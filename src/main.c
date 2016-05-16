@@ -44,6 +44,21 @@
 
 #include "dbgPrint.h"
 
+#include <unistd.h>
+#include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <poll.h>
+#include "ts_util.h"
+#include "server_thread.h"
+#include "simple_server.h"
+
 void *rpcTask(void *argument)
 {
 	while (1)
@@ -114,7 +129,41 @@ int main(int argc, char* argv[])
 	pthread_create(&appThread, NULL, appTask, NULL);
 	pthread_create(&inMThread, NULL, appInMessageTask, NULL);
 
-	while (1)
-		;
+// STARTING THE SERVER
+
+	printf("Server starting...\n");
+	type_handle_server_socket handle_server_socket = {0};
+	int thread_create_retcode = pthread_create(&handle_server_socket.thread_id, NULL,&simple_server_thread, &handle_server_socket);
+	// check the return code
+	if (thread_create_retcode != 0)
+	{
+		perror("ERROR on main thread_create!");
+	}
+	printf("Server started OK\n");
+	while(!handle_server_socket.is_terminated)
+	{
+		usleep(1000000);
+//#define def_test_shutdown
+#ifdef def_test_shutdown
+		{
+			static int i_test_shutdown;
+			if (++i_test_shutdown == 36)
+			{
+				printf("Server shutdown starts\n");
+				if (is_OK_shutdown_server(&handle_server_socket))
+				{
+					printf("Server shutdown OK\n");
+				}
+				else
+				{
+					printf("Server shutdown ERROR\n");
+				}
+			}
+		}
+#endif
+	}
+	printf("Server ends here\n");
+	return 0; /* we never get here */
+
 
 }

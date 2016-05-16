@@ -505,6 +505,7 @@ static int32_t startNetwork(void)
 	int32_t status;
 	uint8_t newNwk = 0;
 	char sCh[128];
+#ifndef OLINUXINO
 
 	do
 	{
@@ -526,7 +527,9 @@ static int32_t startNetwork(void)
 			consolePrint("Incorrect input please type y or n\n");
 		}
 	} while (sCh[0] != 'y' && sCh[0] != 'Y' && sCh[0] != 'n' && sCh[0] != 'N');
-
+#else
+	status = setNVStartup(0);
+#endif
 	if (status != MT_RPC_SUCCESS)
 	{
 		dbg_print(PRINT_LEVEL_WARNING, "network start failed\n");
@@ -801,14 +804,16 @@ void* appProcess(void *argument)
 	status = sysOsalNvWrite(&nvWrite);
 
 	char cmd[128];
+#ifndef OLINUXINO
 	int attget;
-
+#endif
 	while (quit == 0)
 	{
 		nodeCount = 0;
 		initDone = 0;
 		displayDevices();
 		DataRequestFormat_t DataRequest;
+#ifndef OLINUXINO
 		consolePrint("Enter DstAddr:\n");
 		consoleGetLine(cmd, 128);
 		sscanf(cmd, "%x", &attget);
@@ -818,6 +823,11 @@ void* appProcess(void *argument)
 		consoleGetLine(cmd, 128);
 		sscanf(cmd, "%x", &attget);
 		DataRequest.DstEndpoint = (uint8_t) attget;
+#else
+		DataRequest.DstAddr =  (uint16_t) 0xed53;
+
+		DataRequest.DstEndpoint = (uint8_t) 1;
+#endif
 
 		DataRequest.SrcEndpoint = 1;
 

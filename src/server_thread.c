@@ -26,7 +26,7 @@
 #include "ts_util.h"
 #include "server_thread.h"
 #include "simple_server.h"
-#include "my_queues.h"
+#include "ZigBee_messages.h"
 
 
 const char *get_thread_exit_status_string(enum_thread_exit_status status)
@@ -256,8 +256,9 @@ void * thread_start(void *arg)
         	    	else if (n > 0)
         	    	{
         	        	printf("Here is the message: %s\n",tinfo->rx_buffer);
+        	        	uint32_t id;
         	        	// very BASIC we send the message to the radio
-        	        	if (!is_OK_push_message_to_Zigbee(tinfo->rx_buffer, strlen(tinfo->rx_buffer)))
+        	        	if (!is_OK_push_message_to_Zigbee(tinfo->rx_buffer, strlen(tinfo->rx_buffer), &id))
         	        	{
         	        		perror("enqueue");
         	        	}

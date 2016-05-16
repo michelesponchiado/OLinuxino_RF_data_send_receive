@@ -8,7 +8,7 @@ src/dataSendRcv.o: ../src/dataSendRcv.c \
  /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/platform/gnu/rpcTransport.h \
  /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/platform/gnu/dbgPrint.h \
  /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/platform/gnu/hostConsole.h \
- ../src/ts_util.h ../src/my_queues.h
+ ../src/ts_util.h ../src/ZigBee_messages.h
 
 /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/rpc/rpc.h:
 
@@ -30,4 +30,4 @@ src/dataSendRcv.o: ../src/dataSendRcv.c \
 
 ../src/ts_util.h:
 
-../src/my_queues.h:
+../src/ZigBee_messages.h:

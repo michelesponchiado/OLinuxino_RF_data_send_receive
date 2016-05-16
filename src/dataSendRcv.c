@@ -54,7 +54,7 @@
 #include "dbgPrint.h"
 #include "hostConsole.h"
 #include "ts_util.h"
-#include "my_queues.h"
+#include "ZigBee_messages.h"
 
 /*********************************************************************
  * MACROS
@@ -773,33 +773,6 @@ void* appMsgProcess(void *argument)
 	return 0;
 }
 
-type_my_queue my_queue_message_to_ZigBee;
-void start_queue_message_to_ZigBee(void)
-{
-	init_my_queue(&my_queue_message_to_ZigBee);
-}
-
-unsigned int is_OK_push_message_to_Zigbee(char *message, unsigned int message_size)
-{
-	unsigned int retcode = 0;
-	enum_push_my_queue_retcode r;
-	r = push_my_queue(&my_queue_message_to_ZigBee, (uint8_t *)message, message_size);
-	switch(r)
-	{
-		case enum_push_my_queue_retcode_OK:
-		case enum_push_my_queue_retcode_too_big_element:
-		{
-			retcode = 1;
-			break;
-		}
-		default:
-		{
-			break;
-		}
-	}
-	return retcode;
-}
-
 
 void* appProcess(void *argument)
 {
@@ -878,12 +851,12 @@ void* appProcess(void *argument)
 			uint8_t *data;
 			//initDone = 0;
 #if 1
+			unsigned int message_id = 0;
 			unsigned int is_element_in_queue = 0;
         	while(!is_element_in_queue)
         	{
 				unsigned int elem_popped_size;
-				enum_pop_my_queue_retcode r = pop_my_queue(&my_queue_message_to_ZigBee, (uint8_t *)cmd, &elem_popped_size, 128);
-				if (r == enum_pop_my_queue_retcode_OK || r == enum_pop_my_queue_retcode_too_big_element)
+				if (is_OK_pop_message_to_Zigbee(cmd, &elem_popped_size, 128, &message_id))
 				{
 					is_element_in_queue =1;
 				}
@@ -910,12 +883,11 @@ void* appProcess(void *argument)
 				break;
 			}
 #endif
-			data = (uint8_t*) cmd;
-			memcpy(DataRequest.Data, data, strlen(cmd));
-			DataRequest.Len = strlen(cmd);
+			unsigned int len = snprintf((char*)DataRequest.Data, sizeof(DataRequest.Data), "%i: %s",message_id,(char*)cmd);
+			DataRequest.Len = len;
 			initDone = 0;
 			afDataRequest(&DataRequest);
-			rpcWaitMqClientMsg(500);
+			rpcWaitMqClientMsg(1500);
 			initDone = 1;
 		}
 

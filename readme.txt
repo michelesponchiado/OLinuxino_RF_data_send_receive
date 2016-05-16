@@ -9,6 +9,9 @@ Command types:
   * set/get introduce myself
   * set PAN ID
   * set CHANNEL NUMBER
+  * set timeout on message transmit (vedi rpcWaitMqClientMsg(1500); in dataSendRcv.c)
+  * get num of active connections
+  * get stats
   * reset the network connection
   * let me now who is connected
   * read ZIGBEE framework version

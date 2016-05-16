@@ -4,6 +4,7 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../src/ZigBee_messages.c \
 ../src/dataSendRcv.c \
 ../src/main.c \
 ../src/my_queues.c \
@@ -12,6 +13,7 @@ C_SRCS += \
 ../src/ts_util.c 
 
 OBJS += \
+./src/ZigBee_messages.o \
 ./src/dataSendRcv.o \
 ./src/main.o \
 ./src/my_queues.o \
@@ -20,6 +22,7 @@ OBJS += \
 ./src/ts_util.o 
 
 C_DEPS += \
+./src/ZigBee_messages.d \
 ./src/dataSendRcv.d \
 ./src/main.d \
 ./src/my_queues.d \

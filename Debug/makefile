@@ -30,19 +30,19 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
-all: OLinuxino_RF_data_send_receive
+all: OLinuxino_RF_data_send_receive_x86
 
 # Tool invocations
-OLinuxino_RF_data_send_receive: $(OBJS) $(USER_OBJS)
+OLinuxino_RF_data_send_receive_x86: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross GCC Linker'
-	gcc  -o "OLinuxino_RF_data_send_receive" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc  -o "OLinuxino_RF_data_send_receive_x86" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
-	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES) OLinuxino_RF_data_send_receive
+	-$(RM) $(OBJS)$(C_DEPS)$(EXECUTABLES) OLinuxino_RF_data_send_receive_x86
 	-@echo ' '
 
 .PHONY: all clean dependents

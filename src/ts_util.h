@@ -42,7 +42,6 @@ extern  const  char  *tsShow(struct timespec binaryTime,
 extern  struct  timespec  tsSubtract(struct timespec time1,
                                          struct timespec time2) ;
 
-unsigned int is_OK_push_message_to_Zigbee(char *message, unsigned int message_size);
 
 #ifdef __cplusplus		/* If this is a C++ compiler, use C linkage */
 }

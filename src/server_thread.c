@@ -255,6 +255,8 @@ void * thread_start(void *arg)
         	    	else if (n > 0)
         	    	{
         	        	printf("Here is the message: %s\n",tinfo->rx_buffer);
+        	        	// very BASIC we send the message to the radio
+        	        	is_OK_push_simple_queue(tinfo->rx_buffer,strlen(tinfo->rx_buffer));
         	    		thread_server_status = enum_thread_server_status_write;
         	    	}
     			}

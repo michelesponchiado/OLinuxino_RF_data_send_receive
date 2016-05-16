@@ -53,6 +53,7 @@
 #include "rpcTransport.h"
 #include "dbgPrint.h"
 #include "hostConsole.h"
+#include "ts_util.h"
 
 /*********************************************************************
  * MACROS
@@ -845,7 +846,12 @@ void* appProcess(void *argument)
 		{
 			uint8_t *data;
 			//initDone = 0;
-
+#ifdef OLINUXINO
+        	while(!is_OK_pop_simple_queue(cmd,128))
+        	{
+        		usleep(1000);
+        	}
+#else
 			consolePrint(
 			        "Enter message to send or type CHANGE to change the destination\n");
 			consolePrint("or QUIT to exit\n");
@@ -861,6 +867,7 @@ void* appProcess(void *argument)
 				quit = 1;
 				break;
 			}
+#endif
 			data = (uint8_t*) cmd;
 			memcpy(DataRequest.Data, data, strlen(cmd));
 			DataRequest.Len = strlen(cmd);

@@ -26,6 +26,7 @@
 #include "ts_util.h"
 #include "server_thread.h"
 #include "simple_server.h"
+#include "my_queues.h"
 
 
 const char *get_thread_exit_status_string(enum_thread_exit_status status)
@@ -159,7 +160,7 @@ void * thread_start(void *arg)
     pthread_attr_init(&attr);
     size_t stacksize;
     pthread_attr_getstacksize(&attr, &stacksize);
-    printf("Thread stack size = %d bytes \n", stacksize);
+    printf("Thread stack size = %d bytes \n", (int)stacksize);
 
     // set global thread timeout clock, if needed
 	struct timespec ts_timeout_thread = {0};
@@ -256,7 +257,10 @@ void * thread_start(void *arg)
         	    	{
         	        	printf("Here is the message: %s\n",tinfo->rx_buffer);
         	        	// very BASIC we send the message to the radio
-        	        	is_OK_push_simple_queue(tinfo->rx_buffer,strlen(tinfo->rx_buffer));
+        	        	if (!is_OK_push_message_to_Zigbee(tinfo->rx_buffer, strlen(tinfo->rx_buffer)))
+        	        	{
+        	        		perror("enqueue");
+        	        	}
         	    		thread_server_status = enum_thread_server_status_write;
         	    	}
     			}

@@ -54,6 +54,7 @@
 #include "dbgPrint.h"
 #include "hostConsole.h"
 #include "ts_util.h"
+#include "my_queues.h"
 
 /*********************************************************************
  * MACROS
@@ -506,7 +507,7 @@ static int32_t startNetwork(void)
 	int32_t status;
 	uint8_t newNwk = 0;
 	char sCh[128];
-#ifndef OLINUXINO
+#if 0
 
 	do
 	{
@@ -772,10 +773,39 @@ void* appMsgProcess(void *argument)
 	return 0;
 }
 
+type_my_queue my_queue_message_to_ZigBee;
+void start_queue_message_to_ZigBee(void)
+{
+	init_my_queue(&my_queue_message_to_ZigBee);
+}
+
+unsigned int is_OK_push_message_to_Zigbee(char *message, unsigned int message_size)
+{
+	unsigned int retcode = 0;
+	enum_push_my_queue_retcode r;
+	r = push_my_queue(&my_queue_message_to_ZigBee, (uint8_t *)message, message_size);
+	switch(r)
+	{
+		case enum_push_my_queue_retcode_OK:
+		case enum_push_my_queue_retcode_too_big_element:
+		{
+			retcode = 1;
+			break;
+		}
+		default:
+		{
+			break;
+		}
+	}
+	return retcode;
+}
+
+
 void* appProcess(void *argument)
 {
 	int32_t status;
 	uint32_t quit = 0;
+	start_queue_message_to_ZigBee();
 
 	//Flush all messages from the que
 	do
@@ -797,6 +827,7 @@ void* appProcess(void *argument)
 
 	sysGetExtAddr();
 
+
 	OsalNvWriteFormat_t nvWrite;
 	nvWrite.Id = ZCD_NV_ZDO_DIRECT_CB;
 	nvWrite.Offset = 0;
@@ -805,7 +836,7 @@ void* appProcess(void *argument)
 	status = sysOsalNvWrite(&nvWrite);
 
 	char cmd[128];
-#ifndef OLINUXINO
+#if 0
 	int attget;
 #endif
 	while (quit == 0)
@@ -814,7 +845,7 @@ void* appProcess(void *argument)
 		initDone = 0;
 		displayDevices();
 		DataRequestFormat_t DataRequest;
-#ifndef OLINUXINO
+#if 0
 		consolePrint("Enter DstAddr:\n");
 		consoleGetLine(cmd, 128);
 		sscanf(cmd, "%x", &attget);
@@ -846,11 +877,22 @@ void* appProcess(void *argument)
 		{
 			uint8_t *data;
 			//initDone = 0;
-#ifdef OLINUXINO
-        	while(!is_OK_pop_simple_queue(cmd,128))
+#if 1
+			unsigned int is_element_in_queue = 0;
+        	while(!is_element_in_queue)
         	{
-        		usleep(1000);
+				unsigned int elem_popped_size;
+				enum_pop_my_queue_retcode r = pop_my_queue(&my_queue_message_to_ZigBee, (uint8_t *)cmd, &elem_popped_size, 128);
+				if (r == enum_pop_my_queue_retcode_OK || r == enum_pop_my_queue_retcode_too_big_element)
+				{
+					is_element_in_queue =1;
+				}
+				else
+				{
+	        		usleep(1000);
+				}
         	}
+
 #else
 			consolePrint(
 			        "Enter message to send or type CHANGE to change the destination\n");

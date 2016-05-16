@@ -99,8 +99,8 @@ int main(int argc, char* argv[])
 		dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/ttyS1\n\n");
 		selected_serial_port = "/dev/ttyS1";
 #else
-		dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/ttyACM0\n\n");
-		selected_serial_port = "/dev/ttyACM0";
+		dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/USB2\n\n");
+		selected_serial_port = "/dev/ttyUSB2";
 #endif
 	}
 	else

@@ -42,11 +42,7 @@ extern  const  char  *tsShow(struct timespec binaryTime,
 extern  struct  timespec  tsSubtract(struct timespec time1,
                                          struct timespec time2) ;
 
-
-unsigned int is_empty_simple_queue(void);
-unsigned int is_full_simple_queue(void);
-unsigned int is_OK_push_simple_queue(char *s, unsigned int n);
-unsigned int is_OK_pop_simple_queue(char *s, unsigned int n);
+unsigned int is_OK_push_message_to_Zigbee(char *message, unsigned int message_size);
 
 #ifdef __cplusplus		/* If this is a C++ compiler, use C linkage */
 }

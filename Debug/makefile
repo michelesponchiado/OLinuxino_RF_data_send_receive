@@ -36,7 +36,7 @@ all: OLinuxino_RF_data_send_receive
 OLinuxino_RF_data_send_receive: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross GCC Linker'
-	mipsel-openwrt-linuxgcc  -o "OLinuxino_RF_data_send_receive" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc  -o "OLinuxino_RF_data_send_receive" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

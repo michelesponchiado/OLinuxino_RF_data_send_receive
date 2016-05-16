@@ -49,6 +49,7 @@ void appProcess(void *argument);
 void* appMsgProcess(void *argument);
 void appInitQ(void);
 
+
 #ifdef __cplusplus
 }
 #endif

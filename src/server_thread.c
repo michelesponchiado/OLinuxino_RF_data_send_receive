@@ -27,6 +27,73 @@
 #include "server_thread.h"
 #include "simple_server.h"
 #include "ZigBee_messages.h"
+#include "ASAC_ZigBee_network_commands.h"
+
+
+static unsigned int has_reply_decode_incoming_message_from_socket(char *message, unsigned int message_length, char *message_reply, unsigned int max_message_reply_length, unsigned int *pui_message_reply_length)
+{
+	unsigned int has_reply = 1;
+	type_ASAC_Zigbee_interface_command *p = (type_ASAC_Zigbee_interface_command *)message;
+	type_ASAC_Zigbee_interface_command_reply *p_reply =(type_ASAC_Zigbee_interface_command_reply *)message_reply;
+	// if there is no room for the code, error
+	if (max_message_reply_length < def_size_ASAC_Zigbee_interface_code(p_reply))
+	{
+		has_reply = 0;
+	}
+	if (has_reply)
+	{
+		// set the output code the same as the input
+		p_reply->code = p->code;
+		switch( p->code )
+		{
+			case enum_ASAC_ZigBee_interface_command_outside_send_message:
+			{
+				if (max_message_reply_length < def_size_ASAC_Zigbee_interface_reply(p_reply, outside_send_message))
+				{
+					has_reply = 0;
+				}
+				if (has_reply)
+				{
+					// set the output message length
+					*pui_message_reply_length = def_size_ASAC_Zigbee_interface_reply(p_reply, outside_send_message);
+					// initialize the return code to OK
+					p_reply->reply.outside_send_message.retcode = enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode_OK;
+#ifdef def_enable_debug
+				printf("sending user message: %s\n", p->req.outside_send_message.message);
+#endif
+#ifndef def_test_without_Zigbee
+					uint32_t id;
+
+					// we send the message to the radio
+					if (!is_OK_push_message_to_Zigbee(p->req.outside_send_message.message, strlen(p->req.outside_send_message.message), &id))
+					{
+						p_reply->reply.outside_send_message.retcode = enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode_ERROR_unable_to_push_message;
+					}
+#endif
+				}
+				break;
+			}
+			default:
+			{
+				if (max_message_reply_length < def_size_ASAC_Zigbee_interface_reply(p_reply, unknown_reply))
+				{
+					has_reply = 0;
+				}
+				if (has_reply)
+				{
+					// set the output message length
+					*pui_message_reply_length = def_size_ASAC_Zigbee_interface_reply(p_reply, unknown_reply);
+					p_reply->reply.unknown_reply.the_unknown_code = p->code;
+					p_reply->code = enum_ASAC_ZigBee_interface_command_unknown;
+				}
+				break;
+			}
+		}
+	}
+	return has_reply;
+
+}
+
 
 
 const char *get_thread_exit_status_string(enum_thread_exit_status status)
@@ -138,6 +205,8 @@ unsigned int is_ended_thread_info(type_thread_info * p)
 	}
 	return 0;
 }
+
+
 
 void * thread_start(void *arg)
 {
@@ -255,14 +324,15 @@ void * thread_start(void *arg)
         			}
         	    	else if (n > 0)
         	    	{
-        	        	printf("Here is the message: %s\n",tinfo->rx_buffer);
-        	        	uint32_t id;
-        	        	// very BASIC we send the message to the radio
-        	        	if (!is_OK_push_message_to_Zigbee(tinfo->rx_buffer, strlen(tinfo->rx_buffer), &id))
-        	        	{
-        	        		perror("enqueue");
-        	        	}
-        	    		thread_server_status = enum_thread_server_status_write;
+        	        	//printf("Here is the message: %s\n",tinfo->rx_buffer);
+        	    		if (has_reply_decode_incoming_message_from_socket(tinfo->rx_buffer , n, tinfo->tx_buffer,sizeof(tinfo->tx_buffer), &tinfo->tx_buffer_chars_written))
+        	    		{
+            	    		thread_server_status = enum_thread_server_status_write;
+        	    		}
+        	    		else
+        	    		{
+            	    		thread_server_status = enum_thread_server_status_init;
+        	    		}
         	    	}
     			}
     			else
@@ -287,9 +357,8 @@ void * thread_start(void *arg)
     		}
     		case enum_thread_server_status_write:
     		{
-    			int n_char_in_buffer = snprintf(tinfo->tx_buffer,sizeof(tinfo->tx_buffer),"%s","I got your message");
-            	int n = write(tinfo->socket_fd,tinfo->tx_buffer,n_char_in_buffer);
-            	if (n != n_char_in_buffer)
+            	int n = write(tinfo->socket_fd,tinfo->tx_buffer,tinfo->tx_buffer_chars_written);
+            	if (n != tinfo->tx_buffer_chars_written)
         		{
         			tinfo->thread_exit_status = enum_thread_exit_status_ERR_writing;
     	    		thread_server_status = enum_thread_server_status_ends;

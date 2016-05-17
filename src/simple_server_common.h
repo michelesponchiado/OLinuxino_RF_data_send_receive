@@ -8,18 +8,22 @@
 #ifndef SIMPLE_SERVER_COMMON_H_
 #define SIMPLE_SERVER_COMMON_H_
 
+
 // use this to enable debug printouts
 #define def_enable_debug
+
+// use this to test the server without the Zigbee
+#define def_test_without_Zigbee
 
 
 // the port number we use
 #define def_port_number 3117
 // the maximum number of pending connections we can tolerate
-#define LISTEN_BACKLOG 50
+#define LISTEN_BACKLOG 16
 // max number of chars in the thread receive buffer
-#define def_max_char_thread_rx_buffer 4096
+#define def_max_char_thread_rx_buffer 8192
 // max number of chars in the thread transmit buffer
-#define def_max_char_thread_tx_buffer 4096
+#define def_max_char_thread_tx_buffer def_max_char_thread_rx_buffer
 // max time waiting for incoming messages: set to 0 to disable the timeout
 #define def_max_seconds_waiting_incoming_messages 60
 // max duration of the receiving thread: set to 0 to disable the timeout

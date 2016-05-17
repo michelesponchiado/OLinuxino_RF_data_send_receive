@@ -848,7 +848,6 @@ void* appProcess(void *argument)
 
 		while (1)
 		{
-			uint8_t *data;
 			//initDone = 0;
 #if 1
 			unsigned int message_id = 0;

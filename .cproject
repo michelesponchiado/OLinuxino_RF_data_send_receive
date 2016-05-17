@@ -61,16 +61,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.1233714610" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.archiver.538720256" name="Cross GCC Archiver" superClass="cdt.managedbuild.tool.gnu.cross.archiver"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.assembler.58780125" name="Cross GCC Assembler" superClass="cdt.managedbuild.tool.gnu.cross.assembler">
-								<option id="gnu.both.asm.option.include.paths.283869644" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/OLinuxino_RF_data_send_receive/OLinuxino_RF_data_send_receive/framework/mt/Af}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/OLinuxino_RF_data_send_receive/OLinuxino_RF_data_send_receive/framework/mt/Sapi}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/OLinuxino_RF_data_send_receive/OLinuxino_RF_data_send_receive/framework/mt/Sys}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/OLinuxino_RF_data_send_receive/OLinuxino_RF_data_send_receive/framework/mt/Zdo}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/OLinuxino_RF_data_send_receive/OLinuxino_RF_data_send_receive/framework/platform/gnu}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/OLinuxino_RF_data_send_receive/OLinuxino_RF_data_send_receive/framework/rpc}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/OLinuxino_RF_data_send_receive/RF_data_send_receive/framework/mt}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/OLinuxino_RF_data_send_receive/OLinuxino_RF_data_send_receive/inc_libfds700}&quot;"/>
-								</option>
+								<option id="gnu.both.asm.option.include.paths.283869644" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath"/>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1044990935" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>

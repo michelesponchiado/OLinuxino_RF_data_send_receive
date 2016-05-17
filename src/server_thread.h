@@ -42,6 +42,7 @@ typedef struct _type_thread_info // Used as argument to thread_start()
 	struct timespec ts_start_time;			// the thread start time
 	char rx_buffer[def_max_char_thread_rx_buffer];	// the tx and rx buffers for the thread
 	char tx_buffer[def_max_char_thread_rx_buffer];
+	unsigned int tx_buffer_chars_written;
 	unsigned int thread_timeout_seconds; 			// the max thread duration [seconds]; 0 means no timeout
 	unsigned int message_timeout_seconds; 	// the maximum time to wait for an incoming message [seconds]; 0 means no timeout
 	unsigned int max_loop_read_messages; 			// the maximum number of messages we can read; 0 means no limits on the number of loop to execute

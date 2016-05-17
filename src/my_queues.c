@@ -130,7 +130,7 @@ enum_pop_my_queue_retcode pop_my_queue(type_my_queue *p, uint8_t *p_element_to_p
 #endif
 			}
 #ifdef def_my_queue_too_big_message_is_an_error
-			if (r == enum_push_my_queue_retcode_OK)
+			if (r == enum_pop_my_queue_retcode_OK)
 #endif
 			{
 				memcpy(p_element_to_pop, p_element_in_queue->e, n_bytes_to_copy);

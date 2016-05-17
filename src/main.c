@@ -87,6 +87,8 @@ void *appInMessageTask(void *argument)
 
 int main(int argc, char* argv[])
 {
+
+#ifndef def_test_without_Zigbee
 	char * selected_serial_port;
 	pthread_t rpcThread, appThread, inMThread;
 
@@ -128,8 +130,9 @@ int main(int argc, char* argv[])
 	dbg_print(PRINT_LEVEL_INFO, "creating example thread\n");
 	pthread_create(&appThread, NULL, appTask, NULL);
 	pthread_create(&inMThread, NULL, appInMessageTask, NULL);
+#endif
 
-// STARTING THE SERVER
+// STARTING THE SOCKET SERVER
 
 	printf("Server starting...\n");
 	type_handle_server_socket handle_server_socket = {0};

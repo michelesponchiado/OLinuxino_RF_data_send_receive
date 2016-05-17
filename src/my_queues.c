@@ -37,7 +37,7 @@ static unsigned int is_full_my_queue(type_my_queue *p)
 
 static uint32_t get_new_id(uint32_t last_id_used)
 {
-	if (++last_id_used == 0)
+	if (++last_id_used == def_invalid_id)
 	{
 		last_id_used = 1;
 	}
@@ -133,9 +133,18 @@ enum_pop_my_queue_retcode pop_my_queue(type_my_queue *p, uint8_t *p_element_to_p
 			if (r == enum_pop_my_queue_retcode_OK)
 #endif
 			{
-				memcpy(p_element_to_pop, p_element_in_queue->e, n_bytes_to_copy);
-				*p_elem_popped_size = n_bytes_to_copy;
-				*p_id = p_element_in_queue->id;
+				if (p_element_to_pop)
+				{
+					memcpy(p_element_to_pop, p_element_in_queue->e, n_bytes_to_copy);
+				}
+				if (p_elem_popped_size)
+				{
+					*p_elem_popped_size = n_bytes_to_copy;
+				}
+				if (p_id)
+				{
+					*p_id = p_element_in_queue->id;
+				}
 			}
 			if (++idx >= def_N_my_elem_queue)
 			{

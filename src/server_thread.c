@@ -58,17 +58,24 @@ static unsigned int has_reply_decode_incoming_message_from_socket(char *message,
 					*pui_message_reply_length = def_size_ASAC_Zigbee_interface_reply(p_reply, outside_send_message);
 					// initialize the return code to OK
 					p_reply->reply.outside_send_message.retcode = enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode_OK;
+					p_reply->reply.outside_send_message.id = get_invalid_id();
 #ifdef def_enable_debug
 				printf("sending user message: %s\n", p->req.outside_send_message.message);
 #endif
-#ifndef def_test_without_Zigbee
 					uint32_t id;
 
 					// we send the message to the radio
-					if (!is_OK_push_message_to_Zigbee(p->req.outside_send_message.message, strlen(p->req.outside_send_message.message), &id))
+					if (!is_OK_push_message_to_Zigbee((char*)p->req.outside_send_message.message, strlen((const char*)p->req.outside_send_message.message), &id))
 					{
 						p_reply->reply.outside_send_message.retcode = enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode_ERROR_unable_to_push_message;
 					}
+					else
+					{
+						p_reply->reply.outside_send_message.id = id;
+					}
+#ifdef def_test_without_Zigbee
+					// pop away the message
+					is_OK_pop_message_to_Zigbee(NULL, NULL, 65536, NULL);
 #endif
 				}
 				break;

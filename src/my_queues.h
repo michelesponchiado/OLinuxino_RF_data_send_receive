@@ -16,6 +16,8 @@
 
 #define def_my_queue_too_big_message_is_an_error
 
+#define def_invalid_id 0
+
 typedef struct _type_my_queue_indexes
 {
 	unsigned int idx;

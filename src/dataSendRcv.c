@@ -104,6 +104,19 @@ static uint8_t setNVDevType(uint8_t devType);
 static int32_t startNetwork(void);
 static int32_t registerAf(void);
 
+unsigned long get_system_time_ms(void)
+{
+	unsigned long            ms; // Milliseconds
+	time_t          s;  // Seconds
+	struct timespec spec;
+
+	clock_gettime(CLOCK_REALTIME, &spec);
+
+	s  = (spec.tv_sec);
+	ms = s*1000+(spec.tv_nsec / 1.0e6); // Convert nanoseconds to milliseconds
+	return ms;
+}
+
 /*********************************************************************
  * CALLBACK FUNCTIONS
  */
@@ -386,11 +399,11 @@ static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg)
 
 	if (msg->Status == MT_RPC_SUCCESS)
 	{
-		consolePrint("Message transmitted successfully!\n");
+		consolePrint("[%lu]Message %i transmitted successfully!\n", get_system_time_ms(), (int)msg->TransId);
 	}
 	else
 	{
-		consolePrint("Message failed to transmit\n");
+		consolePrint("[%lu]Message %i failed to transmit\n", get_system_time_ms(), (int)msg->TransId);
 	}
 	return msg->Status;
 }
@@ -507,7 +520,8 @@ static int32_t startNetwork(void)
 	int32_t status;
 	uint8_t newNwk = 0;
 	char sCh[128];
-#if 0
+//#define def_interactive
+#ifdef def_interactive
 
 	do
 	{
@@ -530,7 +544,13 @@ static int32_t startNetwork(void)
 		}
 	} while (sCh[0] != 'y' && sCh[0] != 'Y' && sCh[0] != 'n' && sCh[0] != 'N');
 #else
+//#define def_new_network
+#ifdef def_new_network
+	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
+	newNwk = 1;
+#else
 	status = setNVStartup(0);
+#endif
 #endif
 	if (status != MT_RPC_SUCCESS)
 	{
@@ -584,9 +604,12 @@ static int32_t startNetwork(void)
 			return -1;
 		}
 		consolePrint("Enter channel 11-26:\n");
+#ifdef def_interactive_chan
 		consoleGetLine(sCh, 128);
-
 		status = setNVChanList(1 << atoi(sCh));
+#else
+		status = setNVChanList(1 << 11);
+#endif
 		if (status != MT_RPC_SUCCESS)
 		{
 			dbg_print(PRINT_LEVEL_INFO, "setNVPanID failed\n");
@@ -767,7 +790,7 @@ void* appMsgProcess(void *argument)
 
 	if (initDone)
 	{
-		rpcWaitMqClientMsg(10000);
+		//rpcWaitMqClientMsg(10000);
 	}
 
 	return 0;
@@ -829,7 +852,8 @@ void* appProcess(void *argument)
 		sscanf(cmd, "%x", &attget);
 		DataRequest.DstEndpoint = (uint8_t) attget;
 #else
-		DataRequest.DstAddr =  (uint16_t) 0xed53;
+		//DataRequest.DstAddr =  (uint16_t) 0xed53;
+		DataRequest.DstAddr =  (uint16_t) 0xcbef;
 
 		DataRequest.DstEndpoint = (uint8_t) 1;
 #endif
@@ -861,7 +885,8 @@ void* appProcess(void *argument)
 				}
 				else
 				{
-	        		usleep(1000);
+					//rpcWaitMqClientMsg(500);
+	        		usleep(100);
 				}
         	}
 
@@ -882,11 +907,22 @@ void* appProcess(void *argument)
 				break;
 			}
 #endif
+			static uint8_t transId;
+			DataRequest.TransID = transId++;
+			printf("[%lu]radio is sending message %i: %20s\n", get_system_time_ms(), (int)DataRequest.TransID, cmd);
 			unsigned int len = snprintf((char*)DataRequest.Data, sizeof(DataRequest.Data), "%i: %s",message_id,(char*)cmd);
 			DataRequest.Len = len;
+
 			initDone = 0;
 			afDataRequest(&DataRequest);
-			rpcWaitMqClientMsg(1500);
+			if (rpcWaitMqClientMsg(3500)<0)
+			{
+				printf("[%lu]ERROR end of rpcWaitMqClientMsg \n", get_system_time_ms());
+			}
+			else
+			{
+				printf("[%lu]end of rpcWaitMqClientMsg \n", get_system_time_ms());
+			}
 			initDone = 1;
 		}
 

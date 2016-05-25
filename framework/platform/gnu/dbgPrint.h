@@ -52,8 +52,8 @@ typedef enum
 	PRINT_LEVEL_VERBOSE
 }enum_print_level;
 
-#define PRINT_LEVEL PRINT_LEVEL_WARNING
-//#define PRINT_LEVEL PRINT_LEVEL_VERBOSE
+//#define PRINT_LEVEL PRINT_LEVEL_WARNING
+#define PRINT_LEVEL PRINT_LEVEL_INFO_LOWLEVEL
 
 void dbg_print(int printf_level, const char *fmt, ...);
 

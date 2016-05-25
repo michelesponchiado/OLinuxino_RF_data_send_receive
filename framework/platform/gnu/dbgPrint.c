@@ -60,6 +60,20 @@
  * API FUNCTIONS
  */
 
+
+const char * str_dbg_level(int level)
+{
+	if (level == PRINT_LEVEL_ERROR)
+		return "ERROR";
+	if (level == PRINT_LEVEL_WARNING)
+		return "warning";
+	if (level == PRINT_LEVEL_INFO)
+		return "info";
+	if (level == PRINT_LEVEL_INFO_LOWLEVEL)
+		return "low level";
+	return "unk";
+
+}
 /**************************************************************************************************
  * @fn          dbgPrint
  *
@@ -86,7 +100,10 @@ void dbg_print(int print_level, const char *fmt, ...)
 	{
 		va_list argp;
 		va_start(argp, fmt);
-		vprintf(fmt, argp);
+		char c_aux[256];
+		vsnprintf(c_aux,sizeof(c_aux),fmt, argp);
 		va_end(argp);
+		unsigned long get_system_time_ms(void);
+		printf("[%lu]%s %s", get_system_time_ms(), str_dbg_level(print_level), c_aux);
 	}
 }

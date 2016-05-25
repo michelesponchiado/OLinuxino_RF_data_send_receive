@@ -13,7 +13,7 @@
 #define def_enable_debug
 
 // use this to test the server without the Zigbee
-#define def_test_without_Zigbee
+//#define def_test_without_Zigbee
 
 
 // the port number we use

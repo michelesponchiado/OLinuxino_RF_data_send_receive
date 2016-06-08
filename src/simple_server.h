@@ -62,6 +62,7 @@ typedef struct _type_handle_server_socket
     enum_status_accept_connection status_accept_connection;
     unsigned int stats[enum_socket_server_stat_numof];
     unsigned int thread_exit_status_stats[enum_thread_exit_status_numof];
+    char buffer[SOCKET_MESSAGE_SIZE];
 }type_handle_server_socket;
 // argument should be a type_handle_server_socket pointer
 void * simple_server_thread(void *arg);

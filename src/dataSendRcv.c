@@ -43,6 +43,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <time.h>
 
 #include "rpc.h"
 #include "mtSys.h"
@@ -384,6 +385,7 @@ static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg)
 	ActiveEpReqFormat_t actReq;
 	actReq.DstAddr = msg->NwkAddr;
 	actReq.NwkAddrOfInterest = msg->NwkAddr;
+	//add_network_list_node(msg->NwkAddr, msg->IEEEAddr)
 
 	consolePrint("\nNew device joined network.\n");
 	zdoActiveEpReq(&actReq);
@@ -519,9 +521,9 @@ static int32_t startNetwork(void)
 #endif
 	int32_t status;
 	uint8_t newNwk = 0;
-	char sCh[128];
 //#define def_interactive
 #ifdef def_interactive
+	char sCh[128];
 
 	do
 	{

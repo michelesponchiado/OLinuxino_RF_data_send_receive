@@ -1,5 +1,6 @@
 Version 3
  * added echo message 
+ * added some captions / titles 
 
 
 The ASACSOCKET format
@@ -64,6 +65,8 @@ ASAC_Zigbee_interface_reply =
 	<variable>		reply				the reply body 
 }
 
+
+THE ECHO MESSAGE
 The simplest message we can send as a test is the echo message.
 The code for the echo message is:
 	enum_ASAC_ZigBee_interface_command_network_echo_req = 0x20000002
@@ -76,6 +79,8 @@ echo_reply =
 	size [bytes]	name						notes
 	32 				echo body 					the array containing the bytes the server sends back 
 
+
+A MESSAGE TO THE OUTSIDE WORLD
 Let's see the request we must issue to send a message to the outside world:
 outside_send_message_req =
 	size [bytes]	name						notes
@@ -133,6 +138,7 @@ outside_send_message_reply.return_code will be one of the following:
 	retcode_ERR_invalid_endpoint		2				invalid end-point number, must be in the 1 to 240 range
  
  
+ A MESSAGE FROM THE OUTSIDE WORLD
  When a message is received from the outside world, the ZigBee server will look into its own registered input cluster to check where to forward
  the received message. If a match is found, the ZigBee server will issue a received_message_callback which has code:
  	enum_ASAC_ZigBee_interface_command_outside_received_message = next(enum_ASAC_ZigBee_interface_command_outside_send_message)

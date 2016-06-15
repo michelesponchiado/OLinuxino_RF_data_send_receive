@@ -111,8 +111,9 @@ enum_build_ASACSOCKET_formatted_message build_ASACSOCKET_formatted_message(type_
 	}
 	if (r == enum_build_ASACSOCKET_formatted_message_OK)
 	{
-		ph->body_crc = crc32(0, (const void *)buffer, buf_len);
+		memcpy(p->body, buffer, buf_len);
 		ph->body_length = buf_len;
+		ph->body_crc = crc32(0, (const void *)p->body, ph->body_length);
 		ph->key = def_ASACSOCKET_key_header;
 #ifdef def_enable_ASACSOCKET_footer
 		type_struct_ASACSOCKET_footer * pf = (type_struct_ASACSOCKET_footer *)&(p->body[ph->body_length]);

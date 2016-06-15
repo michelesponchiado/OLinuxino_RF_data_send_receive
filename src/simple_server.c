@@ -29,6 +29,7 @@
 #include "simple_server.h"
 #include "dbgPrint.h"
 #include "ASACSOCKET_check.h"
+#include "ASAC_ZigBee_network_commands.h"
 
 static void error(const char *msg)
 {
@@ -283,41 +284,62 @@ void * simple_server_thread(void *arg)
     	// sleep some time
     	usleep(def_sleep_time_between_cycles_us);
     	struct sockaddr_in si_other;
-    	int recv_len;
     	unsigned int slen = sizeof(si_other);
-		//try to receive some data, this is a NON-blocking call
-		if ((recv_len = recvfrom(phss->socket_fd, phss->buffer, sizeof(phss->buffer), 0, (struct sockaddr *) &si_other, &slen)) == -1)
-		{
-			// printf("error while executing recvfrom:\n");
-		}
+        //try to receive some data, this is a NON-blocking call
+        int n_received_bytes = recvfrom(phss->socket_fd, phss->buffer, sizeof(phss->buffer), 0, (struct sockaddr *) &si_other, &slen);
+        if (n_received_bytes == -1)
+        {
+        	//printf("error on recvfrom()");
+        }
 		else
 		{
 	        //print details of the client/peer and the data received
 			dbg_print(PRINT_LEVEL_INFO,"Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
-			enum_check_ASACSOCKET_formatted_message retcode_check = check_ASACSOCKET_formatted_message(phss->buffer, recv_len);
+			enum_check_ASACSOCKET_formatted_message retcode_check = check_ASACSOCKET_formatted_message(phss->buffer, n_received_bytes);
 			if ( retcode_check != enum_check_ASACSOCKET_formatted_message_OK)
 			{
-		        dbg_print(PRINT_LEVEL_ERROR,"ERROR %i ON Data: %*.*s\n", (int)retcode_check , recv_len,recv_len,phss->buffer);
+		        dbg_print(PRINT_LEVEL_ERROR,"ERROR %i ON Data: %*.*s\n", (int)retcode_check , n_received_bytes,n_received_bytes,phss->buffer);
 		        exit(1);
 			}
-	        type_struct_ASACSOCKET_msg * p = phss->buffer;
-	        printf("Data: %*.*s\n" , p->h.body_length,p->h.body_length,p->body);
-	        type_struct_ASACSOCKET_msg msg;
-	        unsigned int message_length;
-	        enum_build_ASACSOCKET_formatted_message retcode_build = build_ASACSOCKET_formatted_message(&msg, p->body, p->h.body_length, &message_length);
-	        if (retcode_build == enum_build_ASACSOCKET_formatted_message_OK)
-	        {
-	        	slen = sizeof(si_other);
-		        //now reply the client with the same data
-		        if (sendto(phss->socket_fd, (char*)&msg,  message_length, 0, (struct sockaddr*) &si_other, slen) == -1)
-		        {
-		        	dbg_print(PRINT_LEVEL_INFO,"error while executing sendto:\n");
-		        }
-	        }
-			{
-		        dbg_print(PRINT_LEVEL_ERROR,"ERROR %i ON message build\n", (int)retcode_build);
-		        exit(1);
-			}
+	        type_struct_ASACSOCKET_msg * p = (type_struct_ASACSOCKET_msg *)phss->buffer;
+        	{
+	        	type_ASAC_Zigbee_interface_request *pzmessage_rx = (type_ASAC_Zigbee_interface_request *)&(p->body);
+        		switch(pzmessage_rx->code)
+        		{
+        			case enum_ASAC_ZigBee_interface_command_network_echo_req:
+        			{
+                		type_ASAC_Zigbee_interface_request zmessage_tx = {0};
+                		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_echo_req;
+                		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_req((&zmessage_tx),echo);
+                		type_ASAC_ZigBee_interface_network_echo_req * p_echo_req = &zmessage_tx.req.echo;
+                		snprintf((char*)p_echo_req->message_to_echo,sizeof(p_echo_req->message_to_echo),"%s", pzmessage_rx->req.echo.message_to_echo);
+
+                		type_struct_ASACSOCKET_msg amessage_tx;
+                		memset(&amessage_tx,0,sizeof(amessage_tx));
+
+                		unsigned int amessage_tx_size = 0;
+                		enum_build_ASACSOCKET_formatted_message r_build = build_ASACSOCKET_formatted_message(&amessage_tx, (char *)&zmessage_tx, zmessage_size, &amessage_tx_size);
+                		if (r_build == enum_build_ASACSOCKET_formatted_message_OK)
+                		{
+            				unsigned int slen=sizeof(si_other);
+            				//send the message
+            				if (sendto(phss->socket_fd, (char*)&amessage_tx, amessage_tx_size , 0 , (struct sockaddr *) &si_other, slen)==-1)
+            				{
+            					dbg_print(PRINT_LEVEL_ERROR,"error on sendto()");
+            				}
+            				else
+            				{
+            					dbg_print(PRINT_LEVEL_INFO,"message echo sent OK: %s\n", p_echo_req->message_to_echo);
+            				}
+                		}
+        				break;
+        			}
+        			default:
+        			{
+        				dbg_print(PRINT_LEVEL_ERROR,"unknown message code received: %u\n", pzmessage_rx->code);
+        			}
+        		}
+        	}
 		}
 
 

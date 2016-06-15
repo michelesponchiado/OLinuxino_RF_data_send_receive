@@ -33,7 +33,7 @@
 static unsigned int has_reply_decode_incoming_message_from_socket(char *message, unsigned int message_length, char *message_reply, unsigned int max_message_reply_length, unsigned int *pui_message_reply_length)
 {
 	unsigned int has_reply = 1;
-	type_ASAC_Zigbee_interface_command *p = (type_ASAC_Zigbee_interface_command *)message;
+	type_ASAC_Zigbee_interface_request *p = (type_ASAC_Zigbee_interface_request *)message;
 	type_ASAC_Zigbee_interface_command_reply *p_reply =(type_ASAC_Zigbee_interface_command_reply *)message_reply;
 	// if there is no room for the code, error
 	if (max_message_reply_length < def_size_ASAC_Zigbee_interface_code(p_reply))
@@ -82,15 +82,15 @@ static unsigned int has_reply_decode_incoming_message_from_socket(char *message,
 			}
 			default:
 			{
-				if (max_message_reply_length < def_size_ASAC_Zigbee_interface_reply(p_reply, unknown_reply))
+				if (max_message_reply_length < def_size_ASAC_Zigbee_interface_reply(p_reply, unknown))
 				{
 					has_reply = 0;
 				}
 				if (has_reply)
 				{
 					// set the output message length
-					*pui_message_reply_length = def_size_ASAC_Zigbee_interface_reply(p_reply, unknown_reply);
-					p_reply->reply.unknown_reply.the_unknown_code = p->code;
+					*pui_message_reply_length = def_size_ASAC_Zigbee_interface_reply(p_reply, unknown);
+					p_reply->reply.unknown.the_unknown_code = p->code;
 					p_reply->code = enum_ASAC_ZigBee_interface_command_unknown;
 				}
 				break;

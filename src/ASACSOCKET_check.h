@@ -19,12 +19,12 @@
 #define def_ASACSOCKET_key_header 0xA55A3663
 
 #ifdef def_enable_ASACSOCKET_footer
-	// ?the key to put at the very end of the message: 32-bit value
+	// the key to put at the very end of the message: 32-bit value
 	#define def_ASACSOCKET_key_footer 0x81c369F0
 	typedef struct _type_struct_ASACSOCKET_footer
 	{
 		uint32_t key;
-	}type_struct_ASACSOCKET_footer;
+	}__attribute__((__packed__)) type_struct_ASACSOCKET_footer ;
 #endif
 
 // the header put at the very beginning of the message
@@ -33,7 +33,7 @@ typedef struct _type_struct_ASACSOCKET_header
 	uint32_t key;
 	uint32_t body_length;
 	uint32_t body_crc;
-}type_struct_ASACSOCKET_header;
+}__attribute__((__packed__)) type_struct_ASACSOCKET_header ;
 
 // the ASACSOCKET_msg structure
 typedef struct _type_struct_ASACSOCKET_msg
@@ -45,7 +45,7 @@ typedef struct _type_struct_ASACSOCKET_msg
 	// ?the key to put at the very end of the message: 32-bit value
 	type_struct_ASACSOCKET_footer f;
 #endif
-}type_struct_ASACSOCKET_msg;
+}__attribute__((__packed__)) type_struct_ASACSOCKET_msg ;
 
 
 typedef enum

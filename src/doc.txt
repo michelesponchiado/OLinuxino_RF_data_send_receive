@@ -1,0 +1,150 @@
+Version 3
+ * added echo message 
+
+
+The ASACSOCKET format
+
+To send a message to the ZigBee server via UDP, use the ASACSOCKET format.
+An ASACSOCKET is comprised of the header, the body and the footer; the header and the footer are fixed-size, 
+while the body has a variable size between 0 and def_max_length_body_ASACSOCKET_msg bytes.
+Currently def_max_length_body_ASACSOCKET_msg is set to 4096.
+There is no padding between the header and the body, and the footer immediately follows the last byte of the body too.
+
+ASACSOCKET = 
+	{
+		header 
+		body 
+		footer
+	}
+
+ASACSOCKET.header
+	size [bytes]	name				notes
+	4 				key					must be equal to 0xA55A3663	
+	4				body_length			the number of bytes in the message body
+	4				body_crc			the CRC of the message body, calculated using crc32 
+										polynomial X^32+X^26+X^23+X^22+X^16+X^12+X^11+X^10+X^8+X^7+X^5+X^4+X^2+X^1+X^0 from work by Gary S. Brown.
+ASACSOCKET.body
+	size [bytes]	name				notes
+	<variable>		body				the pay-load is an array of max def_max_length_body_ASACSOCKET_msg bytes 
+
+ASACSOCKET.footer
+	size [bytes]	name				notes
+	4 				key					must be equal to 0x81c369F0	
+
+
+**
+**
+**
+	
+THE ASAC_Zigbee MESSAGES
+	
+The body of the ASACSOCKET sent to the ZigBee server will contain an ASAC_Zigbee message.
+A message sent from a client to the ZigBee server will be in the format ASAC_Zigbee_interface_request.
+Each request has its own code.
+Currently these are the known requests' codes:
+	request sent to the outside world:
+		enum_ASAC_ZigBee_interface_command_outside_send_message = 0x10000000
+	request sent to handle the network:
+		enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req = 0x20000000
+
+The ASAC_Zigbee_interface_request structure has no padding.
+
+ASAC_Zigbee_interface_request =
+{
+	size [bytes]	name				notes
+	4 				code				the code of the request	
+	<variable>		req					the request body 
+}
+
+The ZigBee server will respond to the request with a reply in the format
+ASAC_Zigbee_interface_reply =
+{
+	size [bytes]	name				notes
+	4 				code				the code of the reply = the same code of the request	
+	<variable>		reply				the reply body 
+}
+
+The simplest message we can send as a test is the echo message.
+The code for the echo message is:
+	enum_ASAC_ZigBee_interface_command_network_echo_req = 0x20000002
+The body is:	
+echo_req =
+	size [bytes]	name						notes
+	32 				echo body 					the array containing the bytes the server will send back 
+The reply will have the same code as the reply and the body will be the same as the request:	
+echo_reply =
+	size [bytes]	name						notes
+	32 				echo body 					the array containing the bytes the server sends back 
+
+Let's see the request we must issue to send a message to the outside world:
+outside_send_message_req =
+	size [bytes]	name						notes
+	8 				IEEE_destination_address 	the IEEE 64-bit destination address; 0 always means the coordinator is the destination
+	1 				destination_endpoint		the destination end-point, must be between 1 and 240
+	2 				cluster_id					the cluster (command) identifier
+	1 				source_endpoint				the source end-point
+	1 				transaction_id				the transaction identifier, i.e. the message identifier
+	1 				message_length				the number of bytes in the message
+	<variable> 		message[]					the message to send, max 128 (? check maybe they are around 120) bytes
+	
+So as you can see, to identify a destination we must specify: the IEEE address, the destination end-point and the cluster identifier.
+Currently a maximum of 16 cluster id can be defined per single end-point, while the available end-points are in the range 1 to 240.
+	
+The ZigBee server will reply with:	
+ outside_send_message_reply =
+	size [bytes]	name						notes
+	8 				IEEE_destination_address 	the IEEE 64-bit destination address; 0 always means the coordinator is the destination
+	1 				destination_endpoint		the destination end-point, must be between 1 and 240
+	2 				cluster_id					the cluster (command) identifier
+	1 				source_endpoint				the source end-point
+	1 				transaction_id				the transaction identifier, i.e. the message identifier
+	1 				message_length				the number of bytes in the message
+	1 				return_code					the return code
+	1 				temporary_id				a temporary id assigned to the message which is valid while the message is in the ZigBee server queues 
+	
+outside_send_message_reply.return_code will be one of the following:
+	name									value			note
+ 	retcode_OK 								0				all OK
+	retcode_ERROR_unable_to_push_message	1				no room in the radio messages queue
+	...
+ 
+ 
+ REMEMBER TO REGISTER TO RECEIVE MESSAGES ON AN INPUT CLUSTER!
+ To receive a message from the outside world, at least one end-point and one input cluster id must be defined.
+ By default, the end-point number 1 and the input cluster id number 6 are always defined.
+ When a new end-point /cluster is defined, the new settings are announced to the whole ZigBee network so every node in the network
+ will be updated with the new settings.
+ To add others end-points / input clusters, one must issue an input_cluster_register request:
+ input_cluster_register_req:    
+ 	size [bytes]	name						notes
+ 	1 				end_point					the end-point to register, must be in the range 1 to 240
+	2 				input_cluster_id			the input cluster (command) to register
+	
+ The ZigBee server will reply with:
+ input_cluster_register_reply 
+ 	size [bytes]	name						notes
+ 	1 				end_point					the end-point to register, must be in the range 1 to 240
+	2 				input_cluster_id			the input cluster (command) to register
+	4  				retcode						the return code
+ The retcode field value will be one of the following:
+	name								value			note
+ 	retcode_OK 							0				OK 
+	retcode_ERR_no_room					1				no more room in the end-point/cluster table
+	retcode_ERR_invalid_endpoint		2				invalid end-point number, must be in the 1 to 240 range
+ 
+ 
+ When a message is received from the outside world, the ZigBee server will look into its own registered input cluster to check where to forward
+ the received message. If a match is found, the ZigBee server will issue a received_message_callback which has code:
+ 	enum_ASAC_ZigBee_interface_command_outside_received_message = next(enum_ASAC_ZigBee_interface_command_outside_send_message)
+ 	
+the body will look like this:
+received_message_callback 
+ 	size [bytes]	name						notes
+	8 				IEEE_source_address 		the IEEE source address; 0 always means the coordinator is the source
+	1				source_endpoint				the source end-point
+	2				cluster_id					the cluster (command) identifier
+	1				destination_endpoint		the destination end-point
+	1				transaction_id				the transaction identifier
+	1				message_length				the number of bytes in the message
+	<variable>		message[]					the message received
+ 	

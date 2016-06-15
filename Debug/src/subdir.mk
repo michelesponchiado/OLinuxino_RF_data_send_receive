@@ -4,7 +4,9 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
+../src/ASACSOCKET_check.c \
 ../src/ZigBee_messages.c \
+../src/crc32.c \
 ../src/dataSendRcv.c \
 ../src/main.c \
 ../src/my_queues.c \
@@ -13,7 +15,9 @@ C_SRCS += \
 ../src/ts_util.c 
 
 OBJS += \
+./src/ASACSOCKET_check.o \
 ./src/ZigBee_messages.o \
+./src/crc32.o \
 ./src/dataSendRcv.o \
 ./src/main.o \
 ./src/my_queues.o \
@@ -22,7 +26,9 @@ OBJS += \
 ./src/ts_util.o 
 
 C_DEPS += \
+./src/ASACSOCKET_check.d \
 ./src/ZigBee_messages.d \
+./src/crc32.d \
 ./src/dataSendRcv.d \
 ./src/main.d \
 ./src/my_queues.d \

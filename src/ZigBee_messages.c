@@ -8,6 +8,7 @@
 #include "my_queues.h"
 
 type_my_queue my_queue_message_to_ZigBee;
+
 void start_queue_message_to_ZigBee(void)
 {
 	init_my_queue(&my_queue_message_to_ZigBee);

@@ -26,6 +26,8 @@ typedef enum
 	enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req = enum_ASAC_ZigBee_interface_command_network_first,
 // echo the body
 	enum_ASAC_ZigBee_interface_command_network_echo_req,
+// unregister an input cluster
+	enum_ASAC_ZigBee_interface_command_network_input_cluster_unregister_req,
 
 // the commands used by the administrator
 	enum_ASAC_ZigBee_interface_command_administrator_first = 0x30000000,
@@ -80,6 +82,27 @@ typedef struct _type_ASAC_ZigBee_interface_network_input_cluster_register_reply
 	uint16_t input_cluster_id;	// the input cluster (command) to register
 	enum_input_cluster_register_reply_retcode retcode;	// the return code
 } __attribute__((__packed__)) type_ASAC_ZigBee_interface_network_input_cluster_register_reply ;
+
+
+typedef struct _type_ASAC_ZigBee_interface_network_input_cluster_unregister_req
+{
+	uint8_t endpoint;			// the end-point to register
+	uint16_t input_cluster_id;	// the input cluster (command) to register
+}  __attribute__((__packed__)) type_ASAC_ZigBee_interface_network_input_cluster_unregister_req;
+
+typedef enum
+{
+	enum_input_cluster_unregister_reply_retcode_OK = 0,
+	enum_input_cluster_unregister_reply_retcode_ERR_not_found,
+	enum_input_cluster_unregister_reply_retcode_numof
+}enum_input_cluster_unregister_reply_retcode;
+
+typedef struct _type_ASAC_ZigBee_interface_network_input_cluster_unregister_reply
+{
+	uint8_t endpoint;			// the end-point to register
+	uint16_t input_cluster_id;	// the input cluster (command) to register
+	enum_input_cluster_register_reply_retcode retcode;	// the return code
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_network_input_cluster_unregister_reply ;
 
 //
 //
@@ -197,6 +220,7 @@ typedef struct _type_ASAC_Zigbee_interface_request
 
 		// network messages requests
 		type_ASAC_ZigBee_interface_network_input_cluster_register_req input_cluster_register;
+		type_ASAC_ZigBee_interface_network_input_cluster_unregister_req input_cluster_unregister;
 		type_ASAC_ZigBee_interface_network_echo_req echo;
 
 	}req;
@@ -216,6 +240,7 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 
 		// network messages replies
 		type_ASAC_ZigBee_interface_network_input_cluster_register_reply input_cluster_register;
+		type_ASAC_ZigBee_interface_network_input_cluster_unregister_reply input_cluster_unregister;
 		type_ASAC_ZigBee_interface_network_echo_reply echo;
 
 		// reply to an unknown command

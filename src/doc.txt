@@ -1,5 +1,6 @@
 Version 3
  * added echo message 
+ * added the unregister end-point/cluster id command
  * added some captions / titles 
 
 
@@ -43,10 +44,27 @@ The body of the ASACSOCKET sent to the ZigBee server will contain an ASAC_Zigbee
 A message sent from a client to the ZigBee server will be in the format ASAC_Zigbee_interface_request.
 Each request has its own code.
 Currently these are the known requests' codes:
-	request sent to the outside world:
-		enum_ASAC_ZigBee_interface_command_outside_send_message = 0x10000000
-	request sent to handle the network:
-		enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req = 0x20000000
+// the commands we send to/receive from the outside world, e.g. the user messages
+	enum_ASAC_ZigBee_interface_command_outside_first = 0x10000000,
+// sends a user message
+	enum_ASAC_ZigBee_interface_command_outside_send_message = enum_ASAC_ZigBee_interface_command_outside_first,
+// a user message has been received
+	enum_ASAC_ZigBee_interface_command_outside_received_message,
+
+// the commands we use to handle the network, e.g. the introduce myself which sets my name in the network
+	enum_ASAC_ZigBee_interface_command_network_first = 0x20000000,
+// create and announce an input cluster
+	enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req = enum_ASAC_ZigBee_interface_command_network_first,
+// echo the body
+	enum_ASAC_ZigBee_interface_command_network_echo_req,
+// unregister an input cluster
+	enum_ASAC_ZigBee_interface_command_network_input_cluster_unregister_req,
+
+// the commands used by the administrator
+	enum_ASAC_ZigBee_interface_command_administrator_first = 0x30000000,
+	enum_ASAC_ZigBee_interface_command_administrator_firmware_update = enum_ASAC_ZigBee_interface_command_administrator_first,
+// the command used to reply to unknown commands
+	enum_ASAC_ZigBee_interface_command_unknown = 0xFFFFFFFF,
 
 The ASAC_Zigbee_interface_request structure has no padding.
 
@@ -69,7 +87,7 @@ ASAC_Zigbee_interface_reply =
 THE ECHO MESSAGE
 The simplest message we can send as a test is the echo message.
 The code for the echo message is:
-	enum_ASAC_ZigBee_interface_command_network_echo_req = 0x20000002
+	enum_ASAC_ZigBee_interface_command_network_echo_req
 The body is:	
 echo_req =
 	size [bytes]	name						notes
@@ -82,6 +100,9 @@ echo_reply =
 
 A MESSAGE TO THE OUTSIDE WORLD
 Let's see the request we must issue to send a message to the outside world:
+The code for the echo message is:
+	enum_ASAC_ZigBee_interface_command_outside_send_message
+The body is:	
 outside_send_message_req =
 	size [bytes]	name						notes
 	8 				IEEE_destination_address 	the IEEE 64-bit destination address; 0 always means the coordinator is the destination
@@ -120,6 +141,9 @@ outside_send_message_reply.return_code will be one of the following:
  When a new end-point /cluster is defined, the new settings are announced to the whole ZigBee network so every node in the network
  will be updated with the new settings.
  To add others end-points / input clusters, one must issue an input_cluster_register request:
+ The code for the echo message is:
+	enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req
+The body is:	
  input_cluster_register_req:    
  	size [bytes]	name						notes
  	1 				end_point					the end-point to register, must be in the range 1 to 240
@@ -137,11 +161,31 @@ outside_send_message_reply.return_code will be one of the following:
 	retcode_ERR_no_room					1				no more room in the end-point/cluster table
 	retcode_ERR_invalid_endpoint		2				invalid end-point number, must be in the 1 to 240 range
  
+In the same way you can un-register a couple endpoint/cluster-id
+The un-register must be issued by the same client doing the registration
+The body is:	
+ input_cluster_unregister_req:    
+ 	size [bytes]	name						notes
+ 	1 				end_point					the end-point to unregister, must be in the range 1 to 240
+	2 				input_cluster_id			the input cluster (command) to unregister
+	
+ The ZigBee server will reply with:
+ input_cluster_unregister_reply 
+ 	size [bytes]	name						notes
+ 	1 				end_point					the end-point to register, must be in the range 1 to 240
+	2 				input_cluster_id			the input cluster (command) to register
+	4  				retcode						the return code
+ The retcode field value will be one of the following:
+	name								value			note
+ 	retcode_OK 							0				OK 
+	retcode_ERR_not_found				1				the endpoint/cluster was not found in thr register table or it is not associated with the current client
+ 
+ 
  
  A MESSAGE FROM THE OUTSIDE WORLD
  When a message is received from the outside world, the ZigBee server will look into its own registered input cluster to check where to forward
  the received message. If a match is found, the ZigBee server will issue a received_message_callback which has code:
- 	enum_ASAC_ZigBee_interface_command_outside_received_message = next(enum_ASAC_ZigBee_interface_command_outside_send_message)
+ 	enum_ASAC_ZigBee_interface_command_outside_received_message
  	
 the body will look like this:
 received_message_callback 

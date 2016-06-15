@@ -30,6 +30,7 @@
 #include "dbgPrint.h"
 #include "ASACSOCKET_check.h"
 #include "ASAC_ZigBee_network_commands.h"
+#include "input_cluster_table.h"
 
 static void error(const char *msg)
 {
@@ -212,6 +213,34 @@ unsigned int is_OK_check_formatted_message(char *buffer, unsigned int buffer_siz
 #endif
 
 
+
+unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_interface_command_reply *p, unsigned int message_size, int socket_fd, struct sockaddr_in *p_socket_dst)
+{
+	unsigned int  is_OK = 0;
+	type_struct_ASACSOCKET_msg amessage_tx;
+	memset(&amessage_tx,0,sizeof(amessage_tx));
+
+	unsigned int amessage_tx_size = 0;
+	enum_build_ASACSOCKET_formatted_message r_build = build_ASACSOCKET_formatted_message(&amessage_tx, (char *)p, message_size, &amessage_tx_size);
+	if (r_build == enum_build_ASACSOCKET_formatted_message_OK)
+	{
+		unsigned int slen=sizeof(*p_socket_dst);
+		//send the message
+		if (sendto(socket_fd, (char*)&amessage_tx, amessage_tx_size , 0 , (struct sockaddr *) p_socket_dst, slen)==-1)
+		{
+			dbg_print(PRINT_LEVEL_ERROR,"error on sendto()");
+		}
+		else
+		{
+			is_OK = 1;
+		}
+	}
+	return is_OK;
+}
+
+
+
+
 void * simple_server_thread(void *arg)
 {
 	type_handle_server_socket hss;
@@ -299,39 +328,159 @@ void * simple_server_thread(void *arg)
 			if ( retcode_check != enum_check_ASACSOCKET_formatted_message_OK)
 			{
 		        dbg_print(PRINT_LEVEL_ERROR,"ERROR %i ON Data: %*.*s\n", (int)retcode_check , n_received_bytes,n_received_bytes,phss->buffer);
-		        exit(1);
+		        //exit(1);
 			}
 	        type_struct_ASACSOCKET_msg * p = (type_struct_ASACSOCKET_msg *)phss->buffer;
         	{
 	        	type_ASAC_Zigbee_interface_request *pzmessage_rx = (type_ASAC_Zigbee_interface_request *)&(p->body);
         		switch(pzmessage_rx->code)
         		{
+        			case enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req:
+        			{
+        				enum_input_cluster_register_reply_retcode r = enum_input_cluster_register_reply_retcode_OK;
+        				type_ASAC_ZigBee_interface_network_input_cluster_register_req * p_body_request = &pzmessage_rx->req.input_cluster_register;
+    					if (r == enum_input_cluster_register_reply_retcode_OK)
+        				{
+    						type_input_cluster_table_elem elem;
+    						memset(&elem,0,sizeof(elem));
+    						elem.request = *p_body_request;
+    						memcpy(&elem.si_other, &si_other, slen);
+
+    						enum_add_input_cluster_table_retcode retcode_input_cluster = add_input_cluster(&elem);
+							switch(retcode_input_cluster)
+							{
+								case enum_add_input_cluster_table_retcode_OK :
+								{
+									break;
+								}
+								case enum_add_input_cluster_table_retcode_OK_already_present:
+								{
+									dbg_print(PRINT_LEVEL_WARNING,"already present end-point %u, cluster %u\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+									break;
+								}
+								case enum_add_input_cluster_table_retcode_ERR_no_room:
+								{
+									r = enum_input_cluster_register_reply_retcode_ERR_no_room;
+									dbg_print(PRINT_LEVEL_ERROR,"NO ROOM to add end-point %u, cluster %u\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+									break;
+								}
+								default:
+								{
+									r = enum_add_input_cluster_table_retcode_ERR_unknwon;
+									dbg_print(PRINT_LEVEL_ERROR,"unknown return code %u adding end-point %u, cluster %u\n", (unsigned int)retcode_input_cluster, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+									break;
+								}
+							}
+#define def_print_walk_ep_clustersid
+#ifdef def_print_walk_ep_clustersid
+							walk_endpoints_clusters_init();
+							type_endpoint_cluster ec;
+							while(is_OK_walk_endpoints_clusters_next(&ec))
+							{
+								int i;
+								dbg_print(PRINT_LEVEL_INFO,"ENDPOINT %u\n", ec.endpoint);
+								for (i = 0; i < ec.num_clusters; i++)
+								{
+									dbg_print(PRINT_LEVEL_INFO,"\tcluster %u\n", ec.clusters_id[i]);
+								}
+							}
+#endif
+        				}
+
+        				{
+                    		type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
+                    		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req;
+                    		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),input_cluster_register);
+                    		type_ASAC_ZigBee_interface_network_input_cluster_register_reply * p_icr_reply = &zmessage_tx.reply.input_cluster_register;
+
+                    		p_icr_reply->endpoint = p_body_request->endpoint;
+                    		p_icr_reply->input_cluster_id = p_body_request->input_cluster_id;
+                    		p_icr_reply->retcode = r ;
+
+                    		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &si_other))
+                    		{
+                    			dbg_print(PRINT_LEVEL_INFO,"end-point %u, cluster %u registered OK\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+                    		}
+        				}
+        				break;
+        			}
+
+        			case enum_ASAC_ZigBee_interface_command_network_input_cluster_unregister_req:
+        			{
+        				enum_input_cluster_unregister_reply_retcode r = enum_input_cluster_unregister_reply_retcode_OK;
+        				type_ASAC_ZigBee_interface_network_input_cluster_unregister_req * p_body_request = &pzmessage_rx->req.input_cluster_unregister;
+    					if (r == enum_input_cluster_unregister_reply_retcode_OK)
+        				{
+    						type_ASAC_ZigBee_interface_network_input_cluster_register_req reg;
+    						reg.endpoint = p_body_request->endpoint;
+    						reg.input_cluster_id = p_body_request->input_cluster_id;
+    						type_input_cluster_table_elem elem;
+    						memset(&elem,0,sizeof(elem));
+    						elem.request = reg;
+    						memcpy(&elem.si_other, &si_other, slen);
+
+    						enum_remove_input_cluster_table_retcode retcode_input_cluster = remove_input_cluster(&elem);
+							switch(retcode_input_cluster)
+							{
+								case enum_remove_input_cluster_table_retcode_OK :
+								{
+									break;
+								}
+								case enum_remove_input_cluster_table_retcode_ERR_not_found:
+								default:
+								{
+									r = enum_input_cluster_unregister_reply_retcode_ERR_not_found;
+									dbg_print(PRINT_LEVEL_ERROR,"unable to find end-point %u, cluster %u to un-register\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+									break;
+								}
+							}
+#define def_print_walk_ep_clustersid
+#ifdef def_print_walk_ep_clustersid
+							walk_endpoints_clusters_init();
+							type_endpoint_cluster ec;
+							while(is_OK_walk_endpoints_clusters_next(&ec))
+							{
+								int i;
+								dbg_print(PRINT_LEVEL_INFO,"ENDPOINT %u\n", ec.endpoint);
+								for (i = 0; i < ec.num_clusters; i++)
+								{
+									dbg_print(PRINT_LEVEL_INFO,"\tcluster %u\n", ec.clusters_id[i]);
+								}
+							}
+#endif
+        				}
+
+        				{
+                    		type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
+                    		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_input_cluster_unregister_req;
+                    		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),input_cluster_unregister);
+                    		type_ASAC_ZigBee_interface_network_input_cluster_unregister_reply * p_icr_reply = &zmessage_tx.reply.input_cluster_unregister;
+
+                    		p_icr_reply->endpoint = p_body_request->endpoint;
+                    		p_icr_reply->input_cluster_id = p_body_request->input_cluster_id;
+                    		p_icr_reply->retcode = r ;
+
+                    		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &si_other))
+                    		{
+                    			dbg_print(PRINT_LEVEL_INFO,"unregistered end-point %u, cluster %u, return code %u\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id, (unsigned int )p_icr_reply->retcode);
+                    		}
+        				}
+        				break;
+        			}
+
         			case enum_ASAC_ZigBee_interface_command_network_echo_req:
         			{
-                		type_ASAC_Zigbee_interface_request zmessage_tx = {0};
+        				type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
                 		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_echo_req;
-                		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_req((&zmessage_tx),echo);
-                		type_ASAC_ZigBee_interface_network_echo_req * p_echo_req = &zmessage_tx.req.echo;
+                		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),echo);
+                		type_ASAC_ZigBee_interface_network_echo_reply * p_echo_req = &zmessage_tx.reply.echo;
                 		snprintf((char*)p_echo_req->message_to_echo,sizeof(p_echo_req->message_to_echo),"%s", pzmessage_rx->req.echo.message_to_echo);
 
-                		type_struct_ASACSOCKET_msg amessage_tx;
-                		memset(&amessage_tx,0,sizeof(amessage_tx));
-
-                		unsigned int amessage_tx_size = 0;
-                		enum_build_ASACSOCKET_formatted_message r_build = build_ASACSOCKET_formatted_message(&amessage_tx, (char *)&zmessage_tx, zmessage_size, &amessage_tx_size);
-                		if (r_build == enum_build_ASACSOCKET_formatted_message_OK)
+                		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &si_other))
                 		{
-            				unsigned int slen=sizeof(si_other);
-            				//send the message
-            				if (sendto(phss->socket_fd, (char*)&amessage_tx, amessage_tx_size , 0 , (struct sockaddr *) &si_other, slen)==-1)
-            				{
-            					dbg_print(PRINT_LEVEL_ERROR,"error on sendto()");
-            				}
-            				else
-            				{
-            					dbg_print(PRINT_LEVEL_INFO,"message echo sent OK: %s\n", p_echo_req->message_to_echo);
-            				}
+                			dbg_print(PRINT_LEVEL_INFO,"message echo sent OK: %s\n", p_echo_req->message_to_echo);
                 		}
+
         				break;
         			}
         			default:

@@ -8,6 +8,7 @@ C_SRCS += \
 ../src/ZigBee_messages.c \
 ../src/crc32.c \
 ../src/dataSendRcv.c \
+../src/input_cluster_table.c \
 ../src/main.c \
 ../src/my_queues.c \
 ../src/server_thread.c \
@@ -19,6 +20,7 @@ OBJS += \
 ./src/ZigBee_messages.o \
 ./src/crc32.o \
 ./src/dataSendRcv.o \
+./src/input_cluster_table.o \
 ./src/main.o \
 ./src/my_queues.o \
 ./src/server_thread.o \
@@ -30,6 +32,7 @@ C_DEPS += \
 ./src/ZigBee_messages.d \
 ./src/crc32.d \
 ./src/dataSendRcv.d \
+./src/input_cluster_table.d \
 ./src/main.d \
 ./src/my_queues.d \
 ./src/server_thread.d \

@@ -401,7 +401,7 @@ static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg)
 
 	if (msg->Status == MT_RPC_SUCCESS)
 	{
-		consolePrint("[%lu]Message %i transmitted successfully!\n", get_system_time_ms(), (int)msg->TransId);
+		//consolePrint("[%lu]Message %i transmitted successfully!\n", get_system_time_ms(), (int)msg->TransId);
 	}
 	else
 	{
@@ -409,16 +409,27 @@ static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg)
 	}
 	return msg->Status;
 }
+static unsigned int txrx_req;
+static unsigned int txrx_ack;
+static IncomingMsgFormat_t txrx_i;
 static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 {
 
-	consolePrint(
-	        "\nIncoming Message from Endpoint 0x%02X and Address 0x%04X:\n",
-	        msg->SrcEndpoint, msg->SrcAddr);
 	msg->Data[msg->Len] = '\0';
-	consolePrint("%s\n", (char*) msg->Data);
-	consolePrint(
-	        "\nEnter message to send or type CHANGE to change the destination \nor QUIT to exit:\n");
+	if (strncmp((char*)msg->Data,"TXRX",4) == 0 )
+	{
+		txrx_i = *msg;
+		txrx_req ++;
+	}
+	else
+	{
+		consolePrint("%s\n", (char*) msg->Data);
+		consolePrint(
+		        "\nIncoming Message from Endpoint 0x%02X and Address 0x%04X:\n",
+		        msg->SrcEndpoint, msg->SrcAddr);
+		consolePrint(
+		        "\nEnter message to send or type CHANGE to change the destination \nor QUIT to exit:\n");
+	}
 
 	return 0;
 }
@@ -546,7 +557,7 @@ static int32_t startNetwork(void)
 		}
 	} while (sCh[0] != 'y' && sCh[0] != 'Y' && sCh[0] != 'n' && sCh[0] != 'N');
 #else
-//#define def_new_network
+#define def_new_network
 #ifdef def_new_network
 	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
 	newNwk = 1;
@@ -787,12 +798,36 @@ uint32_t appInit(void)
 	return 0;
 }
 uint8_t initDone = 0;
+unsigned int suspend_rx_ack;
+unsigned int suspend_rx_req;
+unsigned int end_suspend_rx_ack;
+unsigned int end_suspend_rx_req;
+unsigned int do_suspend_rx;
+
+
 void* appMsgProcess(void *argument)
 {
 
-	if (initDone)
+	if (initDone )
 	{
-		//rpcWaitMqClientMsg(10000);
+		if (do_suspend_rx)
+		{
+			usleep(1000);
+		}
+		else
+		{
+			rpcWaitMqClientMsg(10);
+		}
+	}
+	if (suspend_rx_req != suspend_rx_ack)
+	{
+		suspend_rx_ack = suspend_rx_req;
+		do_suspend_rx = 1;
+	}
+	else if (end_suspend_rx_req != end_suspend_rx_ack)
+	{
+		end_suspend_rx_ack = end_suspend_rx_req;
+		do_suspend_rx = 0;
 	}
 
 	return 0;
@@ -855,7 +890,7 @@ void* appProcess(void *argument)
 		DataRequest.DstEndpoint = (uint8_t) attget;
 #else
 		//DataRequest.DstAddr =  (uint16_t) 0xed53;
-		DataRequest.DstAddr =  (uint16_t) 0xcbef;
+		DataRequest.DstAddr =  (uint16_t) 0xfa24;
 
 		DataRequest.DstEndpoint = (uint8_t) 1;
 #endif
@@ -875,8 +910,8 @@ void* appProcess(void *argument)
 		while (1)
 		{
 			//initDone = 0;
-#if 1
 			unsigned int message_id = 0;
+#ifdef def_use_only_zigbee_queue_messages
 			unsigned int is_element_in_queue = 0;
         	while(!is_element_in_queue)
         	{
@@ -893,10 +928,11 @@ void* appProcess(void *argument)
         	}
 
 #else
+#define def_test_txrx
+#ifndef def_test_txrx
 			consolePrint(
 			        "Enter message to send or type CHANGE to change the destination\n");
 			consolePrint("or QUIT to exit\n");
-
 			consoleGetLine(cmd, 128);
 			//initDone = 1;
 			if (strcmp(cmd, "CHANGE") == 0)
@@ -909,6 +945,36 @@ void* appProcess(void *argument)
 				break;
 			}
 #endif
+#ifdef def_test_txrx
+			if (txrx_req != txrx_ack)
+			{
+//				unsigned int nloop;
+
+				//nloop = 0;
+//				suspend_rx_req ++;
+//				while(suspend_rx_req !=suspend_rx_ack &&++nloop<100)
+//				{
+//					usleep(1000);
+//				}
+				DataRequest.DstAddr = txrx_i.SrcAddr;
+				unsigned int len = snprintf((char*)DataRequest.Data, sizeof(DataRequest.Data), "%s",txrx_i.Data);
+				DataRequest.Len = len;
+				txrx_ack = txrx_req;
+				initDone = 0;
+				afDataRequest(&DataRequest);
+				initDone = 1;
+				end_suspend_rx_req ++;
+//				nloop = 0;
+//				while(end_suspend_rx_req != end_suspend_rx_ack &&++nloop<100)
+//				{
+//					usleep(1000);
+//				}
+			}
+			usleep(1000);
+			continue;
+#endif
+#endif
+#ifndef def_test_txrx
 			static uint8_t transId;
 			DataRequest.TransID = transId++;
 			printf("[%lu]radio is sending message %i: %20s\n", get_system_time_ms(), (int)DataRequest.TransID, cmd);
@@ -926,6 +992,7 @@ void* appProcess(void *argument)
 				printf("[%lu]end of rpcWaitMqClientMsg \n", get_system_time_ms());
 			}
 			initDone = 1;
+#endif
 		}
 
 	}

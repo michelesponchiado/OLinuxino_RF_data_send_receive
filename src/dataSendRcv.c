@@ -90,6 +90,7 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg);
 //SYS Callbacks
 
 static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg);
+static uint8_t mtSysSetTxPowerSrspCb(SetTxPowerSrspFormat_t *msg);
 
 //AF callbacks
 static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg);
@@ -124,8 +125,12 @@ unsigned long get_system_time_ms(void)
 
 // SYS callbacks
 static mtSysCb_t mtSysCb =
-	{ NULL, NULL, NULL, mtSysResetIndCb, NULL, NULL, NULL, NULL, NULL, NULL,
-	        NULL, NULL, NULL, NULL };
+	{ 		NULL, NULL, NULL,
+			mtSysResetIndCb, NULL, NULL,
+			NULL, NULL, NULL,
+			NULL, NULL, NULL,
+			NULL, mtSysSetTxPowerSrspCb
+	};
 
 static mtZdoCb_t mtZdoCb =
 	{ NULL,       // MT_ZDO_NWK_ADDR_RSP
@@ -195,6 +200,12 @@ static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg)
 
 	consolePrint("ZNP Version: %d.%d.%d\n", msg->MajorRel, msg->MinorRel,
 	        msg->HwRev);
+	return 0;
+}
+
+static uint8_t mtSysSetTxPowerSrspCb(SetTxPowerSrspFormat_t *msg)
+{
+	consolePrint("Radio power set to %i dBm\n", (int)msg->TxPower);
 	return 0;
 }
 
@@ -770,6 +781,28 @@ static void displayDevices(void)
 
 	}
 }
+
+void set_TX_power(void)
+{
+	int8_t pwr_required_dbm = 2;
+	SetTxPowerFormat_t req = {0};
+	*(int8_t*)&req.TxPower = pwr_required_dbm;
+	dbg_print(PRINT_LEVEL_WARNING, "setting the TX power to %i dBm\n", (int)pwr_required_dbm);
+	unsigned int success = 0;
+	switch(sysSetTxPower(&req))
+	{
+		case MT_RPC_SUCCESS:
+		{
+			success = 1;
+			break;
+		}
+		default:
+		{
+			break;
+		}
+	}
+	dbg_print(PRINT_LEVEL_WARNING, "TX power sent %s\n", success?"OK":"**ERROR**");
+}
 /*********************************************************************
  * INTERFACE FUNCTIONS
  */
@@ -905,6 +938,9 @@ void* appProcess(void *argument)
 
 		DataRequest.Radius = 0xEE;
 
+		set_TX_power();
+
+
 		initDone = 1;
 
 		while (1)
@@ -956,6 +992,7 @@ void* appProcess(void *argument)
 //				{
 //					usleep(1000);
 //				}
+
 				DataRequest.DstAddr = txrx_i.SrcAddr;
 				unsigned int len = snprintf((char*)DataRequest.Data, sizeof(DataRequest.Data), "%s",txrx_i.Data);
 				DataRequest.Len = len;

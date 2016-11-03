@@ -15,6 +15,7 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -31,6 +32,12 @@
 #include "ASACSOCKET_check.h"
 #include "ASAC_ZigBee_network_commands.h"
 #include "input_cluster_table.h"
+
+typedef struct _type_handle_socket_in
+{
+	struct sockaddr_in si_other;
+	unsigned int slen;
+}type_handle_socket_in;
 
 static void error(const char *msg)
 {
@@ -220,15 +227,22 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 	type_struct_ASACSOCKET_msg amessage_tx;
 	memset(&amessage_tx,0,sizeof(amessage_tx));
 
+	struct sockaddr_in true_socket_dst = *p_socket_dst;
+#define def_force_reply_to_same_port_where_you_listen
+#ifdef def_force_reply_to_same_port_where_you_listen
+//#warning trying the reply on the very same port where we listen
+	true_socket_dst.sin_port = htons(def_port_number);
+#endif
+
 	unsigned int amessage_tx_size = 0;
 	enum_build_ASACSOCKET_formatted_message r_build = build_ASACSOCKET_formatted_message(&amessage_tx, (char *)p, message_size, &amessage_tx_size);
 	if (r_build == enum_build_ASACSOCKET_formatted_message_OK)
 	{
-		unsigned int slen=sizeof(*p_socket_dst);
+		unsigned int slen=sizeof(true_socket_dst);
 		//send the message
-		if (sendto(socket_fd, (char*)&amessage_tx, amessage_tx_size , 0 , (struct sockaddr *) p_socket_dst, slen)==-1)
+		if (sendto(socket_fd, (char*)&amessage_tx, amessage_tx_size , 0 , (struct sockaddr *) &true_socket_dst, slen)==-1)
 		{
-			dbg_print(PRINT_LEVEL_ERROR,"error on sendto()");
+			syslog(LOG_ERR,"%s: unable to send a message using the sendto()", __func__);
 		}
 		else
 		{
@@ -236,6 +250,211 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 		}
 	}
 	return is_OK;
+}
+
+// register a new cluster
+int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
+{
+	int retcode = 0;
+	enum_input_cluster_register_reply_retcode r = enum_input_cluster_register_reply_retcode_OK;
+	type_ASAC_ZigBee_interface_network_input_cluster_register_req * p_body_request = &pzmessage_rx->req.input_cluster_register;
+	if (r == enum_input_cluster_register_reply_retcode_OK)
+	{
+		type_input_cluster_table_elem elem;
+		memset(&elem,0,sizeof(elem));
+		elem.request = *p_body_request;
+		memcpy(&elem.si_other, &phs_in->si_other, phs_in->slen);
+
+		enum_add_input_cluster_table_retcode retcode_input_cluster = add_input_cluster(&elem);
+		switch(retcode_input_cluster)
+		{
+			case enum_add_input_cluster_table_retcode_OK :
+			{
+				syslog(LOG_INFO,"end-point %u, cluster %u registered OK\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				break;
+			}
+			case enum_add_input_cluster_table_retcode_OK_already_present:
+			{
+				syslog(LOG_WARNING,"Input cluster already present: end-point %u, cluster %u\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				break;
+			}
+			case enum_add_input_cluster_table_retcode_ERR_no_room:
+			{
+				r = enum_input_cluster_register_reply_retcode_ERR_no_room;
+				syslog(LOG_ERR,"NO ROOM to add end-point %u, cluster %u\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				break;
+			}
+			default:
+			{
+				r = enum_add_input_cluster_table_retcode_ERR_unknwon;
+				syslog(LOG_ERR,"unknown return code %u adding end-point %u, cluster %u\n", (unsigned int)retcode_input_cluster, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				break;
+			}
+		}
+// print the clusters?
+//#define def_print_walk_ep_clustersid
+#ifdef def_print_walk_ep_clustersid
+		walk_endpoints_clusters_init();
+		type_endpoint_cluster ec;
+		while(is_OK_walk_endpoints_clusters_next(&ec))
+		{
+			int i;
+			dbg_print(PRINT_LEVEL_INFO,"ENDPOINT %u\n", ec.endpoint);
+			for (i = 0; i < ec.num_clusters; i++)
+			{
+				dbg_print(PRINT_LEVEL_INFO,"\tcluster %u\n", ec.clusters_id[i]);
+			}
+		}
+#endif
+	}
+
+	{
+		type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
+		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req;
+		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),input_cluster_register);
+		type_ASAC_ZigBee_interface_network_input_cluster_register_reply * p_icr_reply = &zmessage_tx.reply.input_cluster_register;
+
+		p_icr_reply->endpoint = p_body_request->endpoint;
+		p_icr_reply->input_cluster_id = p_body_request->input_cluster_id;
+		p_icr_reply->retcode = r ;
+
+		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &phs_in->si_other))
+		{
+			syslog(LOG_INFO,"%s: reply sent OK", __func__);
+		}
+		else
+		{
+			syslog(LOG_ERR,"%s: unable to send the reply", __func__);
+			retcode = -1;
+		}
+	}
+	return retcode;
+}
+
+int handle_ASACZ_request_input_cluster_unregister_req(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
+{
+	int retcode = 0;
+	enum_input_cluster_unregister_reply_retcode r = enum_input_cluster_unregister_reply_retcode_OK;
+	type_ASAC_ZigBee_interface_network_input_cluster_unregister_req * p_body_request = &pzmessage_rx->req.input_cluster_unregister;
+	if (r == enum_input_cluster_unregister_reply_retcode_OK)
+	{
+		type_ASAC_ZigBee_interface_network_input_cluster_register_req reg;
+		reg.endpoint = p_body_request->endpoint;
+		reg.input_cluster_id = p_body_request->input_cluster_id;
+		type_input_cluster_table_elem elem;
+		memset(&elem, 0, sizeof(elem));
+		elem.request = reg;
+		memcpy(&elem.si_other, &phs_in->si_other, phs_in->slen);
+
+		enum_remove_input_cluster_table_retcode retcode_input_cluster = remove_input_cluster(&elem);
+		switch(retcode_input_cluster)
+		{
+			case enum_remove_input_cluster_table_retcode_OK :
+			{
+				syslog(LOG_INFO,"%s: end-point %u, cluster %u un-registered OK\n", __func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				break;
+			}
+			case enum_remove_input_cluster_table_retcode_ERR_not_found:
+			default:
+			{
+				r = enum_input_cluster_unregister_reply_retcode_ERR_not_found;
+				syslog(LOG_ERR,"%s: unable to find end-point %u, cluster %u to un-register\n", __func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				break;
+			}
+		}
+//#define def_print_walk_ep_clustersid
+#ifdef def_print_walk_ep_clustersid
+		walk_endpoints_clusters_init();
+		type_endpoint_cluster ec;
+		while(is_OK_walk_endpoints_clusters_next(&ec))
+		{
+			int i;
+			dbg_print(PRINT_LEVEL_INFO,"ENDPOINT %u\n", ec.endpoint);
+			for (i = 0; i < ec.num_clusters; i++)
+			{
+				dbg_print(PRINT_LEVEL_INFO,"\tcluster %u\n", ec.clusters_id[i]);
+			}
+		}
+#endif
+	}
+
+	{
+		type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
+		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_input_cluster_unregister_req;
+		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),input_cluster_unregister);
+		type_ASAC_ZigBee_interface_network_input_cluster_unregister_reply * p_icr_reply = &zmessage_tx.reply.input_cluster_unregister;
+
+		p_icr_reply->endpoint = p_body_request->endpoint;
+		p_icr_reply->input_cluster_id = p_body_request->input_cluster_id;
+		p_icr_reply->retcode = r ;
+
+		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &phs_in->si_other))
+		{
+			syslog(LOG_INFO,"%s: reply sent OK", __func__);
+		}
+		else
+		{
+			syslog(LOG_ERR,"%s: unable to send the reply", __func__);
+			retcode = -1;
+		}
+	}
+	return retcode;
+}
+
+int handle_ASACZ_request_echo_req(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
+{
+	int retcode = 0;
+	type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
+	zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_echo_req;
+	unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),echo);
+	type_ASAC_ZigBee_interface_network_echo_reply * p_echo_reply = &zmessage_tx.reply.echo;
+	// use a memcpy and not a snprintf to achieve a real echo!
+	memcpy((char*)p_echo_reply->message_to_echo, pzmessage_rx->req.echo.message_to_echo, sizeof(p_echo_reply->message_to_echo));
+
+	if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &phs_in->si_other))
+	{
+		syslog(LOG_INFO,"%s: reply sent OK", __func__);
+	}
+	else
+	{
+		syslog(LOG_ERR,"%s: unable to send the reply", __func__);
+		retcode = -1;
+	}
+	return retcode;
+}
+
+
+
+int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
+{
+	int retcode = 0;
+	switch(pzmessage_rx->code)
+	{
+		case enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req:
+		{
+			retcode = handle_ASACZ_request_input_cluster_register_req(pzmessage_rx, phs_in, phss);
+			break;
+		}
+
+		case enum_ASAC_ZigBee_interface_command_network_input_cluster_unregister_req:
+		{
+			retcode = handle_ASACZ_request_input_cluster_unregister_req(pzmessage_rx, phs_in, phss);
+			break;
+		}
+
+		case enum_ASAC_ZigBee_interface_command_network_echo_req:
+		{
+			retcode = handle_ASACZ_request_echo_req(pzmessage_rx, phs_in, phss);
+			break;
+		}
+
+		default:
+		{
+			syslog(LOG_WARNING,"%s: unknown message code received: 0x%X\n",__func__, pzmessage_rx->code);
+			retcode = -1;
+		}
+	}
+	return retcode;
 }
 
 
@@ -246,18 +465,34 @@ void * simple_server_thread(void *arg)
 	type_handle_server_socket hss;
 	type_handle_server_socket *phss = &hss;
 	memset(phss,0,sizeof(*phss));
+	syslog(LOG_INFO, "Server thread starts");
 
 	// opens the socket
 	phss->socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (phss->socket_fd < 0)
 	{
-		error("ERROR opening socket!");
+		syslog(LOG_ERR, "Error opening the socket: %s", strerror(errno));
+		exit(EXIT_FAILURE);
 	}
+	syslog(LOG_INFO, "Socket created OK");
+
 	// mark the socket as NON blocking
 	{
 		int flags = fcntl(phss->socket_fd, F_GETFL, 0);
-		fcntl(phss->socket_fd, F_SETFL, flags | O_NONBLOCK);
+		if (flags == -1)
+		{
+			syslog(LOG_ERR, "Error reading the socket flags: %s", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+		if (fcntl(phss->socket_fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		{
+			syslog(LOG_ERR, "Error setting the socket flag O_NONBLOCK: %s", strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+
 	}
+	syslog(LOG_INFO, "Socket marked as non blocking OK");
+
 	// do the bind
 	{
 		struct sockaddr_in * p = &phss->server_address;
@@ -266,10 +501,11 @@ void * simple_server_thread(void *arg)
 		p->sin_port = htons(def_port_number);
 		if (bind(phss->socket_fd, (struct sockaddr *) p,sizeof(*p)) < 0)
 		{
-			error("ERROR on bind!");
+			syslog(LOG_ERR, "Unable to bind the socket on port %i: %s",def_port_number, strerror(errno));
+			exit(EXIT_FAILURE);
 		}
 	}
-	printf("server started\n");
+	syslog(LOG_INFO, "Bind OK");
 
 #if def_local_preformatted_test
 
@@ -307,191 +543,43 @@ void * simple_server_thread(void *arg)
 
      } /* end of while */
 #elif def_local_ASACSOCKET_test
+	type_handle_socket_in handle_socket_in;
+	memset(&handle_socket_in, 0, sizeof(handle_socket_in));
+	handle_socket_in.slen = sizeof(handle_socket_in.si_other);
 	// loop handling incoming packets
     while (phss->status_accept_connection != enum_status_accept_connection_ended)
     {
     	// sleep some time
     	usleep(def_sleep_time_between_cycles_us);
-    	struct sockaddr_in si_other;
-    	unsigned int slen = sizeof(si_other);
+
         //try to receive some data, this is a NON-blocking call
-        int n_received_bytes = recvfrom(phss->socket_fd, phss->buffer, sizeof(phss->buffer), 0, (struct sockaddr *) &si_other, &slen);
+        int n_received_bytes = recvfrom(phss->socket_fd, phss->buffer, sizeof(phss->buffer), 0, (struct sockaddr *) &handle_socket_in.si_other, &handle_socket_in.slen);
+        // check if some data have been received
         if (n_received_bytes == -1)
         {
-        	//printf("error on recvfrom()");
+        	// no data available from the socket, this is normal, we'll try later
+        	continue;
         }
-		else
+		//print details of the client/peer and the data received
+		syslog(LOG_INFO,"Received packet from %s, port %d", inet_ntoa(handle_socket_in.si_other.sin_addr), ntohs(handle_socket_in.si_other.sin_port));
+
+		// check if the packet received is a valid message or not
+		enum_check_ASACSOCKET_formatted_message retcode_check = check_ASACSOCKET_formatted_message(phss->buffer, n_received_bytes);
+		// was the check OK?
+		if (retcode_check != enum_check_ASACSOCKET_formatted_message_OK)
 		{
-	        //print details of the client/peer and the data received
-			dbg_print(PRINT_LEVEL_INFO,"Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
-			enum_check_ASACSOCKET_formatted_message retcode_check = check_ASACSOCKET_formatted_message(phss->buffer, n_received_bytes);
-			if ( retcode_check != enum_check_ASACSOCKET_formatted_message_OK)
-			{
-		        dbg_print(PRINT_LEVEL_ERROR,"ERROR %i ON Data: %*.*s\n", (int)retcode_check , n_received_bytes,n_received_bytes,phss->buffer);
-		        //exit(1);
-			}
-	        type_struct_ASACSOCKET_msg * p = (type_struct_ASACSOCKET_msg *)phss->buffer;
-        	{
-	        	type_ASAC_Zigbee_interface_request *pzmessage_rx = (type_ASAC_Zigbee_interface_request *)&(p->body);
-        		switch(pzmessage_rx->code)
-        		{
-        			case enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req:
-        			{
-        				enum_input_cluster_register_reply_retcode r = enum_input_cluster_register_reply_retcode_OK;
-        				type_ASAC_ZigBee_interface_network_input_cluster_register_req * p_body_request = &pzmessage_rx->req.input_cluster_register;
-    					if (r == enum_input_cluster_register_reply_retcode_OK)
-        				{
-    						type_input_cluster_table_elem elem;
-    						memset(&elem,0,sizeof(elem));
-    						elem.request = *p_body_request;
-    						memcpy(&elem.si_other, &si_other, slen);
-
-    						enum_add_input_cluster_table_retcode retcode_input_cluster = add_input_cluster(&elem);
-							switch(retcode_input_cluster)
-							{
-								case enum_add_input_cluster_table_retcode_OK :
-								{
-									break;
-								}
-								case enum_add_input_cluster_table_retcode_OK_already_present:
-								{
-									dbg_print(PRINT_LEVEL_WARNING,"already present end-point %u, cluster %u\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
-									break;
-								}
-								case enum_add_input_cluster_table_retcode_ERR_no_room:
-								{
-									r = enum_input_cluster_register_reply_retcode_ERR_no_room;
-									dbg_print(PRINT_LEVEL_ERROR,"NO ROOM to add end-point %u, cluster %u\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
-									break;
-								}
-								default:
-								{
-									r = enum_add_input_cluster_table_retcode_ERR_unknwon;
-									dbg_print(PRINT_LEVEL_ERROR,"unknown return code %u adding end-point %u, cluster %u\n", (unsigned int)retcode_input_cluster, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
-									break;
-								}
-							}
-#define def_print_walk_ep_clustersid
-#ifdef def_print_walk_ep_clustersid
-							walk_endpoints_clusters_init();
-							type_endpoint_cluster ec;
-							while(is_OK_walk_endpoints_clusters_next(&ec))
-							{
-								int i;
-								dbg_print(PRINT_LEVEL_INFO,"ENDPOINT %u\n", ec.endpoint);
-								for (i = 0; i < ec.num_clusters; i++)
-								{
-									dbg_print(PRINT_LEVEL_INFO,"\tcluster %u\n", ec.clusters_id[i]);
-								}
-							}
-#endif
-        				}
-
-        				{
-                    		type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
-                    		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req;
-                    		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),input_cluster_register);
-                    		type_ASAC_ZigBee_interface_network_input_cluster_register_reply * p_icr_reply = &zmessage_tx.reply.input_cluster_register;
-
-                    		p_icr_reply->endpoint = p_body_request->endpoint;
-                    		p_icr_reply->input_cluster_id = p_body_request->input_cluster_id;
-                    		p_icr_reply->retcode = r ;
-
-                    		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &si_other))
-                    		{
-                    			dbg_print(PRINT_LEVEL_INFO,"end-point %u, cluster %u registered OK\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
-                    		}
-        				}
-        				break;
-        			}
-
-        			case enum_ASAC_ZigBee_interface_command_network_input_cluster_unregister_req:
-        			{
-        				enum_input_cluster_unregister_reply_retcode r = enum_input_cluster_unregister_reply_retcode_OK;
-        				type_ASAC_ZigBee_interface_network_input_cluster_unregister_req * p_body_request = &pzmessage_rx->req.input_cluster_unregister;
-    					if (r == enum_input_cluster_unregister_reply_retcode_OK)
-        				{
-    						type_ASAC_ZigBee_interface_network_input_cluster_register_req reg;
-    						reg.endpoint = p_body_request->endpoint;
-    						reg.input_cluster_id = p_body_request->input_cluster_id;
-    						type_input_cluster_table_elem elem;
-    						memset(&elem,0,sizeof(elem));
-    						elem.request = reg;
-    						memcpy(&elem.si_other, &si_other, slen);
-
-    						enum_remove_input_cluster_table_retcode retcode_input_cluster = remove_input_cluster(&elem);
-							switch(retcode_input_cluster)
-							{
-								case enum_remove_input_cluster_table_retcode_OK :
-								{
-									break;
-								}
-								case enum_remove_input_cluster_table_retcode_ERR_not_found:
-								default:
-								{
-									r = enum_input_cluster_unregister_reply_retcode_ERR_not_found;
-									dbg_print(PRINT_LEVEL_ERROR,"unable to find end-point %u, cluster %u to un-register\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
-									break;
-								}
-							}
-#define def_print_walk_ep_clustersid
-#ifdef def_print_walk_ep_clustersid
-							walk_endpoints_clusters_init();
-							type_endpoint_cluster ec;
-							while(is_OK_walk_endpoints_clusters_next(&ec))
-							{
-								int i;
-								dbg_print(PRINT_LEVEL_INFO,"ENDPOINT %u\n", ec.endpoint);
-								for (i = 0; i < ec.num_clusters; i++)
-								{
-									dbg_print(PRINT_LEVEL_INFO,"\tcluster %u\n", ec.clusters_id[i]);
-								}
-							}
-#endif
-        				}
-
-        				{
-                    		type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
-                    		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_input_cluster_unregister_req;
-                    		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),input_cluster_unregister);
-                    		type_ASAC_ZigBee_interface_network_input_cluster_unregister_reply * p_icr_reply = &zmessage_tx.reply.input_cluster_unregister;
-
-                    		p_icr_reply->endpoint = p_body_request->endpoint;
-                    		p_icr_reply->input_cluster_id = p_body_request->input_cluster_id;
-                    		p_icr_reply->retcode = r ;
-
-                    		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &si_other))
-                    		{
-                    			dbg_print(PRINT_LEVEL_INFO,"unregistered end-point %u, cluster %u, return code %u\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id, (unsigned int )p_icr_reply->retcode);
-                    		}
-        				}
-        				break;
-        			}
-
-        			case enum_ASAC_ZigBee_interface_command_network_echo_req:
-        			{
-        				type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
-                		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_echo_req;
-                		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),echo);
-                		type_ASAC_ZigBee_interface_network_echo_reply * p_echo_req = &zmessage_tx.reply.echo;
-                		snprintf((char*)p_echo_req->message_to_echo,sizeof(p_echo_req->message_to_echo),"%s", pzmessage_rx->req.echo.message_to_echo);
-
-                		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &si_other))
-                		{
-                			dbg_print(PRINT_LEVEL_INFO,"message echo sent OK: %s\n", p_echo_req->message_to_echo);
-                		}
-
-        				break;
-        			}
-        			default:
-        			{
-        				dbg_print(PRINT_LEVEL_ERROR,"unknown message code received: %u\n", pzmessage_rx->code);
-        			}
-        		}
-        	}
+			syslog(LOG_ERR,"Error %i / %s", (int)retcode_check , string_of_check_ASACSOCKET_return_code(retcode_check));
+			continue;
 		}
+		syslog(LOG_INFO,"The message is valid");
 
-
+		type_struct_ASACSOCKET_msg * p = (type_struct_ASACSOCKET_msg *)phss->buffer;
+		type_ASAC_Zigbee_interface_request *pzmessage_rx = (type_ASAC_Zigbee_interface_request *)&(p->body);
+		// handle the request
+		if (handle_ASACZ_request(pzmessage_rx, &handle_socket_in, phss) < 0)
+		{
+			syslog(LOG_ERR,"request handled with error");
+		}
      } /* end of while */
 
 #endif

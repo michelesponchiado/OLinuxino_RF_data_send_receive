@@ -86,3 +86,6 @@ enum_check_ASACSOCKET_formatted_message check_ASACSOCKET_formatted_message(char 
 
 // useful to build a message in the proper format to be sent through ASACSOCKET message
 enum_build_ASACSOCKET_formatted_message build_ASACSOCKET_formatted_message(type_struct_ASACSOCKET_msg * p, char *buffer, int buf_len, unsigned int *pui_message_size);
+
+// returns a string describing the error code
+const char * string_of_check_ASACSOCKET_return_code(enum_check_ASACSOCKET_formatted_message e);

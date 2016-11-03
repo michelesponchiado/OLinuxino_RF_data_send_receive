@@ -16,6 +16,60 @@
 
 type_struct_ASACSOCKET_check_stats ASACSOCKET_check_stats;
 
+const char * string_of_check_ASACSOCKET_return_code(enum_check_ASACSOCKET_formatted_message e)
+{
+	const char * p = "ERR_unknown";
+	switch(e)
+	{
+		case enum_check_ASACSOCKET_formatted_message_OK:
+		{
+			p = "OK";
+			break;
+		}
+		case enum_check_ASACSOCKET_formatted_message_ERR_key_header:
+		{
+			p = "ERR_key_header";
+			break;
+		}
+		case enum_check_ASACSOCKET_formatted_message_ERR_length_too_short_no_header:
+		{
+			p = "ERR_length_too_short_no_header";
+			break;
+		}
+		case enum_check_ASACSOCKET_formatted_message_ERR_length_too_short_no_body:
+		{
+			p = "ERR_length_too_short_no_body";
+			break;
+		}
+		case enum_check_ASACSOCKET_formatted_message_ERR_length_too_short_no_footer:
+		{
+			p = "ERR_length_too_short_no_footer";
+			break;
+		}
+		case enum_check_ASACSOCKET_formatted_message_ERR_length_too_big:
+		{
+			p = "ERR_length_too_big";
+			break;
+		}
+		case enum_check_ASACSOCKET_formatted_message_ERR_crc:
+		{
+			p = "ERR_crc";
+			break;
+		}
+		case enum_check_ASACSOCKET_formatted_message_ERR_key_footer:
+		{
+			p = "ERR_key_footer";
+			break;
+		}
+		case enum_check_ASACSOCKET_formatted_message_ERR_unknown:
+		{
+			p = "ERR_unknown";
+			break;
+		}
+	};
+	return p;
+}
+
 // useful to check whether a received message is in the proper format or not
 enum_check_ASACSOCKET_formatted_message check_ASACSOCKET_formatted_message(char *buffer, int buf_len)
 {

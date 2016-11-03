@@ -38,7 +38,8 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
-
+#include <unistd.h>
+#include <syslog.h>
 #include "rpc.h"
 #include "dataSendRcv.h"
 
@@ -84,9 +85,29 @@ void *appInMessageTask(void *argument)
 		appMsgProcess(NULL);
 	}
 }
+static void open_syslog(void)
+{
+// this goes straight to /var/log/syslog file
+//	Nov  3 12:16:53 localhost ASAC_Zlog[13149]: Log just started
+//	Nov  3 12:16:53 localhost ASAC_Zlog[13149]: The application starts
+
+	openlog("ASAC_Zlog", LOG_PID|LOG_CONS, LOG_DAEMON);
+	syslog(LOG_INFO, "Log just started");
+}
+static void my_at_exit(void)
+{
+	syslog(LOG_INFO, "The application closes");
+	// at exit, close system log
+	closelog();
+}
 
 int main(int argc, char* argv[])
 {
+	// open the system log
+	open_syslog();
+	syslog(LOG_INFO, "The application starts");
+	atexit(my_at_exit);
+
 
 #ifndef def_test_without_Zigbee
 	char * selected_serial_port;
@@ -134,17 +155,19 @@ int main(int argc, char* argv[])
 
 // STARTING THE SOCKET SERVER
 
-	printf("Server starting...\n");
+	syslog(LOG_INFO, "Creating the main thread");
 	type_handle_server_socket handle_server_socket = {0};
 	int thread_create_retcode = pthread_create(&handle_server_socket.thread_id, NULL,&simple_server_thread, &handle_server_socket);
 	// check the return code
 	if (thread_create_retcode != 0)
 	{
-		perror("ERROR on main thread_create!");
+		syslog(LOG_ERR, "Unable to create the main thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
+		exit(EXIT_FAILURE);
 	}
-	printf("Server started OK\n");
+	syslog(LOG_INFO, "Main thread created OK");
 	while(!handle_server_socket.is_terminated)
 	{
+		// sleep some time and do basically nothing
 		usleep(1000000);
 //#define def_test_shutdown
 #ifdef def_test_shutdown

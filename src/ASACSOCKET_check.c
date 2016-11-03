@@ -62,6 +62,7 @@ const char * string_of_check_ASACSOCKET_return_code(enum_check_ASACSOCKET_format
 			break;
 		}
 		case enum_check_ASACSOCKET_formatted_message_ERR_unknown:
+		default:
 		{
 			p = "ERR_unknown";
 			break;

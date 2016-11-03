@@ -270,24 +270,24 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 		{
 			case enum_add_input_cluster_table_retcode_OK :
 			{
-				syslog(LOG_INFO,"end-point %u, cluster %u registered OK\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				syslog(LOG_INFO,"%s: end-point %u, cluster %u registered OK\n",__func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
 			case enum_add_input_cluster_table_retcode_OK_already_present:
 			{
-				syslog(LOG_WARNING,"Input cluster already present: end-point %u, cluster %u\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				syslog(LOG_WARNING,"%s: Input cluster already present: end-point %u, cluster %u\n",__func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
 			case enum_add_input_cluster_table_retcode_ERR_no_room:
 			{
 				r = enum_input_cluster_register_reply_retcode_ERR_no_room;
-				syslog(LOG_ERR,"NO ROOM to add end-point %u, cluster %u\n", (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				syslog(LOG_ERR,"%s: NO ROOM to add end-point %u, cluster %u\n", __func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
 			default:
 			{
 				r = enum_add_input_cluster_table_retcode_ERR_unknwon;
-				syslog(LOG_ERR,"unknown return code %u adding end-point %u, cluster %u\n", (unsigned int)retcode_input_cluster, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				syslog(LOG_ERR,"%s: unknown return code %u adding end-point %u, cluster %u\n", __func__, (unsigned int)retcode_input_cluster, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
 		}
@@ -465,33 +465,33 @@ void * simple_server_thread(void *arg)
 	type_handle_server_socket hss;
 	type_handle_server_socket *phss = &hss;
 	memset(phss,0,sizeof(*phss));
-	syslog(LOG_INFO, "Server thread starts");
+	syslog(LOG_INFO, "%s: Server thread starts", __func__);
 
 	// opens the socket
 	phss->socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
 	if (phss->socket_fd < 0)
 	{
-		syslog(LOG_ERR, "Error opening the socket: %s", strerror(errno));
+		syslog(LOG_ERR, "%s: Error opening the socket: %s", __func__, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
-	syslog(LOG_INFO, "Socket created OK");
+	syslog(LOG_INFO, "%s: Socket created OK", __func__);
 
 	// mark the socket as NON blocking
 	{
 		int flags = fcntl(phss->socket_fd, F_GETFL, 0);
 		if (flags == -1)
 		{
-			syslog(LOG_ERR, "Error reading the socket flags: %s", strerror(errno));
+			syslog(LOG_ERR, "%s: Error reading the socket flags: %s",__func__, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 		if (fcntl(phss->socket_fd, F_SETFL, flags | O_NONBLOCK) == -1)
 		{
-			syslog(LOG_ERR, "Error setting the socket flag O_NONBLOCK: %s", strerror(errno));
+			syslog(LOG_ERR, "%s: Error setting the socket flag O_NONBLOCK: %s",__func__, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 
 	}
-	syslog(LOG_INFO, "Socket marked as non blocking OK");
+	syslog(LOG_INFO, "%s: Socket marked as non blocking OK",__func__);
 
 	// do the bind
 	{
@@ -501,11 +501,11 @@ void * simple_server_thread(void *arg)
 		p->sin_port = htons(def_port_number);
 		if (bind(phss->socket_fd, (struct sockaddr *) p,sizeof(*p)) < 0)
 		{
-			syslog(LOG_ERR, "Unable to bind the socket on port %i: %s",def_port_number, strerror(errno));
+			syslog(LOG_ERR, "%s: Unable to bind the socket on port %i: %s",__func__,def_port_number, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 	}
-	syslog(LOG_INFO, "Bind OK");
+	syslog(LOG_INFO, "%s: Bind OK", __func__);
 
 #if def_local_preformatted_test
 
@@ -561,24 +561,24 @@ void * simple_server_thread(void *arg)
         	continue;
         }
 		//print details of the client/peer and the data received
-		syslog(LOG_INFO,"Received packet from %s, port %d", inet_ntoa(handle_socket_in.si_other.sin_addr), ntohs(handle_socket_in.si_other.sin_port));
+		syslog(LOG_INFO,"%s: Received packet from %s, port %d", __func__, inet_ntoa(handle_socket_in.si_other.sin_addr), ntohs(handle_socket_in.si_other.sin_port));
 
 		// check if the packet received is a valid message or not
 		enum_check_ASACSOCKET_formatted_message retcode_check = check_ASACSOCKET_formatted_message(phss->buffer, n_received_bytes);
 		// was the check OK?
 		if (retcode_check != enum_check_ASACSOCKET_formatted_message_OK)
 		{
-			syslog(LOG_ERR,"Error %i / %s", (int)retcode_check , string_of_check_ASACSOCKET_return_code(retcode_check));
+			syslog(LOG_ERR,"%s: Check error %i / %s", __func__, (int)retcode_check , string_of_check_ASACSOCKET_return_code(retcode_check));
 			continue;
 		}
-		syslog(LOG_INFO,"The message is valid");
+		syslog(LOG_INFO,"%s: The message is valid",__func__);
 
 		type_struct_ASACSOCKET_msg * p = (type_struct_ASACSOCKET_msg *)phss->buffer;
 		type_ASAC_Zigbee_interface_request *pzmessage_rx = (type_ASAC_Zigbee_interface_request *)&(p->body);
 		// handle the request
 		if (handle_ASACZ_request(pzmessage_rx, &handle_socket_in, phss) < 0)
 		{
-			syslog(LOG_ERR,"request handled with error");
+			syslog(LOG_ERR,"%s: request handled with error", __func__);
 		}
      } /* end of while */
 

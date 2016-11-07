@@ -60,7 +60,7 @@
  */
 static mtZdoCb_t mtZdoCbs;
 extern uint8_t srspRpcBuff[RPC_MAX_LEN];
-extern uint8_t srspRpcLen;
+//extern uint8_t srspRpcLen;
 
 /*********************************************************************
  * LOCAL FUNCTIONS

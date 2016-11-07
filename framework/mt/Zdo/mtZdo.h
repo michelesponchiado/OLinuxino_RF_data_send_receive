@@ -502,11 +502,11 @@ typedef struct
 
 typedef struct
 {
-	uint16_t SrcAddr;
-	uint8_t Status;
-	uint16_t NwkAddr;
-	uint8_t ActiveEPCount;
-	uint8_t ActiveEPList[77];
+	uint16_t SrcAddr;			// The message’s source network address
+	uint8_t Status;				// This field indicates either SUCCESS(0) or FAILURE(1).
+	uint16_t NwkAddr;			// Device’s short address that this response describes.
+	uint8_t ActiveEPCount;		// Number of active end-points in the list
+	uint8_t ActiveEPList[77];	// Array of active end-points on this device.
 } ActiveEpRspFormat_t;
 
 typedef struct

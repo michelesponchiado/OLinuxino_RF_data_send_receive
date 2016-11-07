@@ -149,6 +149,7 @@ uint8_t afDataRequest(DataRequestFormat_t *req)
 
 		if (status == MT_RPC_SUCCESS)
 		{
+#warning is this delay really needed?
 			rpcWaitMqClientMsg(50);
 		}
 

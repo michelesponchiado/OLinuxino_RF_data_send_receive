@@ -197,4 +197,21 @@ received_message_callback
 	1				transaction_id				the transaction identifier
 	1				message_length				the number of bytes in the message
 	<variable>		message[]					the message received
+	
+	
+* lettura del numero di versione del software server ASACZ
+* registrazione notifica ricezione messaggio: when received a message in endpoint + command, forward the message to <my_address>
+* de-registrazione notifica ricezione messaggio
+* lettura della lista dei dispositivi collegati in rete ASACZ
+  - per ogni dispositivo:
+    : indirizzo IEEE (0 = coordinatore)
+    : indirizzo breve di rete (16 bit)
+    : lista degli endpoint (max 77?)
+    : per ogni endpoint:
+        * lista dei cluster(commands) in ingresso (max 16?)
+        * lista dei cluster(commands) in uscita (max 16?)
+* lettura dello stato della radio (qualità del segnale)
+* check notifiche abilitate al mio indirizzo
+* invio messaggio ad outside world
+
  	

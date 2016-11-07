@@ -59,6 +59,7 @@
 #include "ts_util.h"
 #include "server_thread.h"
 #include "simple_server.h"
+#include "ASACZ_devices_list.h"
 
 void *rpcTask(void *argument)
 {
@@ -94,8 +95,63 @@ static void open_syslog(void)
 	openlog("ASAC_Zlog", LOG_PID|LOG_CONS, LOG_DAEMON);
 	syslog(LOG_INFO, "Log just started");
 }
+
+typedef enum
+{
+	enum_thread_id_rpc,
+	enum_thread_id_app,
+	enum_thread_id_inMessage,
+	enum_thread_id_socket,
+	enum_thread_id_numof
+}enum_thread_id;
+typedef struct _type_thread_id_created_info
+{
+	pthread_t t;
+	uint32_t created_OK;
+}type_thread_id_created_info;
+
+type_thread_id_created_info threads_cancel_info[enum_thread_id_numof];
+
 static void my_at_exit(void)
 {
+	enum_thread_id e;
+	for (e = (enum_thread_id)0; e < enum_thread_id_numof; e++)
+	{
+		if (!threads_cancel_info[e].created_OK)
+		{
+			syslog(LOG_INFO, "Skipping uninitialized thread id %i", (int)e);
+		}
+		else
+		{
+			syslog(LOG_INFO, "Trying to cancel initialized thread id %i", (int)e);
+			threads_cancel_info[e].created_OK = 0;
+			pthread_t t = threads_cancel_info[e].t;
+			int s;
+			s = pthread_cancel(t);
+			if (s != 0)
+			{
+				syslog(LOG_ERR, "Unable to cancel thread id %i", (int)e);
+			}
+			else
+			{
+				void *res;
+				/* Join with thread to see what its exit status was */
+				s = pthread_join(t, &res);
+				if (s != 0)
+				{
+					syslog(LOG_ERR, "Unable to join thread id %i", (int)e);
+				}
+				if (res == PTHREAD_CANCELED)
+				{
+					syslog(LOG_INFO, "Thread id %i canceled OK", (int)e);
+				}
+				else
+				{
+					syslog(LOG_ERR, "Error canceling thread id %i", (int)e);
+				}
+			}
+		}
+	}
 	syslog(LOG_INFO, "The application closes");
 	// at exit, close system log
 	closelog();
@@ -106,12 +162,15 @@ int main(int argc, char* argv[])
 	// open the system log
 	open_syslog();
 	syslog(LOG_INFO, "The application starts");
+	memset(&threads_cancel_info, 0, sizeof(threads_cancel_info));
 	atexit(my_at_exit);
+
+// call the initialization procedures
+	init_ASACZ_device_list();
 
 
 #ifndef def_test_without_Zigbee
 	char * selected_serial_port;
-	pthread_t rpcThread, appThread, inMThread;
 
 	dbg_print(PRINT_LEVEL_INFO, "%s -- %s %s\n", argv[0], __DATE__, __TIME__);
 
@@ -143,28 +202,53 @@ int main(int argc, char* argv[])
 	//init the application thread to register the callbacks
 	appInit();
 
+	int thread_create_retcode = 0;
+
 	//Start the Rx thread
 	dbg_print(PRINT_LEVEL_INFO, "creating RPC thread\n");
-	pthread_create(&rpcThread, NULL, rpcTask, (void *) &serialPortFd);
+	thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_rpc].t, NULL, rpcTask, (void *) &serialPortFd)
+	if (thread_create_retcode != 0)
+	{
+		syslog(LOG_ERR, "Unable to create the rpc thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	threads_cancel_info[enum_thread_id_rpc].created_OK = 1;
 
 	//Start the example thread
 	dbg_print(PRINT_LEVEL_INFO, "creating example thread\n");
-	pthread_create(&appThread, NULL, appTask, NULL);
-	pthread_create(&inMThread, NULL, appInMessageTask, NULL);
+	thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_app].t, NULL, appTask, NULL);
+	if (thread_create_retcode != 0)
+	{
+		syslog(LOG_ERR, "Unable to create the app thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	threads_cancel_info[enum_thread_id_app].created_OK = 1;
+
+	// start the in message thread
+	thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_inMessage].t, NULL, appInMessageTask, NULL);
+	if (thread_create_retcode != 0)
+	{
+		syslog(LOG_ERR, "Unable to create the inMessage thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
+		exit(EXIT_FAILURE);
+	}
+	threads_cancel_info[enum_thread_id_inMessage].created_OK = 1;
+
 #endif
 
 // STARTING THE SOCKET SERVER
 
 	syslog(LOG_INFO, "Creating the main thread");
 	type_handle_server_socket handle_server_socket = {0};
-	int thread_create_retcode = pthread_create(&handle_server_socket.thread_id, NULL,&simple_server_thread, &handle_server_socket);
+	int thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_socket].t, NULL,&simple_server_thread, &handle_server_socket);
 	// check the return code
 	if (thread_create_retcode != 0)
 	{
 		syslog(LOG_ERR, "Unable to create the main thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
 		exit(EXIT_FAILURE);
 	}
+	threads_cancel_info[enum_thread_id_socket].created_OK = 1;
 	syslog(LOG_INFO, "Main thread created OK");
+
 	while(!handle_server_socket.is_terminated)
 	{
 		// sleep some time and do basically nothing

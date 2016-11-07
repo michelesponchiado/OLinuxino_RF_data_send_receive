@@ -44,7 +44,7 @@ typedef enum
 // the structure we use to handle our socket
 typedef struct _type_handle_server_socket
 {
-	pthread_t thread_id;  					// ID returned by pthread_create()
+	//pthread_t thread_id;  					// ID returned by pthread_create()
 	unsigned int shutdown;
 	unsigned int shutdown_ack;
 	int socket_fd;

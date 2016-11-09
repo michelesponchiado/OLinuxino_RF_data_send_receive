@@ -159,6 +159,10 @@ typedef struct _type_ASAC_ZigBee_interface_command_outside_send_message_req
 	uint8_t message_length;				// the number of bytes in the message
 	uint8_t message[def_ASAC_ZigBee_interface_max_size_outside_message];	// the message to send
 }__attribute__((__packed__)) type_ASAC_ZigBee_interface_command_outside_send_message_req ;
+/**
+ * use this define to get the meaningful number of bytes in the outside message request structure
+ */
+#define NUM_BYTES_IN_outside_send_message_req(pm) (sizeof((pm)->dst_id) + sizeof((pm)->message_length) + (pm)->message_length)
 
 // the return codes from the send user message outside
 typedef enum
@@ -194,6 +198,10 @@ typedef struct _type_ASAC_ZigBee_interface_command_received_message_callback
 }__attribute__((__packed__)) type_ASAC_ZigBee_interface_command_received_message_callback ;
 
 
+/**
+ * use this define to get the meaningful number of bytes in the outside message request structure
+ */
+#define NUM_BYTES_IN_command_received(pm) (sizeof((pm)->src_id) + sizeof((pm)->message_length) + (pm)->message_length)
 
 typedef struct _type_ASAC_ZigBee_interface_unknown_reply
 {

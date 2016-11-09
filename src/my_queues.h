@@ -24,7 +24,7 @@ typedef struct _type_my_queue_indexes
 	unsigned int num_of;
 }type_my_queue_indexes;
 
-#define def_size_my_elem_queue 128
+#define def_size_my_elem_queue 256
 typedef struct _type_my_queue_elem
 {
 	uint32_t id;
@@ -32,7 +32,7 @@ typedef struct _type_my_queue_elem
 	uint8_t e[def_size_my_elem_queue];
 }type_my_queue_elem;
 
-#define def_N_my_elem_queue 128
+#define def_N_my_elem_queue 64
 typedef struct _type_my_queue_stats
 {
 	unsigned int num_push_OK;

@@ -8,13 +8,15 @@ C_SRCS += \
 ../src/ASACZ_UDP_server.c \
 ../src/ASACZ_devices_list.c \
 ../src/ASACZ_message_history.c \
-../src/ZigBee_messages.c \
+../src/ZigBee_messages_Rx.c \
+../src/ZigBee_messages_Tx.c \
 ../src/crc32.c \
 ../src/dataSendRcv.c \
 ../src/input_cluster_table.c \
 ../src/main.c \
 ../src/my_queues.c \
 ../src/server_thread.c \
+../src/timeout_utils.c \
 ../src/ts_util.c 
 
 OBJS += \
@@ -22,13 +24,15 @@ OBJS += \
 ./src/ASACZ_UDP_server.o \
 ./src/ASACZ_devices_list.o \
 ./src/ASACZ_message_history.o \
-./src/ZigBee_messages.o \
+./src/ZigBee_messages_Rx.o \
+./src/ZigBee_messages_Tx.o \
 ./src/crc32.o \
 ./src/dataSendRcv.o \
 ./src/input_cluster_table.o \
 ./src/main.o \
 ./src/my_queues.o \
 ./src/server_thread.o \
+./src/timeout_utils.o \
 ./src/ts_util.o 
 
 C_DEPS += \
@@ -36,13 +40,15 @@ C_DEPS += \
 ./src/ASACZ_UDP_server.d \
 ./src/ASACZ_devices_list.d \
 ./src/ASACZ_message_history.d \
-./src/ZigBee_messages.d \
+./src/ZigBee_messages_Rx.d \
+./src/ZigBee_messages_Tx.d \
 ./src/crc32.d \
 ./src/dataSendRcv.d \
 ./src/input_cluster_table.d \
 ./src/main.d \
 ./src/my_queues.d \
 ./src/server_thread.d \
+./src/timeout_utils.d \
 ./src/ts_util.d 
 
 

@@ -58,8 +58,11 @@
 #include "ts_util.h"
 #include "ZigBee_messages.h"
 #include "my_queues.h"
+#include "ASACZ_app.h"
+#include "ASAC_ZigBee_network_commands.h"
 #include "ASACZ_devices_list.h"
 #include "ASACZ_message_history.h"
+#include "timeout_utils.h"
 
 //#define def_test_txrx
 
@@ -85,25 +88,9 @@ static IncomingMsgFormat_t txrx_i;
 uint8_t gSrcEndPoint = 1;
 uint8_t gDstEndPoint = 1;
 
-typedef enum
-{
-	enum_app_status_idle = 0,
-	enum_app_status_init,
-	enum_app_status_flush_messages_init,
-	enum_app_status_flush_messages_do,
-	enum_app_status_start_network,
-	enum_app_status_get_IEEE_address,
-	enum_app_status_sysOsalNvWrite,
-	enum_app_status_set_TX_power,
-	enum_app_status_wait_callbacks,
-	enum_app_status_display_devices_init,
-	enum_app_status_display_devices_do,
-	enum_app_status_display_devices_ends,
-	enum_app_status_rx_msgs,
-	enum_app_status_tx_msgs,
-	enum_app_status_error,
-	enum_app_status_numof
-}enum_app_status;
+#define def_timeout_wait_callbacks_do_ms 10000
+
+
 
 typedef enum
 {
@@ -113,6 +100,7 @@ typedef enum
 	enum_app_error_code_unable_to_sysGetExtAddr,
 	enum_app_error_code_unable_to_sysOsalNvWrite,
 	enum_app_error_code_unable_to_set_TX_power,
+	enum_app_error_code_timeout_waiting_init_callbacks,
 	enum_app_error_code_numof
 }enum_app_error_code;
 
@@ -189,6 +177,8 @@ typedef struct _type_handle_app
 	pthread_mutex_t mtx_id;
 	type_handle_app_IEEE_address IEEE_address;
 	type_handle_app_Tx_power Tx_power;
+	type_my_timeout my_timeout;
+	unsigned int channel_index; // channel index, between 11 and 26
 }type_handle_app;
 static type_handle_app handle_app;
 
@@ -196,6 +186,7 @@ void init_handle_app(void)
 {
 	memset(&handle_app, 0, sizeof(handle_app));
 	handle_app.devState = DEV_HOLD;
+	handle_app.channel_index = 11;
 	pthread_mutex_init(&handle_app.mtx_id, NULL);
 }
 unsigned int get_app_new_trans_id(uint32_t message_id)
@@ -209,12 +200,29 @@ unsigned int get_app_new_trans_id(uint32_t message_id)
 }
 void start_handle_app(void)
 {
+	handle_app.status = enum_app_status_idle;
 	handle_app.start_request++;
+}
+unsigned int is_in_error_app(void)
+{
+	return (handle_app.status == enum_app_status_error) ? 1: 0;
+}
+
+enum_app_status get_app_status(void)
+{
+	return handle_app.status;
+}
+
+void restart_handle_app(void)
+{
+	syslog(LOG_WARNING, "Restart handle app requested");
+	start_handle_app();
 }
 
 static void handle_app_error(enum_app_error_code error_code)
 {
 	handle_app.error_code = error_code;
+	handle_app.status = enum_app_status_error;
 }
 
 
@@ -269,7 +277,7 @@ static uint8_t setNVPanID(uint32_t panId);
 #ifndef CC26xx
 static uint8_t setNVDevType(uint8_t devType);
 #endif
-static int32_t startNetwork(void);
+static int32_t startNetwork(unsigned int channel_index);
 static int32_t registerAf(void);
 
 unsigned long get_system_time_ms(void)
@@ -731,7 +739,34 @@ static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg)
 
 static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 {
+	uint8_t retcode = SUCCESS;
+	// incoming message received, we put it in the received messages queue
 #if 1
+	uint64_t IEEE_address;
+	if (!is_OK_get_IEEE_from_network_short_address(msg->SrcAddr, &IEEE_address))
+	{
+		syslog(LOG_ERR, "Unknown short address 0x%X on incoming message", (uint32_t)msg->SrcAddr);
+		retcode = FAILURE;
+	}
+	else
+	{
+		uint32_t id;
+		type_ASAC_ZigBee_interface_command_received_message_callback m;
+		{
+			type_ASAC_ZigBee_src_id *ph = &m.src_id;
+
+			ph->IEEE_source_address		= IEEE_address;
+			ph->destination_endpoint 	= msg->DstEndpoint;
+			ph->cluster_id 				= msg->ClusterId;
+			ph->source_endpoint 		= msg->SrcEndpoint;
+			ph->transaction_id 			= msg->TransSeqNum;
+		}
+		if (!is_OK_push_Rx_outside_message(&m, &id))
+		{
+			syslog(LOG_ERR, "Unable to put received message in rx queue");
+			retcode = FAILURE;
+		}
+	}
 #else
 
 	msg->Data[msg->Len] = '\0';
@@ -752,7 +787,7 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 		        "\nEnter message to send or type CHANGE to change the destination \nor QUIT to exit:\n");
 	}
 #endif
-	return 0;
+	return retcode;
 }
 
 /********************************************************************
@@ -845,7 +880,7 @@ static uint8_t setNVChanList(uint32_t chanList)
 }
 
 uint8_t dType;
-static int32_t startNetwork(void)
+static int32_t startNetwork(unsigned int channel_index)
 {
 #ifndef CC26xx	
 	char cDevType;
@@ -880,6 +915,7 @@ static int32_t startNetwork(void)
 #else
 #define def_new_network
 #ifdef def_new_network
+	syslog(LOG_INFO, "starting a new network");
 	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
 	newNwk = 1;
 #else
@@ -888,14 +924,15 @@ static int32_t startNetwork(void)
 #endif
 	if (status != MT_RPC_SUCCESS)
 	{
-		dbg_print(PRINT_LEVEL_WARNING, "network start failed\n");
+		syslog(LOG_WARNING, "network startup failed");
 		return -1;
 	}
-	consolePrint("Resetting ZNP\n");
+	syslog(LOG_INFO, "Resetting ZNP");
 	ResetReqFormat_t resReq;
 	resReq.Type = 1;
 	sysResetReq(&resReq);
 	//flush the rsp
+	syslog(LOG_INFO, "Flushing rcp");
 	rpcWaitMqClientMsg(5000);
 
 	if (newNwk)
@@ -931,48 +968,54 @@ static int32_t startNetwork(void)
 		}
 #endif //CC26xx
 		//Select random PAN ID for Coord and join any PAN for RTR/ED
+		syslog(LOG_INFO, "Setting the PAN ID");
 		status = setNVPanID(0xFFFF);
 		if (status != MT_RPC_SUCCESS)
 		{
-			dbg_print(PRINT_LEVEL_WARNING, "setNVPanID failed\n");
+			syslog(LOG_WARNING, "setNVPanID failed");
 			return -1;
 		}
-		consolePrint("Enter channel 11-26:\n");
 #ifdef def_interactive_chan
+		consolePrint("Enter channel 11-26:\n");
 		consoleGetLine(sCh, 128);
 		status = setNVChanList(1 << atoi(sCh));
 #else
-		status = setNVChanList(1 << 11);
+		// this must be between 11 and 26
+#define def_fix_channel 11
+#warning always using fixed channel
+		syslog(LOG_INFO, "Setting the Channel %i", def_fix_channel);
+		status = setNVChanList(1 << def_fix_channel);
 #endif
 		if (status != MT_RPC_SUCCESS)
 		{
-			dbg_print(PRINT_LEVEL_INFO, "setNVPanID failed\n");
+			syslog(LOG_WARNING, "setNVChanList failed on channel %i", def_fix_channel);
 			return -1;
 		}
 
 	}
 
+	syslog(LOG_INFO, "registering the default end point/command 1.6");
 	registerAf();
-	consolePrint("EndPoint: 1\n");
 
+	syslog(LOG_INFO, "zdo init");
 	status = zdoInit();
 	if (status == NEW_NETWORK)
 	{
-		dbg_print(PRINT_LEVEL_INFO, "zdoInit NEW_NETWORK\n");
+		syslog(LOG_INFO, "zdoInit NEW_NETWORK\n");
 		status = MT_RPC_SUCCESS;
 	}
 	else if (status == RESTORED_NETWORK)
 	{
-		dbg_print(PRINT_LEVEL_INFO, "zdoInit RESTORED_NETWORK\n");
+		syslog(LOG_INFO, "zdoInit RESTORED_NETWORK\n");
 		status = MT_RPC_SUCCESS;
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_INFO, "zdoInit failed\n");
+		syslog(LOG_WARNING, "zdoInit failed\n");
 		status = -1;
 	}
 
-	dbg_print(PRINT_LEVEL_INFO, "process zdoStatechange callbacks\n");
+	syslog(LOG_INFO, "process zdoStatechange callbacks\n");
 
 	//flush AREQ ZDO State Change messages
 	while (status != -1)
@@ -999,22 +1042,25 @@ static int32_t startNetwork(void)
 		retcode = zbPermitJoiningReq(&my_join_permit);
 		if ( retcode )
 		{
-			dbg_print(PRINT_LEVEL_WARNING, " *** permit join req ERROR: %i\n", (int)retcode);
+			syslog(LOG_WARNING, " *** permit join req ERROR: %i", (int)retcode);
 		}
 		else
 		{
-			dbg_print(PRINT_LEVEL_WARNING, "permit join req OK\n");
+			syslog(LOG_INFO, "permit join req OK");
 		}
 	}
 #endif
+	syslog(LOG_INFO, "setNVStartup");
 	//set startup option back to keep configuration in case of reset
 	status = setNVStartup(0);
 	if (handle_app.devState < DEV_END_DEVICE)
 	{
+		syslog(LOG_WARNING, "setNVStartup failed with devState: %i", (int)handle_app.devState);
 		//start network failed
 		return -1;
 	}
 
+	syslog(LOG_INFO, "startNetwork ends OK");
 	return 0;
 }
 static int32_t registerAf(void)
@@ -1098,46 +1144,84 @@ uint8_t set_TX_power(void)
 	int8_t pwr_required_dbm = 2;
 	SetTxPowerFormat_t req = {0};
 	*(int8_t*)&req.TxPower = pwr_required_dbm;
-	dbg_print(PRINT_LEVEL_WARNING, "setting the TX power to %i dBm\n", (int)pwr_required_dbm);
+	syslog(LOG_INFO, "setting the TX power to %i dBm\n", (int)pwr_required_dbm);
 	retcode = sysSetTxPower(&req);
 	switch(sysSetTxPower(&req))
 	{
 		case MT_RPC_SUCCESS:
 		{
+			syslog(LOG_INFO, "TX power sent result: %s\n", "OK");
 			break;
 		}
 		default:
 		{
+			syslog(LOG_ERR, "TX power sent result: %s\n", "**ERROR**");
 			break;
 		}
 	}
-	dbg_print(PRINT_LEVEL_WARNING, "TX power sent %s\n", (retcode == MT_RPC_SUCCESS)?"OK":"**ERROR**");
 	return retcode;
 }
+
+static void flush_rpc_queue(void)
+{
+	syslog(LOG_INFO, "Flushing rpc queue");
+
+#define def_purge_queue_timeout_ms 5000
+	type_my_timeout my_timeout;
+	initialize_my_timeout(&my_timeout);
+
+	uint32_t num_msg_flushed = 0;
+	unsigned int too_long_waiting_for_flush = 0;
+	unsigned int queue_flushed = 0;
+	while (!queue_flushed && !too_long_waiting_for_flush)
+	{
+		int32_t status = rpcWaitMqClientMsg(10);
+		if (status == -1)
+		{
+			queue_flushed = 1;
+		}
+		else
+		{
+			num_msg_flushed++;
+			if (is_my_timeout_elapsed_ms(&my_timeout, def_purge_queue_timeout_ms))
+			{
+				too_long_waiting_for_flush = 1;
+			}
+		}
+	}
+	if (!too_long_waiting_for_flush)
+	{
+		syslog(LOG_ERR, "Timeout waiting for rpc queue to flush [max %i ms]", def_purge_queue_timeout_ms);
+	}
+	else if (!queue_flushed)
+	{
+		syslog(LOG_ERR, "Error waiting for rpc queue to flush");
+	}
+	else
+	{
+		syslog(LOG_INFO, "Rpc queue flushed OK, %i messages flushed", num_msg_flushed);
+	}
+}
+
 /*********************************************************************
  * INTERFACE FUNCTIONS
  */
 uint32_t appInit(void)
 {
-	int32_t status = 0;
-	uint32_t msgCnt = 0;
 
-	//Flush all messages from the que
-	while (status != -1)
-	{
-		status = rpcWaitMqClientMsg(10);
-		if (status != -1)
-		{
-			msgCnt++;
-		}
-	}
+	//Flush all messages from the queue
+	flush_rpc_queue();
 
-	dbg_print(PRINT_LEVEL_INFO, "flushed %d message from msg queue\n", msgCnt);
 
 	//Register Callbacks MT system callbacks
 	sysRegisterCallbacks(mtSysCb);
 	zdoRegisterCallbacks(mtZdoCb);
 	afRegisterCallbacks(mtAfCb);
+
+	init_handle_app();
+	// initialize the handle app stati machine
+	start_handle_app();
+
 
 	return 0;
 }
@@ -1189,6 +1273,11 @@ void* appProcess(void *argument)
 			handle_app.status = enum_app_status_idle;
 			break;
 		}
+		// if in error, only a restart can change status
+		case enum_app_status_error:
+		{
+			break;
+		}
 		case enum_app_status_idle:
 		{
 			if (handle_app.start_ack != handle_app.start_request)
@@ -1200,13 +1289,14 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_init:
 		{
-			start_queue_message_to_ZigBee();
+			start_queue_message_Tx();
 			handle_app.devState = DEV_HOLD;
 			handle_app.status = enum_app_status_flush_messages_init;
 			break;
 		}
 		case enum_app_status_flush_messages_init:
 		{
+			syslog(LOG_INFO, "Network Initialization");
 			handle_app.num_msgs_flushed = 0;
 			handle_app.status = enum_app_status_flush_messages_do;
 			break;
@@ -1229,7 +1319,7 @@ void* appProcess(void *argument)
 		{
 			handle_app.devState = DEV_HOLD;
 
-			int32_t status = startNetwork();
+			int32_t status = startNetwork(handle_app.channel_index);
 			if (status != -1)
 			{
 				syslog(LOG_INFO, "Network up");
@@ -1292,16 +1382,26 @@ void* appProcess(void *argument)
 			}
 			else
 			{
-				handle_app.status = enum_app_status_wait_callbacks;
+				handle_app.status = enum_app_status_wait_callbacks_init;
 			}
 			break;
 		}
-		case enum_app_status_wait_callbacks:
+		case enum_app_status_wait_callbacks_init:
+		{
+			initialize_my_timeout(&handle_app.my_timeout);
+			break;
+		}
+		case enum_app_status_wait_callbacks_do:
 		{
 			if (is_valid_IEEE_address(&handle_app.IEEE_address) && is_valid_Tx_power(&handle_app.Tx_power))
 			{
 				syslog(LOG_INFO, "Callback OK, going to device init");
 				handle_app.status = enum_app_status_display_devices_init;
+			}
+			else if (is_my_timeout_elapsed_ms(&handle_app.my_timeout, def_timeout_wait_callbacks_do_ms))
+			{
+				syslog(LOG_ERR, "Timeout waiting init callbacks");
+				handle_app_error(enum_app_error_code_timeout_waiting_init_callbacks);
 			}
 			break;
 		}
@@ -1321,13 +1421,15 @@ void* appProcess(void *argument)
 		case enum_app_status_display_devices_ends:
 		{
 			syslog(LOG_INFO, "Display device OK, going to rx/tx mode");
-			handle_app.DataRequest.DstAddr =  (uint16_t) 0xfa24;
-			handle_app.DataRequest.DstEndpoint = (uint8_t) 1;
-			handle_app.DataRequest.SrcEndpoint = 1;
-			handle_app.DataRequest.ClusterID = 6;
-			handle_app.DataRequest.TransID = 5;
-			handle_app.DataRequest.Options = 0;
-			handle_app.DataRequest.Radius = 0xEE;
+// wait until a device shows up?
+#warning better to remove this default end point / destination address
+			handle_app.DataRequest.DstAddr 		= (uint16_t) 0xfa24;
+			handle_app.DataRequest.DstEndpoint 	= (uint8_t) 1;
+			handle_app.DataRequest.SrcEndpoint 	= 1;
+			handle_app.DataRequest.ClusterID 	= 6;
+			handle_app.DataRequest.TransID 		= 5;
+			handle_app.DataRequest.Options 		= 0;
+			handle_app.DataRequest.Radius 		= 0xEE;
 			handle_app.initDone = 1;
 			handle_app.status = enum_app_status_rx_msgs;
 			break;
@@ -1343,24 +1445,52 @@ void* appProcess(void *argument)
 			handle_app.status = enum_app_status_rx_msgs;
 #define def_use_only_zigbee_queue_messages
 #ifdef def_use_only_zigbee_queue_messages
-			unsigned int elem_popped_size;
 			DataRequestFormat_t *pdr = &handle_app.DataRequest;
-			if (is_OK_pop_message_to_Zigbee((char*)pdr->Data, &elem_popped_size, sizeof(pdr->Data), &handle_app.message_id))
+			type_ASAC_ZigBee_interface_command_outside_send_message_req m;
+			if (is_OK_pop_Tx_outside_message(&m, &handle_app.message_id))
 			{
-				// retrieve a new transaction ID
-				pdr->TransID = get_app_new_trans_id(handle_app.message_id);
-				// store the message length
-				pdr->Len = elem_popped_size;
-				int32_t status = afDataRequest(pdr);
-				// mark the data request has been sent OK
-				message_history_tx_set_id_status(handle_app.message_id, enum_message_history_status_datareq_sent);
-				if (status != MT_RPC_SUCCESS)
+				if (m.message_length > sizeof(pdr->Data))
 				{
-					syslog(LOG_ERR, "Unable to send message with id = %u, length = %u", handle_app.message_id, elem_popped_size);
+					// mark the data request has been sent OK
+					message_history_tx_set_error(handle_app.message_id, enum_message_history_error_too_big_outside_message_on_pop);
+					syslog(LOG_ERR, "Too big message with id = %u, length %u, available %u", handle_app.message_id, m.message_length, (unsigned int)sizeof(pdr->Data));
 				}
 				else
 				{
-					syslog(LOG_INFO, "Message with id = %u sent OK", handle_app.message_id);
+					uint16_t DstAddr = 0;
+					if (!is_OK_get_network_short_address_from_IEEE(m.dst_id.IEEE_destination_address, &DstAddr))
+					{
+						message_history_tx_set_error(handle_app.message_id, enum_message_history_error_unknown_IEEE_address);
+						syslog(LOG_ERR, "Unable to find device with IEEE address: %lX", m.dst_id.IEEE_destination_address);
+					}
+					else
+					{
+						// store the message length
+						pdr->Len         = m.message_length;
+						// store the message body
+						memcpy(pdr->Data, m.message, m.message_length);
+						// set the destination address
+						pdr->DstAddr     = DstAddr;
+						pdr->DstEndpoint = m.dst_id.destination_endpoint;
+						pdr->ClusterID   = m.dst_id.cluster_id;
+						pdr->SrcEndpoint = m.dst_id.source_endpoint;
+						// retrieve a new transaction ID
+						pdr->TransID     = get_app_new_trans_id(handle_app.message_id);
+						// send the message
+						int32_t status = afDataRequest(pdr);
+						// check the return code
+						if (status != MT_RPC_SUCCESS)
+						{
+							// mark the data request has been sent OK
+							message_history_tx_set_id_status(handle_app.message_id, enum_message_history_status_datareq_sent);
+							syslog(LOG_ERR, "Unable to send message with id = %u", handle_app.message_id);
+						}
+						else
+						{
+							message_history_tx_set_error(handle_app.message_id, enum_message_history_error_unable_to_send_DATAREQ);
+							syslog(LOG_INFO, "Message with id = %u sent OK", handle_app.message_id);
+						}
+					}
 				}
 			}
 			else

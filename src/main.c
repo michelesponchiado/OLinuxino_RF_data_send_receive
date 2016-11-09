@@ -159,6 +159,7 @@ static void my_at_exit(void)
 
 int main(int argc, char* argv[])
 {
+	type_handle_server_socket handle_server_socket = {0};
 	// open the system log
 	open_syslog();
 	syslog(LOG_INFO, "The application starts");
@@ -197,57 +198,59 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
 
-	rpcInitMq();
-
-	//init the application thread to register the callbacks
-	appInit();
-
-	int thread_create_retcode = 0;
-
-	//Start the Rx thread
-	dbg_print(PRINT_LEVEL_INFO, "creating RPC thread\n");
-	thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_rpc].t, NULL, rpcTask, (void *) &serialPortFd)
-	if (thread_create_retcode != 0)
 	{
-		syslog(LOG_ERR, "Unable to create the rpc thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	threads_cancel_info[enum_thread_id_rpc].created_OK = 1;
+		rpcInitMq();
 
-	//Start the example thread
-	dbg_print(PRINT_LEVEL_INFO, "creating example thread\n");
-	thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_app].t, NULL, appTask, NULL);
-	if (thread_create_retcode != 0)
-	{
-		syslog(LOG_ERR, "Unable to create the app thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	threads_cancel_info[enum_thread_id_app].created_OK = 1;
+		//init the application thread to register the callbacks
+		appInit();
 
-	// start the in message thread
-	thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_inMessage].t, NULL, appInMessageTask, NULL);
-	if (thread_create_retcode != 0)
-	{
-		syslog(LOG_ERR, "Unable to create the inMessage thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
-		exit(EXIT_FAILURE);
-	}
-	threads_cancel_info[enum_thread_id_inMessage].created_OK = 1;
+		int thread_create_retcode = 0;
 
+		//Start the Rx thread
+		dbg_print(PRINT_LEVEL_INFO, "creating RPC thread\n");
+		thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_rpc].t, NULL, rpcTask, (void *) &serialPortFd);
+		if (thread_create_retcode != 0)
+		{
+			syslog(LOG_ERR, "Unable to create the rpc thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+		threads_cancel_info[enum_thread_id_rpc].created_OK = 1;
+
+		//Start the example thread
+		dbg_print(PRINT_LEVEL_INFO, "creating example thread\n");
+		thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_app].t, NULL, appTask, NULL);
+		if (thread_create_retcode != 0)
+		{
+			syslog(LOG_ERR, "Unable to create the app thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+		threads_cancel_info[enum_thread_id_app].created_OK = 1;
+
+		// start the in message thread
+		thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_inMessage].t, NULL, appInMessageTask, NULL);
+		if (thread_create_retcode != 0)
+		{
+			syslog(LOG_ERR, "Unable to create the inMessage thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+		threads_cancel_info[enum_thread_id_inMessage].created_OK = 1;
+	}
 #endif
 
 // STARTING THE SOCKET SERVER
 
-	syslog(LOG_INFO, "Creating the main thread");
-	type_handle_server_socket handle_server_socket = {0};
-	int thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_socket].t, NULL,&simple_server_thread, &handle_server_socket);
-	// check the return code
-	if (thread_create_retcode != 0)
 	{
-		syslog(LOG_ERR, "Unable to create the main thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
-		exit(EXIT_FAILURE);
+		syslog(LOG_INFO, "Creating the main thread");
+		int thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_socket].t, NULL,&simple_server_thread, &handle_server_socket);
+		// check the return code
+		if (thread_create_retcode != 0)
+		{
+			syslog(LOG_ERR, "Unable to create the main thread, return code %i, message: %s", thread_create_retcode, strerror(errno));
+			exit(EXIT_FAILURE);
+		}
+		threads_cancel_info[enum_thread_id_socket].created_OK = 1;
+		syslog(LOG_INFO, "Main thread created OK");
 	}
-	threads_cancel_info[enum_thread_id_socket].created_OK = 1;
-	syslog(LOG_INFO, "Main thread created OK");
 
 	while(!handle_server_socket.is_terminated)
 	{

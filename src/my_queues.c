@@ -4,6 +4,7 @@
  *  Created on: May 16, 2016
  *      Author: michele
  */
+#include <syslog.h>
 #include "my_queues.h"
 
 
@@ -69,7 +70,8 @@ enum_push_my_queue_retcode push_my_queue(type_my_queue *p, uint8_t *p_element_to
 			if (n_bytes_to_copy > def_size_my_elem_queue)
 			{
 				n_bytes_to_copy = def_size_my_elem_queue;
-				p->too_big_elements_pushed ++;
+				p->stats.num_too_big_elements_pushed_ERR++;
+				syslog(LOG_ERR, "Too big element to push in the queue, size: %u", n_bytes_to_copy);
 #ifdef def_my_queue_too_big_message_is_an_error
 				r = enum_push_my_queue_retcode_too_big_element;
 #endif
@@ -91,6 +93,14 @@ enum_push_my_queue_retcode push_my_queue(type_my_queue *p, uint8_t *p_element_to
 				p_idx->idx = idx;
 				p_idx->num_of++;
 			}
+		}
+		if (r == enum_push_my_queue_retcode_OK)
+		{
+			p->stats.num_push_OK++;
+		}
+		else
+		{
+			p->stats.num_push_ERR++;
 		}
 	pthread_mutex_unlock(&p->mtx);
 	return r;
@@ -124,7 +134,8 @@ enum_pop_my_queue_retcode pop_my_queue(type_my_queue *p, uint8_t *p_element_to_p
 			if (n_bytes_to_copy > def_size_my_elem_queue)
 			{
 				n_bytes_to_copy = def_size_my_elem_queue;
-				p->too_big_elements_popped ++;
+				p->stats.num_too_big_elements_popped_ERR ++;
+				syslog(LOG_ERR, "Too big element popping the queue, size: %u", n_bytes_to_copy);
 #ifdef def_my_queue_too_big_message_is_an_error
 				r = enum_pop_my_queue_retcode_too_big_element;
 #endif
@@ -152,6 +163,17 @@ enum_pop_my_queue_retcode pop_my_queue(type_my_queue *p, uint8_t *p_element_to_p
 			}
 			p_idx->idx = idx;
 			p_idx->num_of++;
+		}
+		if (r == enum_pop_my_queue_retcode_OK)
+		{
+			p->stats.num_pop_OK++;
+		}
+		else
+		{
+			if (r != enum_pop_my_queue_retcode_empty)
+			{
+				p->stats.num_pop_ERR++;
+			}
 		}
 	pthread_mutex_unlock(&p->mtx);
 	return r;

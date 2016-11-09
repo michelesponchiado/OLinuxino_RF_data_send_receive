@@ -33,15 +33,23 @@ typedef struct _type_my_queue_elem
 }type_my_queue_elem;
 
 #define def_N_my_elem_queue 128
+typedef struct _type_my_queue_stats
+{
+	unsigned int num_push_OK;
+	unsigned int num_pop_OK;
+	unsigned int num_push_ERR;
+	unsigned int num_pop_ERR;
+	unsigned int num_too_big_elements_pushed_ERR;
+	unsigned int num_too_big_elements_popped_ERR;
+}type_my_queue_stats;
 typedef struct _type_my_queue
 {
 	uint32_t last_id_used;
 	type_my_queue_indexes r,w;
 	type_my_queue_elem queue[def_N_my_elem_queue];
 	pthread_mutex_t mtx;
+	type_my_queue_stats stats;
 
-	unsigned int too_big_elements_pushed;
-	unsigned int too_big_elements_popped;
 }type_my_queue;
 
 

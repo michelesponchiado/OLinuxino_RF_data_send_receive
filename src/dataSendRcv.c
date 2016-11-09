@@ -59,6 +59,16 @@
 #include "ZigBee_messages.h"
 #include "my_queues.h"
 #include "ASACZ_devices_list.h"
+#include "ASACZ_message_history.h"
+
+//#define def_test_txrx
+
+#ifdef def_test_txrx
+static unsigned int txrx_req;
+static unsigned int txrx_ack;
+static IncomingMsgFormat_t txrx_i;
+#endif
+
 
 /*********************************************************************
  * MACROS
@@ -83,7 +93,9 @@ typedef enum
 	enum_app_status_flush_messages_do,
 	enum_app_status_start_network,
 	enum_app_status_get_IEEE_address,
+	enum_app_status_sysOsalNvWrite,
 	enum_app_status_set_TX_power,
+	enum_app_status_wait_callbacks,
 	enum_app_status_display_devices_init,
 	enum_app_status_display_devices_do,
 	enum_app_status_display_devices_ends,
@@ -98,8 +110,67 @@ typedef enum
 	enum_app_error_code_none,
 	enum_app_error_code_too_many_messages_flushed,
 	enum_app_error_code_unable_to_start_network,
+	enum_app_error_code_unable_to_sysGetExtAddr,
+	enum_app_error_code_unable_to_sysOsalNvWrite,
+	enum_app_error_code_unable_to_set_TX_power,
 	enum_app_error_code_numof
 }enum_app_error_code;
+
+typedef struct _type_handle_app_Tx_power
+{
+	unsigned int valid;
+	int power_dbM;
+}type_handle_app_Tx_power;
+static void invalidate_Tx_power(type_handle_app_Tx_power *p)
+{
+	memset(p, 0, sizeof(*p));
+}
+static void set_Tx_power(type_handle_app_Tx_power *p, int power_dbM)
+{
+	p->power_dbM = power_dbM;
+	p->valid = 1;
+}
+static int get_Tx_power(type_handle_app_Tx_power *p)
+{
+	if (p->valid)
+	{
+		return p->power_dbM;
+	}
+	return -1000;
+}
+static unsigned int is_valid_Tx_power(type_handle_app_Tx_power *p)
+{
+	return p->valid;
+}
+
+
+typedef struct _type_handle_app_IEEE_address
+{
+	unsigned int valid;
+	uint64_t address;
+}type_handle_app_IEEE_address;
+
+static void invalidate_IEEE_address(type_handle_app_IEEE_address *p)
+{
+	memset(p, 0, sizeof(*p));
+}
+static void set_IEEE_address(type_handle_app_IEEE_address *p, uint64_t address)
+{
+	p->address = address;
+	p->valid = 1;
+}
+static uint64_t get_IEEE_address(type_handle_app_IEEE_address *p)
+{
+	if (p->valid)
+	{
+		return p->address;
+	}
+	return 0;
+}
+static unsigned int is_valid_IEEE_address(type_handle_app_IEEE_address *p)
+{
+	return p->valid;
+}
 
 typedef struct _type_handle_app
 {
@@ -116,6 +187,8 @@ typedef struct _type_handle_app
 	unsigned int message_id;
 	uint8_t transId;
 	pthread_mutex_t mtx_id;
+	type_handle_app_IEEE_address IEEE_address;
+	type_handle_app_Tx_power Tx_power;
 }type_handle_app;
 static type_handle_app handle_app;
 
@@ -128,9 +201,9 @@ void init_handle_app(void)
 unsigned int get_app_new_trans_id(uint32_t message_id)
 {
 	pthread_mutex_lock(&handle_app.mtx_id);
-	uint8_t trans_id = handle_app.transId++;
+		uint8_t trans_id = handle_app.transId++;
 		// cleanup all of the similar identifiers in the id queue, set the new id with the trans_id passed
-		message_history_set_trans_id(trans_id, message_id);
+		message_history_tx_set_trans_id(message_id, trans_id);
 	pthread_mutex_unlock(&handle_app.mtx_id);
 	return trans_id;
 }
@@ -183,6 +256,7 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg);
 
 static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg);
 static uint8_t mtSysSetTxPowerSrspCb(SetTxPowerSrspFormat_t *msg);
+static uint8_t mtSysGetExtAddrSrsp(GetExtAddrSrspFormat_t *msg);
 
 //AF callbacks
 static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg);
@@ -217,12 +291,22 @@ unsigned long get_system_time_ms(void)
 
 // SYS callbacks
 static mtSysCb_t mtSysCb =
-	{ 		NULL, NULL, NULL,
-			mtSysResetIndCb, NULL, NULL,
-			NULL, NULL, NULL,
-			NULL, NULL, NULL,
-			NULL, mtSysSetTxPowerSrspCb
+	{ 		.pfnSysPingSrsp 		= NULL,
+			.pfnSysGetExtAddrSrsp 	= mtSysGetExtAddrSrsp,
+			.pfnSysRamReadSrsp 		= NULL,
+			.pfnSysResetInd 		= mtSysResetIndCb,
+			.pfnSysVersionSrsp 		= NULL,
+			.pfnSysOsalNvReadSrsp 	= NULL,
+			.pfnSysOsalNvLengthSrsp = NULL,
+			.pfnSysOsalTimerExpired = NULL,
+			.pfnSysStackTuneSrsp 	= NULL,
+			.pfnSysAdcReadSrsp 		= NULL,
+			.pfnSysGpioSrsp 		= NULL,
+			.pfnSysRandomSrsp 		= NULL,
+			.pfnSysGetTimeSrsp 		= NULL,
+			.pfnSysSetTxPowerSrsp 	= mtSysSetTxPowerSrspCb,
 	};
+
 
 static mtZdoCb_t mtZdoCb =
 	{ NULL,       // MT_ZDO_NWK_ADDR_RSP
@@ -295,9 +379,19 @@ static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg)
 	return 0;
 }
 
+
+// callback from MT_SYS_GET_EXTADDR
+static uint8_t mtSysGetExtAddrSrsp(GetExtAddrSrspFormat_t *msg)
+{
+	set_IEEE_address(&handle_app.IEEE_address, msg->ExtAddr);
+	syslog(LOG_INFO, "IEEE address: 0x%lX\n", (long int)get_IEEE_address(&handle_app.IEEE_address));
+	return 0;
+}
+
 static uint8_t mtSysSetTxPowerSrspCb(SetTxPowerSrspFormat_t *msg)
 {
-	consolePrint("Radio power set to %i dBm\n", (int)msg->TxPower);
+	set_Tx_power(&handle_app.Tx_power, (int)msg->TxPower);
+	syslog(LOG_INFO, "Radio power callback: set to %i dBm\n", get_Tx_power(&handle_app.Tx_power));
 	return 0;
 }
 
@@ -623,27 +717,32 @@ static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg)
 
 	if (msg->Status == MT_RPC_SUCCESS)
 	{
-		//consolePrint("[%lu]Message %i transmitted successfully!\n", get_system_time_ms(), (int)msg->TransId);
+		syslog(LOG_INFO, "Data confirm cb OK: end-point: %u, trans-id: %u", (uint32_t)msg->Endpoint, (uint32_t)msg->TransId);
+		message_history_tx_set_trans_id_status(msg->TransId, enum_message_history_status_dataconfirm_received);
 	}
 	else
 	{
-		consolePrint("[%lu]Message %i failed to transmit\n", get_system_time_ms(), (int)msg->TransId);
+		syslog(LOG_ERR, "Data confirm cb ERR: end-point: %u, trans-id: %u", (uint32_t)msg->Endpoint, (uint32_t)msg->TransId);
+		message_history_tx_set_trans_id_error(msg->TransId, enum_message_history_error_DATACONFIRM);
 	}
 	return msg->Status;
 }
-static unsigned int txrx_req;
-static unsigned int txrx_ack;
-static IncomingMsgFormat_t txrx_i;
+
+
 static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 {
+#if 1
+#else
 
 	msg->Data[msg->Len] = '\0';
+#ifdef def_test_txrx
 	if (strncmp((char*)msg->Data,"TXRX",4) == 0 )
 	{
 		txrx_i = *msg;
 		txrx_req ++;
 	}
 	else
+#endif
 	{
 		consolePrint("%s\n", (char*) msg->Data);
 		consolePrint(
@@ -652,7 +751,7 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 		consolePrint(
 		        "\nEnter message to send or type CHANGE to change the destination \nor QUIT to exit:\n");
 	}
-
+#endif
 	return 0;
 }
 
@@ -993,18 +1092,18 @@ static void displayDevices(void)
 	}
 }
 
-void set_TX_power(void)
+uint8_t set_TX_power(void)
 {
+	uint8_t retcode = MT_RPC_SUCCESS;
 	int8_t pwr_required_dbm = 2;
 	SetTxPowerFormat_t req = {0};
 	*(int8_t*)&req.TxPower = pwr_required_dbm;
 	dbg_print(PRINT_LEVEL_WARNING, "setting the TX power to %i dBm\n", (int)pwr_required_dbm);
-	unsigned int success = 0;
+	retcode = sysSetTxPower(&req);
 	switch(sysSetTxPower(&req))
 	{
 		case MT_RPC_SUCCESS:
 		{
-			success = 1;
 			break;
 		}
 		default:
@@ -1012,7 +1111,8 @@ void set_TX_power(void)
 			break;
 		}
 	}
-	dbg_print(PRINT_LEVEL_WARNING, "TX power sent %s\n", success?"OK":"**ERROR**");
+	dbg_print(PRINT_LEVEL_WARNING, "TX power sent %s\n", (retcode == MT_RPC_SUCCESS)?"OK":"**ERROR**");
+	return retcode;
 }
 /*********************************************************************
  * INTERFACE FUNCTIONS
@@ -1144,7 +1244,24 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_get_IEEE_address:
 		{
-			sysGetExtAddr();
+			// reset my own IEEE address
+			invalidate_IEEE_address(&handle_app.IEEE_address);
+			// send an IEEE address request
+			int32_t status = sysGetExtAddr();
+			if (status != MT_RPC_SUCCESS)
+			{
+				syslog(LOG_ERR, "Unable to execute sysGetExtAddr");
+				handle_app_error(enum_app_error_code_unable_to_sysGetExtAddr);
+			}
+			else
+			{
+				syslog(LOG_INFO, "IEEE address request sent OK");
+				handle_app.status = enum_app_status_sysOsalNvWrite;
+			}
+			break;
+		}
+		case enum_app_status_sysOsalNvWrite:
+		{
 			// TODO: what is this?
 			OsalNvWriteFormat_t nvWrite;
 			nvWrite.Id = ZCD_NV_ZDO_DIRECT_CB;
@@ -1152,13 +1269,40 @@ void* appProcess(void *argument)
 			nvWrite.Len = 1;
 			nvWrite.Value[0] = 1;
 			int32_t status = sysOsalNvWrite(&nvWrite);
-			handle_app.status = enum_app_status_set_TX_power;
+			if (status != MT_RPC_SUCCESS)
+			{
+				syslog(LOG_ERR, "Unable to execute sysOsalNvWrite");
+				handle_app_error(enum_app_error_code_unable_to_sysOsalNvWrite);
+			}
+			else
+			{
+				syslog(LOG_INFO, "sysOsalNvWrite request sent OK");
+				handle_app.status = enum_app_status_set_TX_power;
+			}
 			break;
 		}
 		case enum_app_status_set_TX_power:
 		{
-			set_TX_power();
-			handle_app.status = enum_app_status_display_devices_init;
+			invalidate_Tx_power(&handle_app.Tx_power);
+			int32_t status = set_TX_power();
+			if (status != MT_RPC_SUCCESS)
+			{
+				syslog(LOG_ERR, "Unable to execute set_TX_power");
+				handle_app_error(enum_app_error_code_unable_to_set_TX_power);
+			}
+			else
+			{
+				handle_app.status = enum_app_status_wait_callbacks;
+			}
+			break;
+		}
+		case enum_app_status_wait_callbacks:
+		{
+			if (is_valid_IEEE_address(&handle_app.IEEE_address) && is_valid_Tx_power(&handle_app.Tx_power))
+			{
+				syslog(LOG_INFO, "Callback OK, going to device init");
+				handle_app.status = enum_app_status_display_devices_init;
+			}
 			break;
 		}
 		case enum_app_status_display_devices_init:
@@ -1176,6 +1320,7 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_display_devices_ends:
 		{
+			syslog(LOG_INFO, "Display device OK, going to rx/tx mode");
 			handle_app.DataRequest.DstAddr =  (uint16_t) 0xfa24;
 			handle_app.DataRequest.DstEndpoint = (uint8_t) 1;
 			handle_app.DataRequest.SrcEndpoint = 1;
@@ -1198,30 +1343,32 @@ void* appProcess(void *argument)
 			handle_app.status = enum_app_status_rx_msgs;
 #define def_use_only_zigbee_queue_messages
 #ifdef def_use_only_zigbee_queue_messages
-			unsigned int is_element_in_queue = 0;
 			unsigned int elem_popped_size;
 			DataRequestFormat_t *pdr = &handle_app.DataRequest;
-			if (is_OK_pop_message_to_Zigbee(pdr->Data, &elem_popped_size, sizeof(pdr->Data), &handle_app.message_id))
+			if (is_OK_pop_message_to_Zigbee((char*)pdr->Data, &elem_popped_size, sizeof(pdr->Data), &handle_app.message_id))
 			{
-
+				// retrieve a new transaction ID
 				pdr->TransID = get_app_new_trans_id(handle_app.message_id);
+				// store the message length
 				pdr->Len = elem_popped_size;
-
 				int32_t status = afDataRequest(pdr);
-				if (status == MT_RPC_SUCCESS)
+				// mark the data request has been sent OK
+				message_history_tx_set_id_status(handle_app.message_id, enum_message_history_status_datareq_sent);
+				if (status != MT_RPC_SUCCESS)
 				{
 					syslog(LOG_ERR, "Unable to send message with id = %u, length = %u", handle_app.message_id, elem_popped_size);
 				}
 				else
 				{
-
+					syslog(LOG_INFO, "Message with id = %u sent OK", handle_app.message_id);
 				}
-				// TODO: is a rpcWaitMqClientMsg really needed?
-
+			}
+			else
+			{
+				syslog(LOG_ERR, "Unable to pop a message from the Zigbee queue");
 			}
 
 #else
-	#define def_test_txrx
 	#ifndef def_test_txrx
 				consolePrint(
 						"Enter message to send or type CHANGE to change the destination\n");

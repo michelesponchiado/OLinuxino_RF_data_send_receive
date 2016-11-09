@@ -69,6 +69,7 @@ static unsigned int has_reply_decode_incoming_message_from_socket(char *message,
 					{
 						p_reply->reply.outside_send_message.retcode = enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode_ERROR_unable_to_push_message;
 					}
+					// save the assigned message id
 					else
 					{
 						p_reply->reply.outside_send_message.id = id;

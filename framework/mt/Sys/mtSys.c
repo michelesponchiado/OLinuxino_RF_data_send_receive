@@ -59,7 +59,7 @@
  */
 static mtSysCb_t mtSysCbs;
 extern uint8_t srspRpcBuff[RPC_MAX_LEN];
-extern uint8_t srspRpcLen;
+//extern uint8_t srspRpcLen;
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -190,7 +190,7 @@ uint8_t sysGetExtAddr()
 /*********************************************************************
  * @fn      processGetExtAddrSrsp
  *
- * @brief   This Function is trigered after a call to sysGetExtAddr. Gets a buffer with IEEE address and passes it to its respective callback function.
+ * @brief   This Function is triggered after a call to sysGetExtAddr. Gets a buffer with IEEE address and passes it to its respective callback function.
  *
  * @param   rpcBuff - Incoming buffer.
  * @param   rpcLen - Length of buffer.

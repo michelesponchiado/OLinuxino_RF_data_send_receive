@@ -12,7 +12,7 @@
 #define def_invalid_endpoint 0
 
 
-#define def_N_elements_input_cluster_table 32
+#define def_N_elements_input_cluster_table 128
 
 typedef struct _type_input_cluster_table
 {
@@ -29,6 +29,43 @@ void init_input_cluster_table(void)
 {
 	memset(&input_cluster_table,0,sizeof(input_cluster_table));
 	pthread_mutex_init(&input_cluster_table.mtx, NULL);
+}
+/**
+ * Search for the end-point/cluster_id passed, returns NULL if not found, else returns the pointer to the passed structure, filled with the socket informations
+ */
+struct sockaddr_in * p_find_socket_of_input_cluster_end_point_command(struct sockaddr_in * p_return, uint8_t endpoint, uint16_t input_cluster_id)
+{
+	struct sockaddr_in * p = NULL;
+	pthread_mutex_lock(&input_cluster_table.mtx);
+		unsigned int element_doesnt_exists = 0;
+		unsigned int idx;
+		for (idx = 0; (idx < input_cluster_table.idx) && !p && !element_doesnt_exists; idx++)
+		{
+			type_input_cluster_table_elem *p_cur_elem = &input_cluster_table.queue[idx];
+			uint8_t cur_endpoint = p_cur_elem->cluster.endpoint;
+			if (cur_endpoint == endpoint)
+			{
+				uint16_t cur_input_cluster_id = p_cur_elem->cluster.input_cluster_id;
+				if (cur_input_cluster_id == input_cluster_id)
+				{
+					p = &p_cur_elem->si_other;
+				}
+				else if (cur_input_cluster_id > input_cluster_id)
+				{
+					element_doesnt_exists = 1;
+				}
+			}
+			else if (cur_endpoint > endpoint)
+			{
+				element_doesnt_exists = 1;
+			}
+		}
+	pthread_mutex_unlock(&input_cluster_table.mtx);
+	if (p)
+	{
+		*p_return = *p;
+	}
+	return p;
 }
 
 
@@ -55,24 +92,24 @@ int compare_endp_clusters(const void *a, const void *b)
 {
 	type_input_cluster_table_elem *pa =(type_input_cluster_table_elem *)a;
 	type_input_cluster_table_elem *pb =(type_input_cluster_table_elem *)b;
-	if (pa->request.endpoint == 0)
+	if (pa->cluster.endpoint == 0)
 	{
 		return 1;
 	}
-	else if (pb->request.endpoint == 0)
+	else if (pb->cluster.endpoint == 0)
 	{
 		return -1;
 	}
-	else if (pa->request.endpoint != pb->request.endpoint)
+	else if (pa->cluster.endpoint != pb->cluster.endpoint)
 	{
-		int endpa = pa->request.endpoint;
-		int endpb = pb->request.endpoint;
+		int endpa = pa->cluster.endpoint;
+		int endpb = pb->cluster.endpoint;
 		return endpa - endpb;
 	}
 	else
 	{
-		int cla = pa->request.input_cluster_id;
-		int clb = pb->request.input_cluster_id;
+		int cla = pa->cluster.input_cluster_id;
+		int clb = pb->cluster.input_cluster_id;
 		return cla - clb;
 	}
 }
@@ -98,7 +135,7 @@ enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_
 
 		if (r == enum_add_input_cluster_table_retcode_OK)
 		{
-			if (pelem_to_add->request.endpoint < def_min_valid_endpoint || pelem_to_add->request.endpoint > def_max_valid_endpoint)
+			if (pelem_to_add->cluster.endpoint < def_min_valid_endpoint || pelem_to_add->cluster.endpoint > def_max_valid_endpoint)
 			{
 				r = enum_add_input_cluster_table_retcode_ERR_invalid_endpoint;
 			}
@@ -180,18 +217,18 @@ unsigned int is_OK_walk_endpoints_clusters_next(type_endpoint_cluster *p)
 		for (idx = 0; idx < input_cluster_table.idx; idx++)
 		{
 			type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[idx];
-			if (!found && p_elem->request.endpoint > input_cluster_table.current_endpoint)
+			if (!found && p_elem->cluster.endpoint > input_cluster_table.current_endpoint)
 			{
 				found = 1;
 				is_OK = 1;
-				input_cluster_table.current_endpoint = p_elem->request.endpoint;
-				p->endpoint = p_elem->request.endpoint;
+				input_cluster_table.current_endpoint = p_elem->cluster.endpoint;
+				p->endpoint = p_elem->cluster.endpoint;
 			}
-			if (found && input_cluster_table.current_endpoint == p_elem->request.endpoint)
+			if (found && input_cluster_table.current_endpoint == p_elem->cluster.endpoint)
 			{
 				if (p->num_clusters < sizeof(p->clusters_id)/sizeof(p->clusters_id[0]))
 				{
-					p->clusters_id[p->num_clusters] = p_elem->request.input_cluster_id;
+					p->clusters_id[p->num_clusters] = p_elem->cluster.input_cluster_id;
 					p->num_clusters ++;
 				}
 				else

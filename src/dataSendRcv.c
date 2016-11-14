@@ -1389,6 +1389,7 @@ void* appProcess(void *argument)
 		case enum_app_status_wait_callbacks_init:
 		{
 			initialize_my_timeout(&handle_app.my_timeout);
+			handle_app.status = enum_app_status_wait_callbacks_do;
 			break;
 		}
 		case enum_app_status_wait_callbacks_do:

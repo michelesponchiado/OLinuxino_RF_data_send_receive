@@ -182,8 +182,8 @@ int main(int argc, char* argv[])
 		dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/ttyS1\n\n");
 		selected_serial_port = "/dev/ttyS1";
 #else
-		dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/USB2\n\n");
-		selected_serial_port = "/dev/ttyUSB2";
+		dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/USB1\n\n");
+		selected_serial_port = "/dev/ttyUSB1";
 #endif
 	}
 	else
@@ -241,7 +241,7 @@ int main(int argc, char* argv[])
 
 	{
 		syslog(LOG_INFO, "Creating the main thread");
-		int thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_socket].t, NULL,&simple_server_thread, &handle_server_socket);
+		int thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_socket].t, NULL,&ASACZ_UDP_server_thread, &handle_server_socket);
 		// check the return code
 		if (thread_create_retcode != 0)
 		{

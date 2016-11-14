@@ -23,7 +23,7 @@
 
 typedef struct _type_input_cluster_table_elem
 {
-	type_ASAC_ZigBee_interface_network_input_cluster_register_req request;
+	type_ASAC_ZigBee_interface_network_input_cluster_register_req cluster;
 	struct sockaddr_in  si_other;
 }type_input_cluster_table_elem;
 
@@ -38,7 +38,7 @@ typedef enum
 }enum_add_input_cluster_table_retcode;
 enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_elem *pelem_to_add);
 
-
+struct sockaddr_in * p_find_socket_of_input_cluster_end_point_command(struct sockaddr_in * p_return, uint8_t endpoint, uint16_t input_cluster_id);
 
 typedef enum
 {

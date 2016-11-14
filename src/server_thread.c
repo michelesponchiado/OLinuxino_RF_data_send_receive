@@ -16,6 +16,7 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
@@ -28,83 +29,11 @@
 #include "simple_server.h"
 #include "ZigBee_messages.h"
 #include "ASAC_ZigBee_network_commands.h"
+#include "input_cluster_table.h"
 
 
-static unsigned int has_reply_decode_incoming_message_from_socket(char *message, unsigned int message_length, char *message_reply, unsigned int max_message_reply_length, unsigned int *pui_message_reply_length)
-{
-	unsigned int has_reply = 1;
-	type_ASAC_Zigbee_interface_request *p = (type_ASAC_Zigbee_interface_request *)message;
-	type_ASAC_Zigbee_interface_command_reply *p_reply =(type_ASAC_Zigbee_interface_command_reply *)message_reply;
-	// if there is no room for the code, error
-	if (max_message_reply_length < def_size_ASAC_Zigbee_interface_code(p_reply))
-	{
-		has_reply = 0;
-	}
-	if (has_reply)
-	{
-		// set the output code the same as the input
-		p_reply->code = p->code;
-		switch( p->code )
-		{
-			case enum_ASAC_ZigBee_interface_command_outside_send_message:
-			{
-				if (max_message_reply_length < def_size_ASAC_Zigbee_interface_reply(p_reply, outside_send_message))
-				{
-					has_reply = 0;
-				}
-				if (has_reply)
-				{
-					// set the output message length
-					*pui_message_reply_length = def_size_ASAC_Zigbee_interface_reply(p_reply, outside_send_message);
-					// initialize the return code to OK
-					p_reply->reply.outside_send_message.retcode = enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode_OK;
-					p_reply->reply.outside_send_message.id = get_invalid_id();
-#ifdef def_enable_debug
-				printf("sending user message: %s\n", p->req.outside_send_message.message);
-#endif
-					uint32_t id;
 
-					// we send the message to the radio
-					if (!is_OK_push_Tx_outside_message(&p->req.outside_send_message, &id))
-					{
-						p_reply->reply.outside_send_message.retcode = enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode_ERROR_unable_to_push_message;
-					}
-					// save the assigned message id
-					else
-					{
-						p_reply->reply.outside_send_message.id = id;
-					}
-#ifdef def_test_without_Zigbee
-					{
-						type_ASAC_ZigBee_interface_command_outside_send_message_req m;
-						uint32_t id;
-						// pop away the message
-						is_OK_pop_outside_message(&m, &id);
-					}
-#endif
-				}
-				break;
-			}
-			default:
-			{
-				if (max_message_reply_length < def_size_ASAC_Zigbee_interface_reply(p_reply, unknown))
-				{
-					has_reply = 0;
-				}
-				if (has_reply)
-				{
-					// set the output message length
-					*pui_message_reply_length = def_size_ASAC_Zigbee_interface_reply(p_reply, unknown);
-					p_reply->reply.unknown.the_unknown_code = p->code;
-					p_reply->code = enum_ASAC_ZigBee_interface_command_unknown;
-				}
-				break;
-			}
-		}
-	}
-	return has_reply;
 
-}
 
 
 
@@ -226,37 +155,26 @@ void * thread_start(void *arg)
     typedef enum
     {
     	enum_thread_server_status_init = 0,
+    	enum_thread_server_status_read_from_Zigbee,
     	enum_thread_server_status_read,
     	enum_thread_server_status_write,
     	enum_thread_server_status_ends_clock_api_error,
-		enum_thread_server_status_ends_single_message_timeout,
 		enum_thread_server_status_ends_thread_timeout,
     	enum_thread_server_status_ends,
     	enum_thread_server_status_ended,
     	enum_thread_server_status_numof
     }enum_thread_server_status;
     enum_thread_server_status thread_server_status = enum_thread_server_status_init;
+    enum_thread_server_status thread_server_status_after_init = enum_thread_server_status_read_from_Zigbee;
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
     size_t stacksize;
     pthread_attr_getstacksize(&attr, &stacksize);
-    printf("Thread stack size = %d bytes \n", (int)stacksize);
+
 
     // set global thread timeout clock, if needed
 	struct timespec ts_timeout_thread = {0};
-	if (tinfo->thread_timeout_seconds)
-	{
-		if (clock_gettime(CLOCK_REALTIME, &ts_timeout_thread) == -1)
-		{
-			thread_server_status = enum_thread_server_status_ends_clock_api_error;
-		}
-		else
-		{
-			ts_timeout_thread.tv_sec += tinfo->thread_timeout_seconds;
-		}
-	}
-	struct timespec ts_timeout_message = {0};
 
     while (thread_server_status != enum_thread_server_status_ended)
     {
@@ -272,12 +190,14 @@ void * thread_start(void *arg)
     		struct timespec ts_now = {0};
     		if (clock_gettime(CLOCK_REALTIME, &ts_now) == -1)
     		{
+    			syslog(LOG_ERR, "unable to get CLOCK_REALTIME");
     			thread_server_status = enum_thread_server_status_ends_clock_api_error;
     		}
     		else
     		{
-        		if (tsCompare(ts_now, ts_timeout_thread) >0 )
+        		if (tsCompare(ts_now, ts_timeout_thread) > 0 )
         		{
+        			syslog(LOG_WARNING, "thread ends because of timeout");
     				thread_server_status = enum_thread_server_status_ends_thread_timeout;
     			}
     		}
@@ -287,19 +207,26 @@ void * thread_start(void *arg)
     		case enum_thread_server_status_init:
     		default:
     		{
-	    		thread_server_status = enum_thread_server_status_read;
-	    		if (tinfo->message_timeout_seconds)
-	    		{
-	    			if (clock_gettime(CLOCK_REALTIME, &ts_timeout_message) == -1)
-	    			{
-	    				thread_server_status = enum_thread_server_status_ends_clock_api_error;
-	    			}
-	    			else
-	    			{
-	    				ts_timeout_message.tv_sec += tinfo->message_timeout_seconds;
-	    			}
-	    		}
-
+    			switch(thread_server_status_after_init)
+    			{
+    				case enum_thread_server_status_read_from_Zigbee:
+    				{
+    					thread_server_status_after_init = enum_thread_server_status_read;
+    		    		thread_server_status = enum_thread_server_status_read_from_Zigbee;
+    					break;
+    				}
+    				default:
+    				{
+    					thread_server_status_after_init = enum_thread_server_status_read_from_Zigbee;
+    		    		thread_server_status = enum_thread_server_status_read;
+    					break;
+    				}
+    			}
+    			break;
+    		}
+    		case enum_thread_server_status_read_from_Zigbee:
+    		{
+    			thread_server_status = enum_thread_server_status_read;
     			break;
     		}
     		case enum_thread_server_status_read:
@@ -310,6 +237,14 @@ void * thread_start(void *arg)
     			int retval_getsockopt = getsockopt (tinfo->socket_fd, SOL_SOCKET, SO_ERROR, &socket_error, &len_socket_error);
     			if ((retval_getsockopt != 0) || (socket_error != 0))
     			{
+    				if (retval_getsockopt)
+    				{
+    	    			syslog(LOG_ERR, "error on getsockopt retval_getsockopt = %i", retval_getsockopt);
+    				}
+    				if (socket_error)
+    				{
+    	    			syslog(LOG_ERR, "error on getsockopt socket_error = %i", socket_error);
+    				}
         			tinfo->thread_exit_status = enum_thread_exit_status_OK_lost_socket;
     	    		thread_server_status = enum_thread_server_status_ends;
     	    		break;
@@ -330,40 +265,16 @@ void * thread_start(void *arg)
         	    		}
         	    		else
         	    		{
+        	    			syslog(LOG_ERR, "error %i on socket read operation", n);
                 			tinfo->thread_exit_status = enum_thread_exit_status_ERR_reading;
         	    		}
+    	    			syslog(LOG_WARNING, "thread ends");
         	    		thread_server_status = enum_thread_server_status_ends;
         			}
         	    	else if (n > 0)
         	    	{
-        	        	//printf("Here is the message: %s\n",tinfo->rx_buffer);
-        	    		if (has_reply_decode_incoming_message_from_socket(tinfo->rx_buffer , n, tinfo->tx_buffer,sizeof(tinfo->tx_buffer), &tinfo->tx_buffer_chars_written))
-        	    		{
-            	    		thread_server_status = enum_thread_server_status_write;
-        	    		}
-        	    		else
-        	    		{
-            	    		thread_server_status = enum_thread_server_status_init;
-        	    		}
+						thread_server_status = enum_thread_server_status_init;
         	    	}
-    			}
-    			else
-    			{
-    		    	if (tinfo->message_timeout_seconds)
-    		    	{
-    		    		struct timespec ts_now = {0};
-    		    		if (clock_gettime(CLOCK_REALTIME, &ts_now) == -1)
-    		    		{
-    		    			thread_server_status = enum_thread_server_status_ends_clock_api_error;
-    		    		}
-    		    		else
-    		    		{
-    		        		if (tsCompare(ts_now, ts_timeout_message) >0 )
-    		        		{
-    		    				thread_server_status = enum_thread_server_status_ends_single_message_timeout;
-    		    			}
-    		    		}
-    		    	}
     			}
     			break;
     		}
@@ -372,6 +283,7 @@ void * thread_start(void *arg)
             	int n = write(tinfo->socket_fd,tinfo->tx_buffer,tinfo->tx_buffer_chars_written);
             	if (n != tinfo->tx_buffer_chars_written)
         		{
+	    			syslog(LOG_ERR, "error %i on socket write operation", n);
         			tinfo->thread_exit_status = enum_thread_exit_status_ERR_writing;
     	    		thread_server_status = enum_thread_server_status_ends;
         		}
@@ -382,6 +294,7 @@ void * thread_start(void *arg)
     	    		{
     	    			if (tinfo->num_loop_read_messages_executed >= tinfo->max_loop_read_messages)
     	    			{
+        	    			syslog(LOG_ERR, "error %i messages limit hit: %i", tinfo->max_loop_read_messages, tinfo->num_loop_read_messages_executed);
     	    				tinfo->thread_exit_status = enum_thread_exit_status_OK_num_loop_limit_reached;
     	    				thread_server_status = enum_thread_server_status_ends;
     	    			}
@@ -390,26 +303,24 @@ void * thread_start(void *arg)
     	    	}
     			break;
     		}
-    		case enum_thread_server_status_ends_single_message_timeout:
-    		{
-    			tinfo->thread_exit_status = enum_thread_exit_status_ERR_single_message_timeout;
-	    		thread_server_status = enum_thread_server_status_ends;
-    			break;
-    		}
+
     		case enum_thread_server_status_ends_thread_timeout:
     		{
+    			syslog(LOG_ERR, "*** server exits by timeout ***");
     			tinfo->thread_exit_status = enum_thread_exit_status_ERR_thread_timeout;
 	    		thread_server_status = enum_thread_server_status_ends;
 	    		break;
     		}
     		case enum_thread_server_status_ends_clock_api_error:
     		{
+    			syslog(LOG_ERR, "*** server exits by clock API error ***");
     			tinfo->thread_exit_status = enum_thread_exit_status_ERR_clock_api;
 	    		thread_server_status = enum_thread_server_status_ends;
 	    		break;
     		}
     		case enum_thread_server_status_ends:
     		{
+    			syslog(LOG_INFO, "*** server thread loop ends ***");
 	    		thread_server_status = enum_thread_server_status_ended;
     			close(tinfo->socket_fd);
     			break;

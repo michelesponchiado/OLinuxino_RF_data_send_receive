@@ -65,7 +65,7 @@ typedef struct _type_handle_server_socket
     char buffer[SOCKET_MESSAGE_SIZE];
 }type_handle_server_socket;
 // argument should be a type_handle_server_socket pointer
-void * simple_server_thread(void *arg);
+void * ASACZ_UDP_server_thread(void *arg);
 unsigned int is_OK_shutdown_server(type_handle_server_socket *p);
 
 

@@ -32,6 +32,7 @@
 #include "ASACSOCKET_check.h"
 #include "ASAC_ZigBee_network_commands.h"
 #include "input_cluster_table.h"
+#include "ZigBee_messages.h"
 
 typedef struct _type_handle_socket_in
 {
@@ -48,7 +49,6 @@ static void error(const char *msg)
     perror(message);
     exit(1);
 }
-
 
 
 #if 0
@@ -228,7 +228,7 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 	memset(&amessage_tx,0,sizeof(amessage_tx));
 
 	struct sockaddr_in true_socket_dst = *p_socket_dst;
-#define def_force_reply_to_same_port_where_you_listen
+//#define def_force_reply_to_same_port_where_you_listen
 #ifdef def_force_reply_to_same_port_where_you_listen
 //#warning trying the reply on the very same port where we listen
 	true_socket_dst.sin_port = htons(def_port_number);
@@ -262,7 +262,7 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 	{
 		type_input_cluster_table_elem elem;
 		memset(&elem,0,sizeof(elem));
-		elem.request = *p_body_request;
+		elem.cluster = *p_body_request;
 		memcpy(&elem.si_other, &phs_in->si_other, phs_in->slen);
 
 		enum_add_input_cluster_table_retcode retcode_input_cluster = add_input_cluster(&elem);
@@ -284,6 +284,7 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 				syslog(LOG_ERR,"%s: NO ROOM to add end-point %u, cluster %u\n", __func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
+
 			default:
 			{
 				r = enum_add_input_cluster_table_retcode_ERR_unknwon;
@@ -343,7 +344,7 @@ int handle_ASACZ_request_input_cluster_unregister_req(type_ASAC_Zigbee_interface
 		reg.input_cluster_id = p_body_request->input_cluster_id;
 		type_input_cluster_table_elem elem;
 		memset(&elem, 0, sizeof(elem));
-		elem.request = reg;
+		elem.cluster = reg;
 		memcpy(&elem.si_other, &phs_in->si_other, phs_in->slen);
 
 		enum_remove_input_cluster_table_retcode retcode_input_cluster = remove_input_cluster(&elem);
@@ -388,7 +389,7 @@ int handle_ASACZ_request_input_cluster_unregister_req(type_ASAC_Zigbee_interface
 		p_icr_reply->input_cluster_id = p_body_request->input_cluster_id;
 		p_icr_reply->retcode = r ;
 
-		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &phs_in->si_other))
+		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size,phss->socket_fd, &phs_in->si_other))
 		{
 			syslog(LOG_INFO,"%s: reply sent OK", __func__);
 		}
@@ -423,6 +424,49 @@ int handle_ASACZ_request_echo_req(type_ASAC_Zigbee_interface_request *pzmessage_
 	return retcode;
 }
 
+int handle_ASACZ_request_outside_send_message(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
+{
+	int retcode = 0;
+	type_ASAC_ZigBee_interface_command_outside_send_message_req * p_body_request = &pzmessage_rx->req.outside_send_message;
+	type_ASAC_Zigbee_interface_command_reply zmessage_tx;
+	zmessage_tx.code = enum_ASAC_ZigBee_interface_command_outside_send_message;
+	unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),outside_send_message);
+	type_ASAC_ZigBee_interface_command_outside_send_message_reply * p_outside_send_message_reply = &zmessage_tx.reply.outside_send_message;
+
+	p_outside_send_message_reply->dst_id = p_body_request->dst_id;
+	p_outside_send_message_reply->message_length = p_body_request->message_length;
+	p_outside_send_message_reply->retcode = enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode_OK;
+	uint32_t id = get_invalid_id();
+
+	// we send the message to the radio
+	if (!is_OK_push_Tx_outside_message(p_body_request, &id))
+	{
+		p_outside_send_message_reply->retcode = enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode_ERROR_unable_to_push_message;
+		syslog(LOG_ERR,"%s: unable to push the outside message", __func__);
+		retcode = -1;
+	}
+	// save the assigned message id
+	p_outside_send_message_reply->id = id;
+	#ifdef def_test_without_Zigbee
+	{
+		type_ASAC_ZigBee_interface_command_outside_send_message_req m;
+		uint32_t id;
+		// pop away the message
+		is_OK_pop_outside_message(&m, &id);
+	}
+	#endif
+
+	if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &phs_in->si_other))
+	{
+		syslog(LOG_INFO,"%s: reply sent OK", __func__);
+	}
+	else
+	{
+		syslog(LOG_ERR,"%s: unable to send the reply", __func__);
+		retcode = -1;
+	}
+	return retcode;
+}
 
 
 int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
@@ -448,6 +492,12 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 			break;
 		}
 
+		case enum_ASAC_ZigBee_interface_command_outside_send_message:
+		{
+			retcode = handle_ASACZ_request_outside_send_message(pzmessage_rx, phs_in, phss);
+			break;
+		}
+
 		default:
 		{
 			syslog(LOG_WARNING,"%s: unknown message code received: 0x%X\n",__func__, pzmessage_rx->code);
@@ -457,19 +507,87 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 	return retcode;
 }
 
-
-
-
-void * simple_server_thread(void *arg)
+typedef enum
 {
+	enum_check_outside_messages_from_ZigBee_retcode_OK = 0,
+	enum_check_outside_messages_from_ZigBee_retcode_unhandled_end_point_command,
+	enum_check_outside_messages_from_ZigBee_retcode_unable_to_forward,
+	enum_check_outside_messages_from_ZigBee_retcode_numof
+}enum_check_outside_messages_from_ZigBee_retcode;
+
+enum_check_outside_messages_from_ZigBee_retcode check_outside_messages_from_ZigBee(type_handle_server_socket *phss)
+{
+	enum_check_outside_messages_from_ZigBee_retcode r = enum_check_outside_messages_from_ZigBee_retcode_OK;
+	type_ASAC_Zigbee_interface_command_reply zmessage_tx;
+	zmessage_tx.code = enum_ASAC_ZigBee_interface_command_outside_received_message;
+	unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),received_message_callback);
+	type_ASAC_ZigBee_interface_command_received_message_callback * p_icr_rx = &zmessage_tx.reply.received_message_callback;
+	uint32_t id;
+	// if a message has been received...
+	if (is_OK_pop_Rx_outside_message(p_icr_rx, &id))
+	{
+		type_ASAC_ZigBee_src_id * psrcid = &p_icr_rx->src_id;
+		// we must check if someone is listening to the end-point/command destination of the outside message
+		struct sockaddr_in s_reply;
+		if (!p_find_socket_of_input_cluster_end_point_command(&s_reply, psrcid->destination_endpoint, psrcid->cluster_id))
+		{
+			syslog(LOG_ERR,"%s: unable to find end_point %u, command %u", __func__, (unsigned int )psrcid->destination_endpoint, (unsigned int)psrcid->cluster_id);
+			r = enum_check_outside_messages_from_ZigBee_retcode_unhandled_end_point_command;
+		}
+		else
+		{
+			// send the message in callback to the destination registered application
+			if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &s_reply))
+			{
+				syslog(LOG_INFO,"%s: reply sent OK", __func__);
+			}
+			else
+			{
+				syslog(LOG_ERR,"%s: unable to forward the message", __func__);
+				r = enum_check_outside_messages_from_ZigBee_retcode_unable_to_forward;
+			}
+
+		}
+	}
+	return r;
+}
+
+
+typedef enum
+{
+	enum_ASACZ_read_source_socket = 0,
+	enum_ASACZ_read_source_ZigBee,
+	enum_ASACZ_read_source_numof
+}enum_ASACZ_read_source;
+typedef enum
+{
+	enum_ASACZ_server_status_init = 0,
+	enum_ASACZ_server_status_begin_loop,
+	enum_ASACZ_server_status_read_socket,
+	enum_ASACZ_server_status_read_ZigBee,
+	enum_ASACZ_server_status_numof
+}enum_ASACZ_server_status;
+
+typedef struct _type_ASACZ_UDP_server_handle
+{
+	enum_ASACZ_read_source read_source;
+	enum_ASACZ_server_status server_status;
 	type_handle_server_socket hss;
-	type_handle_server_socket *phss = &hss;
-	memset(phss,0,sizeof(*phss));
+	type_handle_socket_in handle_socket_in;
+}type_ASACZ_UDP_server_handle;
+static type_ASACZ_UDP_server_handle h;
+
+
+void * ASACZ_UDP_server_thread(void *arg)
+{
+	//type_thread_info *tinfo = arg;
+	memset(&h, 0, sizeof(h));
+	h.handle_socket_in.slen = sizeof(h.handle_socket_in.si_other);
 	syslog(LOG_INFO, "%s: Server thread starts", __func__);
 
 	// opens the socket
-	phss->socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (phss->socket_fd < 0)
+	h.hss.socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (h.hss.socket_fd < 0)
 	{
 		syslog(LOG_ERR, "%s: Error opening the socket: %s", __func__, strerror(errno));
 		exit(EXIT_FAILURE);
@@ -478,13 +596,13 @@ void * simple_server_thread(void *arg)
 
 	// mark the socket as NON blocking
 	{
-		int flags = fcntl(phss->socket_fd, F_GETFL, 0);
+		int flags = fcntl(h.hss.socket_fd, F_GETFL, 0);
 		if (flags == -1)
 		{
 			syslog(LOG_ERR, "%s: Error reading the socket flags: %s",__func__, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
-		if (fcntl(phss->socket_fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		if (fcntl(h.hss.socket_fd, F_SETFL, flags | O_NONBLOCK) == -1)
 		{
 			syslog(LOG_ERR, "%s: Error setting the socket flag O_NONBLOCK: %s",__func__, strerror(errno));
 			exit(EXIT_FAILURE);
@@ -495,11 +613,11 @@ void * simple_server_thread(void *arg)
 
 	// do the bind
 	{
-		struct sockaddr_in * p = &phss->server_address;
+		struct sockaddr_in * p = &h.hss.server_address;
 		p->sin_family = AF_INET;
 		p->sin_addr.s_addr = INADDR_ANY;
 		p->sin_port = htons(def_port_number);
-		if (bind(phss->socket_fd, (struct sockaddr *) p,sizeof(*p)) < 0)
+		if (bind(h.hss.socket_fd, (struct sockaddr *) p,sizeof(*p)) < 0)
 		{
 			syslog(LOG_ERR, "%s: Unable to bind the socket on port %i: %s",__func__,def_port_number, strerror(errno));
 			exit(EXIT_FAILURE);
@@ -510,7 +628,7 @@ void * simple_server_thread(void *arg)
 #if def_local_preformatted_test
 
 	// loop handling incoming packets
-    while (phss->status_accept_connection != enum_status_accept_connection_ended)
+    while (h.hss.status_accept_connection != enum_status_accept_connection_ended)
     {
     	// sleep some time
     	//usleep(def_sleep_time_between_cycles_us);
@@ -519,7 +637,7 @@ void * simple_server_thread(void *arg)
     	int recv_len;
     	unsigned int slen = sizeof(si_other);
 		//try to receive some data, this is a blocking call
-		if ((recv_len = recvfrom(phss->socket_fd, phss->buffer, sizeof(phss->buffer), 0, (struct sockaddr *) &si_other, &slen)) == -1)
+		if ((recv_len = recvfrom(h.hss.socket_fd, h.hss.buffer, sizeof(h.hss.buffer), 0, (struct sockaddr *) &si_other, &slen)) == -1)
 		{
 			// printf("error while executing recvfrom:\n");
 		}
@@ -527,14 +645,14 @@ void * simple_server_thread(void *arg)
 		{
 	        //print details of the client/peer and the data received
 	        printf("Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
-			if (!is_OK_check_formatted_message(phss->buffer, sizeof(phss->buffer)))
+			if (!is_OK_check_formatted_message(h.hss.buffer, sizeof(h.hss.buffer)))
 			{
-		        printf("ERROR ON Data: %*.*s\n" , recv_len,recv_len,phss->buffer);
+		        printf("ERROR ON Data: %*.*s\n" , recv_len,recv_len,h.hss.buffer);
 		        exit(1);
 			}
-	        printf("Data: %*.*s\n" , recv_len,recv_len,phss->buffer);
+	        printf("Data: %*.*s\n" , recv_len,recv_len,h.hss.buffer);
 	        //now reply the client with the same data
-	        if (sendto(phss->socket_fd, phss->buffer,  recv_len, 0, (struct sockaddr*) &si_other, slen) == -1)
+	        if (sendto(h.hss.socket_fd, h.hss.buffer,  recv_len, 0, (struct sockaddr*) &si_other, slen) == -1)
 	        {
 				printf("error while executing sendto:\n");
 	        }
@@ -543,50 +661,101 @@ void * simple_server_thread(void *arg)
 
      } /* end of while */
 #elif def_local_ASACSOCKET_test
-	type_handle_socket_in handle_socket_in;
-	memset(&handle_socket_in, 0, sizeof(handle_socket_in));
-	handle_socket_in.slen = sizeof(handle_socket_in.si_other);
+
 	// loop handling incoming packets
-    while (phss->status_accept_connection != enum_status_accept_connection_ended)
+    while (h.hss.status_accept_connection != enum_status_accept_connection_ended)
     {
     	// sleep some time
     	usleep(def_sleep_time_between_cycles_us);
+    	switch(h.server_status)
+    	{
+    		case enum_ASACZ_server_status_init:
+    		default:
+    		{
+    			h.server_status = enum_ASACZ_server_status_begin_loop;
+    			break;
+    		}
+    		case enum_ASACZ_server_status_begin_loop:
+    		{
+    	    	switch (h.read_source)
+    	    	{
+    	    		case enum_ASACZ_read_source_socket:
+    	    		default:
+    	    		{
+    	    			h.server_status = enum_ASACZ_server_status_read_socket;
+    	    			h.read_source = enum_ASACZ_read_source_ZigBee;
+    	    			break;
+    	    		}
+    	    		case enum_ASACZ_read_source_ZigBee:
+    	    		{
+    	    			h.server_status = enum_ASACZ_server_status_read_ZigBee;
+    	    			h.read_source = enum_ASACZ_read_source_socket;
+    	    			break;
+    	    		}
+    	    	}
+    			break;
+    		}
+    		case enum_ASACZ_server_status_read_ZigBee:
+    		{
+    			h.server_status = enum_ASACZ_server_status_begin_loop;
+    			enum_check_outside_messages_from_ZigBee_retcode r = check_outside_messages_from_ZigBee(&h.hss);
+    			switch(r)
+    			{
+    				case enum_check_outside_messages_from_ZigBee_retcode_OK:
+    				{
+    					break;
+    				}
+    				default:
+    				{
+    	    			syslog(LOG_ERR, "error %u checking outside messages", (unsigned int)r);
+    					break;
+    				}
+    			}
+    			break;
+    		}
 
-        //try to receive some data, this is a NON-blocking call
-        int n_received_bytes = recvfrom(phss->socket_fd, phss->buffer, sizeof(phss->buffer), 0, (struct sockaddr *) &handle_socket_in.si_other, &handle_socket_in.slen);
-        // check if some data have been received
-        if (n_received_bytes == -1)
-        {
-        	// no data available from the socket, this is normal, we'll try later
-        	continue;
-        }
-		//print details of the client/peer and the data received
-		syslog(LOG_INFO,"%s: Received packet from %s, port %d", __func__, inet_ntoa(handle_socket_in.si_other.sin_addr), ntohs(handle_socket_in.si_other.sin_port));
+        	case enum_ASACZ_server_status_read_socket:
+        	{
+        		h.server_status = enum_ASACZ_server_status_begin_loop;
+        		//try to receive some data, this is a NON-blocking call
+                int n_received_bytes = recvfrom(h.hss.socket_fd, h.hss.buffer, sizeof(h.hss.buffer), 0, (struct sockaddr *) &h.handle_socket_in.si_other, &h.handle_socket_in.slen);
+                // check if some data have been received
+                if (n_received_bytes == -1)
+                {
+                	// no data available from the socket, this is normal, we'll try later
+                	continue;
+                }
+        		//print details of the client/peer and the data received
+        		syslog(LOG_INFO,"%s: Received packet from %s, port %d", __func__, inet_ntoa(h.handle_socket_in.si_other.sin_addr), ntohs(h.handle_socket_in.si_other.sin_port));
 
-		// check if the packet received is a valid message or not
-		enum_check_ASACSOCKET_formatted_message retcode_check = check_ASACSOCKET_formatted_message(phss->buffer, n_received_bytes);
-		// was the check OK?
-		if (retcode_check != enum_check_ASACSOCKET_formatted_message_OK)
-		{
-			syslog(LOG_ERR,"%s: Check error %i / %s", __func__, (int)retcode_check , string_of_check_ASACSOCKET_return_code(retcode_check));
-			continue;
-		}
-		syslog(LOG_INFO,"%s: The message is valid",__func__);
+        		// check if the packet received is a valid message or not
+        		enum_check_ASACSOCKET_formatted_message retcode_check = check_ASACSOCKET_formatted_message(h.hss.buffer, n_received_bytes);
+        		// was the check OK?
+        		if (retcode_check != enum_check_ASACSOCKET_formatted_message_OK)
+        		{
+        			syslog(LOG_ERR,"%s: Check error %i / %s", __func__, (int)retcode_check , string_of_check_ASACSOCKET_return_code(retcode_check));
+        			continue;
+        		}
+        		syslog(LOG_INFO,"%s: The message is valid",__func__);
 
-		type_struct_ASACSOCKET_msg * p = (type_struct_ASACSOCKET_msg *)phss->buffer;
-		type_ASAC_Zigbee_interface_request *pzmessage_rx = (type_ASAC_Zigbee_interface_request *)&(p->body);
-		// handle the request
-		if (handle_ASACZ_request(pzmessage_rx, &handle_socket_in, phss) < 0)
-		{
-			syslog(LOG_ERR,"%s: request handled with error", __func__);
-		}
+        		type_struct_ASACSOCKET_msg * p = (type_struct_ASACSOCKET_msg *)h.hss.buffer;
+        		type_ASAC_Zigbee_interface_request *pzmessage_rx = (type_ASAC_Zigbee_interface_request *)&(p->body);
+        		// handle the request
+        		if (handle_ASACZ_request(pzmessage_rx, &h.handle_socket_in, &h.hss) < 0)
+        		{
+        			syslog(LOG_ERR,"%s: request handled with error", __func__);
+        		}
+        		break;
+        	}
+    	}
+
      } /* end of while */
 
 #endif
 
     // the thread ends here
-    phss->is_running = 0;
-    phss->is_terminated =1;
+    h.hss.is_running = 0;
+    h.hss.is_terminated =1;
 
     return 0;
 

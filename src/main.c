@@ -178,6 +178,7 @@ int main(int argc, char* argv[])
 
 // call the initialization procedures
 	init_ASACZ_device_list();
+	init_input_cluster_table();
 
 
 #ifndef def_test_without_Zigbee

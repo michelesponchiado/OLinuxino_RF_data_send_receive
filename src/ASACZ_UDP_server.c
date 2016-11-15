@@ -529,20 +529,27 @@ enum_check_outside_messages_from_ZigBee_retcode check_outside_messages_from_ZigB
 		type_ASAC_ZigBee_src_id * psrcid = &p_icr_rx->src_id;
 		// we must check if someone is listening to the end-point/command destination of the outside message
 		struct sockaddr_in s_reply;
+		printf("%s: popped message from ep:%i, cluster_id:%i\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
+
 		if (!p_find_socket_of_input_cluster_end_point_command(&s_reply, psrcid->destination_endpoint, psrcid->cluster_id))
 		{
+			printf("%s: ERROR NO SOCKET BOUND TO ep:%i, cluster_id:%i\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
 			syslog(LOG_ERR,"%s: unable to find end_point %u, command %u", __func__, (unsigned int )psrcid->destination_endpoint, (unsigned int)psrcid->cluster_id);
 			r = enum_check_outside_messages_from_ZigBee_retcode_unhandled_end_point_command;
 		}
 		else
 		{
+			char *ip = inet_ntoa(s_reply.sin_addr);
+			printf("%s: OK found socket bound to ep:%i, cluster_id:%i, ip:%s, port=%u\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id, ip, (unsigned int)s_reply.sin_port);
 			// send the message in callback to the destination registered application
 			if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &s_reply))
 			{
+				printf("%s: message sent OK\n", __func__);
 				syslog(LOG_INFO,"%s: reply sent OK", __func__);
 			}
 			else
 			{
+				printf("%s: error sending message\n", __func__);
 				syslog(LOG_ERR,"%s: unable to forward the message", __func__);
 				r = enum_check_outside_messages_from_ZigBee_retcode_unable_to_forward;
 			}

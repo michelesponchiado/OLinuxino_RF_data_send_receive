@@ -694,10 +694,12 @@ static uint8_t mtZdoIEEEAddrRspCb(IeeeAddrRspFormat_t *msg)
 		enum_add_ASACZ_device_list_header_retcode r = add_ASACZ_device_list_header(&device_header);
 		if (r != enum_add_ASACZ_device_list_header_retcode_OK)
 		{
+			consolePrint("%s: ERROR ADDING DEVICE @ IEEE Address 0x%lX / network address 0x%X\n", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
 			stats.device_list.add_header.ERR++;
 		}
 		else
 		{
+			consolePrint("%s: *** Device @ IEEE Address 0x%lX / network address 0x%X added OK\n", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
 			stats.device_list.add_header.OK++;
 		}
 	}
@@ -727,10 +729,12 @@ static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg)
 		enum_add_ASACZ_device_list_header_retcode r = add_ASACZ_device_list_header(&device_header);
 		if (r != enum_add_ASACZ_device_list_header_retcode_OK)
 		{
+			consolePrint("%s: ERROR ADDING DEVICE @ IEEE Address 0x%lX / network address 0x%X\n", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
 			stats.device_list.add_header.ERR++;
 		}
 		else
 		{
+			consolePrint("%s: *** Device @ IEEE Address 0x%lX / network address 0x%X added OK\n", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
 			stats.device_list.add_header.OK++;
 		}
 	}
@@ -768,13 +772,16 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 	// incoming message received, we put it in the received messages queue
 #if 1
 	uint64_t IEEE_address;
+	consolePrint("%s: message from device @ Short Address 0x%X\n", __func__,(unsigned int)msg->SrcAddr);
 	if (!is_OK_get_IEEE_from_network_short_address(msg->SrcAddr, &IEEE_address))
 	{
+		consolePrint("%s: UNKNOWN DEVICE @ Short Address 0x%X\n", __func__,(unsigned int)msg->SrcAddr);
 		syslog(LOG_ERR, "Unknown short address 0x%X on incoming message", (uint32_t)msg->SrcAddr);
 		retcode = FAILURE;
 	}
 	else
 	{
+		consolePrint("%s: the device is @ IEEE 0x%lX, Short Address 0x%X\n", __func__,IEEE_address, (unsigned int)msg->SrcAddr);
 		uint32_t id;
 		type_ASAC_ZigBee_interface_command_received_message_callback m;
 		memset(&m, 0, sizeof(m));
@@ -791,8 +798,13 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 		memcpy(m.message, msg->Data, m.message_length);
 		if (!is_OK_push_Rx_outside_message(&m, &id))
 		{
+			consolePrint("%s: ERROR PUTTING message in outside queue\n", __func__);
 			syslog(LOG_ERR, "Unable to put received message in rx queue");
 			retcode = FAILURE;
+		}
+		else
+		{
+			consolePrint("%s: message put OK in outside queue\n", __func__);
 		}
 	}
 #else
@@ -1164,7 +1176,7 @@ static void displayDevices(void)
 				// asks info about the node, so we can add it to the device list
 				{
 					IeeeAddrReqFormat_t IEEEreq;
-					IEEEreq.ShortAddr = nodeList[i].NodeAddr;
+					IEEEreq.ShortAddr = nodeList[i].childs[cI].ChildAddr;
 					IEEEreq.ReqType = 0; // signle device response
 					IEEEreq.StartIndex = 0; // start from first
 					zdoIeeeAddrReq(&IEEEreq);
@@ -1451,6 +1463,8 @@ void* appProcess(void *argument)
 		{
 			if (is_valid_IEEE_address(&handle_app.IEEE_address) && is_valid_Tx_power(&handle_app.Tx_power))
 			{
+				consolePrint("My IEEE Address is: 0x%lX\n", handle_app.IEEE_address.address);
+
 				syslog(LOG_INFO, "Callback OK, going to device init");
 				handle_app.status = enum_app_status_display_devices_init;
 			}
@@ -1476,6 +1490,7 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_display_devices_ends:
 		{
+			consolePrint("My IEEE Address is: 0x%lX\n", handle_app.IEEE_address.address);
 			syslog(LOG_INFO, "Display device OK, going to rx/tx mode");
 // wait until a device shows up?
 #warning better to remove this default end point / destination address
@@ -1515,11 +1530,13 @@ void* appProcess(void *argument)
 					uint16_t DstAddr = 0;
 					if (!is_OK_get_network_short_address_from_IEEE(m.dst_id.IEEE_destination_address, &DstAddr))
 					{
+						consolePrint("%s: ERROR UNKNOWN DST @ IEEE Address 0x%lX\n", __func__, m.dst_id.IEEE_destination_address);
 						message_history_tx_set_error(handle_app.message_id, enum_message_history_error_unknown_IEEE_address);
 						syslog(LOG_ERR, "Unable to find device with IEEE address: %lX", m.dst_id.IEEE_destination_address);
 					}
 					else
 					{
+						consolePrint("%s: sending DST @ IEEE Address 0x%lX\n", __func__, m.dst_id.IEEE_destination_address);
 						// store the message length
 						pdr->Len         = m.message_length;
 						// store the message body
@@ -1536,13 +1553,14 @@ void* appProcess(void *argument)
 						// check the return code
 						if (status != MT_RPC_SUCCESS)
 						{
+							consolePrint("%s: ERROR sending DST @ IEEE Address 0x%lX\n", __func__, m.dst_id.IEEE_destination_address);
 							// mark the data request has been sent OK
 							message_history_tx_set_id_status(handle_app.message_id, enum_message_history_status_datareq_sent);
 							syslog(LOG_ERR, "Unable to send message with id = %u", handle_app.message_id);
 						}
 						else
 						{
-
+							consolePrint("%s: sent OK @ IEEE Address 0x%lX\n", __func__, m.dst_id.IEEE_destination_address);
 							syslog(LOG_INFO, "Message with id = %u sent OK", handle_app.message_id);
 						}
 					}

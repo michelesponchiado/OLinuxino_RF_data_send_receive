@@ -16,9 +16,9 @@
 
 typedef struct _type_input_cluster_table
 {
-	uint32_t idx;
+	uint32_t numof;
 	type_input_cluster_table_elem queue[def_N_elements_input_cluster_table];
-	int current_endpoint;
+	int walk_current_endpoint;
 	pthread_mutex_t mtx;
 
 }type_input_cluster_table;
@@ -46,7 +46,7 @@ struct sockaddr_in * p_find_socket_of_input_cluster_end_point_command(struct soc
 	pthread_mutex_lock(&input_cluster_table.mtx);
 		unsigned int element_doesnt_exists = 0;
 		unsigned int idx;
-		for (idx = 0; (idx < input_cluster_table.idx) && !p && !element_doesnt_exists; idx++)
+		for (idx = 0; (idx < input_cluster_table.numof) && !p && !element_doesnt_exists; idx++)
 		{
 			type_input_cluster_table_elem *p_cur_elem = &input_cluster_table.queue[idx];
 			uint8_t cur_endpoint = p_cur_elem->cluster.endpoint;
@@ -80,7 +80,7 @@ static unsigned int is_OK_find_input_cluster_entry(type_input_cluster_table_elem
 {
 	unsigned int found = 0;
 	unsigned int idx;
-	for (idx = 0; idx < input_cluster_table.idx && !found; idx++)
+	for (idx = 0; idx < input_cluster_table.numof && !found; idx++)
 	{
 		type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[idx];
 		// if the elements are equal, found!
@@ -126,6 +126,44 @@ static void sort_input_cluster_table(void)
 	qsort(&input_cluster_table.queue, def_N_elements_input_cluster_table, sizeof(input_cluster_table.queue[0]), compare_endp_clusters);
 }
 
+static void delete_clusters(type_ASAC_ZigBee_interface_network_input_cluster_register_req *p)
+{
+	pthread_mutex_lock(&input_cluster_table.mtx);
+		unsigned int idx;
+		for (idx = 0; (idx < input_cluster_table.numof) ; idx++)
+		{
+			type_input_cluster_table_elem *p_cur_elem = &input_cluster_table.queue[idx];
+			uint8_t cur_endpoint = p_cur_elem->cluster.endpoint;
+			if (cur_endpoint == p->endpoint)
+			{
+				uint16_t cur_input_cluster_id = p_cur_elem->cluster.input_cluster_id;
+				if (cur_input_cluster_id == p->input_cluster_id)
+				{
+					{
+	        			char *ip = inet_ntoa(p_cur_elem->si_other.sin_addr);
+	        			printf("%s: removed old ep:%i, cluster:%i, ip:%s, port=%u\n", __func__,(int)p_cur_elem->cluster.endpoint,(int)p_cur_elem->cluster.input_cluster_id, ip, (unsigned int)p_cur_elem->si_other.sin_port);
+					}
+					int idx_copy;
+					for (idx_copy = idx; (idx_copy + 1 < input_cluster_table.numof) ; idx_copy++)
+					{
+						type_input_cluster_table_elem *p_cur_elem = &input_cluster_table.queue[idx_copy];
+						type_input_cluster_table_elem *p_next_elem = &input_cluster_table.queue[idx_copy + 1];
+						*p_cur_elem = *p_next_elem;
+					}
+					type_input_cluster_table_elem *p_cur_elem = &input_cluster_table.queue[idx_copy];
+					// cleanup the last element
+					memset(p_cur_elem, 0, sizeof(*p_cur_elem));
+					if (input_cluster_table.numof > 0)
+					{
+						input_cluster_table.numof--;
+					}
+				}
+			}
+		}
+	pthread_mutex_unlock(&input_cluster_table.mtx);
+
+}
+
 
 enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_elem *pelem_to_add)
 {
@@ -134,7 +172,7 @@ enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_
 	pthread_mutex_lock(&input_cluster_table.mtx);
 		if (r == enum_add_input_cluster_table_retcode_OK)
 		{
-			if (input_cluster_table.idx >= def_N_elements_input_cluster_table)
+			if (input_cluster_table.numof >= def_N_elements_input_cluster_table)
 			{
 				r = enum_add_input_cluster_table_retcode_ERR_no_room;
 			}
@@ -150,6 +188,8 @@ enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_
 
 		if (r == enum_add_input_cluster_table_retcode_OK)
 		{
+			// delete all of the elements with the same cluster!
+			delete_clusters(&pelem_to_add->cluster);
 			// already existing ? nothing to do!
 			if (is_OK_find_input_cluster_entry(pelem_to_add, NULL))
 			{
@@ -157,10 +197,14 @@ enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_
 			}
 			else
 			{
-				type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[input_cluster_table.idx];
+				type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[input_cluster_table.numof];
 				*p_elem = *pelem_to_add;
-				++input_cluster_table.idx;
+				++input_cluster_table.numof;
 				sort_input_cluster_table();
+			}
+			{
+    			char *ip = inet_ntoa(pelem_to_add->si_other.sin_addr);
+    			printf("%s: added NEW ep:%i, cluster:%i, ip:%s, port=%u\n", __func__,(int)pelem_to_add->cluster.endpoint, (int)pelem_to_add->cluster.input_cluster_id, ip, (unsigned int)pelem_to_add->si_other.sin_port);
 			}
 		}
 	pthread_mutex_unlock(&input_cluster_table.mtx);
@@ -186,17 +230,17 @@ enum_remove_input_cluster_table_retcode remove_input_cluster(type_input_cluster_
 			else
 			{
 				unsigned int idx;
-				for (idx = idx_in_table; idx + 1 < input_cluster_table.idx; idx++)
+				for (idx = idx_in_table; idx + 1 < input_cluster_table.numof; idx++)
 				{
 					type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[idx];
 					p_elem[0] = p_elem[1];
 				}
 				// cleanup the freed element
-				if (input_cluster_table.idx)
+				if (input_cluster_table.numof)
 				{
-					type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[input_cluster_table.idx];
+					type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[input_cluster_table.numof];
 					memset(p_elem,0,sizeof(*p_elem));
-					--input_cluster_table.idx;
+					--input_cluster_table.numof;
 				}
 				// sort the table
 				sort_input_cluster_table();
@@ -209,7 +253,7 @@ enum_remove_input_cluster_table_retcode remove_input_cluster(type_input_cluster_
 
 void walk_endpoints_clusters_init(void)
 {
-	input_cluster_table.current_endpoint = -1;
+	input_cluster_table.walk_current_endpoint = -1;
 }
 
 
@@ -221,17 +265,17 @@ unsigned int is_OK_walk_endpoints_clusters_next(type_endpoint_cluster *p)
 	pthread_mutex_lock(&input_cluster_table.mtx);
 		unsigned int found = 0;
 		unsigned int idx;
-		for (idx = 0; idx < input_cluster_table.idx; idx++)
+		for (idx = 0; idx < input_cluster_table.numof; idx++)
 		{
 			type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[idx];
-			if (!found && p_elem->cluster.endpoint > input_cluster_table.current_endpoint)
+			if (!found && p_elem->cluster.endpoint > input_cluster_table.walk_current_endpoint)
 			{
 				found = 1;
 				is_OK = 1;
-				input_cluster_table.current_endpoint = p_elem->cluster.endpoint;
+				input_cluster_table.walk_current_endpoint = p_elem->cluster.endpoint;
 				p->endpoint = p_elem->cluster.endpoint;
 			}
-			if (found && input_cluster_table.current_endpoint == p_elem->cluster.endpoint)
+			if (found && input_cluster_table.walk_current_endpoint == p_elem->cluster.endpoint)
 			{
 				if (p->num_clusters < sizeof(p->clusters_id)/sizeof(p->clusters_id[0]))
 				{

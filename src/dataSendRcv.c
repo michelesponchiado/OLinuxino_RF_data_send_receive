@@ -63,6 +63,8 @@
 #include "ASACZ_devices_list.h"
 #include "ASACZ_message_history.h"
 #include "timeout_utils.h"
+#include "dataSendRcv.h"
+#include "input_cluster_table.h"
 
 //#define def_test_txrx
 
@@ -90,6 +92,19 @@ uint8_t gDstEndPoint = 1;
 
 #define def_timeout_wait_callbacks_do_ms 10000
 
+
+const static RegisterFormat_t default_RegisterFormat_t =
+{
+		.AppProfId = 0x0104,
+		.AppDeviceId = 0x0100,
+		.AppDevVer = 1,
+		.LatencyReq = 0,
+		.EndPoint = 0xf0,
+		.AppNumInClusters = 1,
+		.AppInClusterList[0] = 0x0001,
+		.AppNumOutClusters = 1,
+		.AppOutClusterList[0] = 0x0001,
+};
 
 
 typedef enum
@@ -179,6 +194,8 @@ typedef struct _type_handle_app
 	type_handle_app_Tx_power Tx_power;
 	type_my_timeout my_timeout;
 	unsigned int channel_index; // channel index, between 11 and 26
+	unsigned int network_restart_req;
+	unsigned int network_restart_ack;
 }type_handle_app;
 static type_handle_app handle_app;
 
@@ -286,7 +303,7 @@ static uint8_t setNVPanID(uint32_t panId);
 static uint8_t setNVDevType(uint8_t devType);
 #endif
 static int32_t startNetwork(unsigned int channel_index);
-static int32_t registerAf(void);
+static int32_t registerAf_default(void);
 
 unsigned long get_system_time_ms(void)
 {
@@ -365,6 +382,20 @@ static mtAfCb_t mtAfCb =
 	        NULL,			//MT_AF_DATA_RETRIEVE
 	        NULL,			    //MT_AF_REFLECT_ERROR
 	    };
+
+static mtSapiCb_t mtSapiCb=
+{
+	.pfnSapiReadConfigurationSrsp 	= NULL, //MT_SAPI_READ_CONFIGURATION
+	.pfnSapiGetDeviceInfoSrsp 		= NULL,//MT_SAPI_GET_DEVICE_INFO
+	.pfnSapiFindDeviceCnf 			= NULL,//MT_SAPI_FIND_DEVICE_CNF
+	.pfnSapiSendDataCnf 			= NULL,//MT_SAPI_SEND_DATA_CNF
+	.pfnSapiReceiveDataInd 			= NULL,//MT_SAPI_RECEIVE_DATA_IND
+	.pfnSapiAllowBindCnf 			= NULL,//MT_SAPI_ALLOW_BIND_CNF
+	.pfnSapiBindCnf 				= NULL,//MT_SAPI_BIND_CNF
+	.pfnSapiStartCnf 				= NULL,//MT_SAPI_START_CNF
+
+};
+
 typedef struct
 {
 	uint16_t ChildAddr;
@@ -745,6 +776,9 @@ static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg)
 	return 0;
 }
 
+
+
+
 /********************************************************************
  * AF DATA REQUEST CALL BACK FUNCTION
  */
@@ -918,8 +952,158 @@ static uint8_t setNVChanList(uint32_t chanList)
 
 	return status;
 }
+static void refresh_my_endpoint_list(void)
+{
+	uint16_t my_short_address;
+	if (!is_OK_get_network_short_address_from_IEEE(handle_app.IEEE_address.address, &my_short_address))
+	{
+		printf("%s: ERROR unable to refresh my end point list\n", __func__);
+	}
+	else
+	{
+		printf("%s: refreshing my end point list...\n", __func__);
+		ActiveEpReqFormat_t actReq;
+		actReq.DstAddr = my_short_address;
+		actReq.NwkAddrOfInterest = my_short_address;
+		zdoActiveEpReq(&actReq);
+		rpcGetMqClientMsg();
+		int32_t status;
+		do
+		{
+			status = rpcWaitMqClientMsg(1000);
+		} while (status != -1);
+	}
+}
+
 
 uint8_t dType;
+
+void register_user_end_points(void)
+{
+	uint8_t prev_end_point = 0;
+	uint32_t nloop = 0;
+	printf("%s: + registering end_point\n", __func__);
+	while(++nloop < 256)
+	{
+		type_Af_user u;
+
+		enum_get_next_end_point_command_list_retcode r = get_next_end_point_command_list(prev_end_point, &u);
+		if (r != enum_get_next_end_point_command_list_retcode_OK)
+		{
+			break;
+		}
+		prev_end_point = u.EndPoint;
+		printf("%s: registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
+		if (!is_OK_registerAf_user(&u))
+		{
+			printf("%s: ERROR registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
+		}
+		else
+		{
+
+		}
+
+	}
+	//refresh my end point list
+	refresh_my_endpoint_list();
+	printf("%s: - registering end_point\n", __func__);
+}
+
+
+static int32_t restartNetwork(void)
+{
+#ifndef CC26xx
+	char cDevType;
+	uint8_t devType;
+#endif
+	int32_t status;
+	handle_app.initDone = 0;
+	rpcWaitMqClientMsg(2000);
+
+	status = setNVStartup(0);
+	if (status != MT_RPC_SUCCESS)
+	{
+		syslog(LOG_WARNING, "%s: network startup failed", __func__);
+		printf("%s: ERROR network startup failed\n", __func__);
+		return -1;
+	}
+	ResetReqFormat_t resReq;
+	resReq.Type = 1;
+	sysResetReq(&resReq);
+	//flush the rsp
+	rpcWaitMqClientMsg(200);
+
+	// register the default end point
+	registerAf_default();
+	// register the user end points
+	register_user_end_points();
+
+	status = zdoInit();
+	if (status == NEW_NETWORK)
+	{
+		dbg_print(PRINT_LEVEL_INFO, "zdoInit NEW_NETWORK\n");
+		status = MT_RPC_SUCCESS;
+	}
+	else if (status == RESTORED_NETWORK)
+	{
+		dbg_print(PRINT_LEVEL_INFO, "zdoInit RESTORED_NETWORK\n");
+		status = MT_RPC_SUCCESS;
+	}
+	else
+	{
+		syslog(LOG_WARNING, "%s: zdoInit failed", __func__);
+		printf("%s: ERROR zdoInit failed\n", __func__);
+		status = -1;
+	}
+
+
+	//flush AREQ ZDO State Change messages
+	while (status != -1)
+	{
+		status = rpcWaitMqClientMsg(2000);
+#ifndef CC26xx
+		if (((devType == DEVICETYPE_COORDINATOR) && (devState == DEV_ZB_COORD))
+		        || ((devType == DEVICETYPE_ROUTER) && (devState == DEV_ROUTER))
+		        || ((devType == DEVICETYPE_ENDDEVICE)
+		                && (devState == DEV_END_DEVICE)))
+		{
+			break;
+		}
+#endif
+	}
+
+
+	{
+		PermitJoiningReqFormat_t my_join_permit = {0};
+		my_join_permit.Destination = 0x00;
+		my_join_permit.Timeout = 255;
+		uint8_t retcode;
+		retcode = zbPermitJoiningReq(&my_join_permit);
+		if ( retcode )
+		{
+			printf(" *** permit join req ERROR: %i\n", (int)retcode);
+		}
+		else
+		{
+			printf("permit join req OK\n");
+		}
+	}
+	//set startup option back to keep configuration in case of reset
+	status = setNVStartup(0);
+	if (handle_app.devState < DEV_END_DEVICE)
+	{
+		syslog(LOG_WARNING, "%s: network restart failed", __func__);
+		printf("%s: ERROR network restart failed\n", __func__);
+		//start network failed
+		return -1;
+	}
+	syslog(LOG_INFO, "%s: network restart OK", __func__);
+	printf("%s: network restart OK\n", __func__);
+
+	return 0;
+}
+
+
 static int32_t startNetwork(unsigned int channel_index)
 {
 #ifndef CC26xx	
@@ -973,7 +1157,7 @@ static int32_t startNetwork(unsigned int channel_index)
 	sysResetReq(&resReq);
 	//flush the rsp
 	syslog(LOG_INFO, "Flushing rcp");
-	rpcWaitMqClientMsg(5000);
+	rpcWaitMqClientMsg(2000);
 
 	if (newNwk)
 	{
@@ -1034,8 +1218,8 @@ static int32_t startNetwork(unsigned int channel_index)
 
 	}
 
-	syslog(LOG_INFO, "registering the default end point/command 1.6");
-	registerAf();
+	syslog(LOG_INFO, "registering the default end point/command");
+	registerAf_default();
 
 	syslog(LOG_INFO, "zdo init");
 	status = zdoInit();
@@ -1060,7 +1244,7 @@ static int32_t startNetwork(unsigned int channel_index)
 	//flush AREQ ZDO State Change messages
 	while (status != -1)
 	{
-		status = rpcWaitMqClientMsg(5000);
+		status = rpcWaitMqClientMsg(2000);
 #ifndef CC26xx
 		if (((devType == DEVICETYPE_COORDINATOR) && (handle_app.devState == DEV_ZB_COORD))
 		        || ((devType == DEVICETYPE_ROUTER) && (handle_app.devState == DEV_ROUTER))
@@ -1103,23 +1287,97 @@ static int32_t startNetwork(unsigned int channel_index)
 	syslog(LOG_INFO, "startNetwork ends OK");
 	return 0;
 }
-static int32_t registerAf(void)
+
+
+
+static int32_t registerAf_default(void)
 {
 	int32_t status = 0;
 	RegisterFormat_t reg;
-
-	reg.EndPoint = 1;
-	reg.AppProfId = 0x0104;
-	reg.AppDeviceId = 0x0100;
-	reg.AppDevVer = 1;
-	reg.LatencyReq = 0;
-	reg.AppNumInClusters = 1;
-	reg.AppInClusterList[0] = 0x0006;
-	reg.AppNumOutClusters = 1;
-	reg.AppOutClusterList[0] = 0x0006;
+	memcpy(&reg, &default_RegisterFormat_t, sizeof(reg));
 
 	status = afRegister(&reg);
 	return status;
+}
+
+
+void require_network_restart(void)
+{
+	handle_app.network_restart_req++;
+}
+unsigned int is_required_network_restart(void)
+{
+	unsigned int is_required =0;
+	if (handle_app.network_restart_req != handle_app.network_restart_ack)
+	{
+		handle_app.network_restart_ack = handle_app.network_restart_req;
+		is_required = 1;
+	}
+	return is_required;
+}
+unsigned int is_OK_registerAf_user(type_Af_user *p)
+{
+	unsigned int is_OK = 1;
+	if (is_OK)
+	{
+		if (p->AppNumInClusters > sizeof(p->AppInClusterList)/sizeof(p->AppInClusterList[0]))
+		{
+			is_OK = 0;
+		}
+	}
+	if (is_OK)
+	{
+		if (p->AppNumOutClusters > sizeof(p->AppOutClusterList)/sizeof(p->AppOutClusterList[0]))
+		{
+			is_OK = 0;
+		}
+	}
+	if (is_OK)
+	{
+
+		printf("%s: refreshing my point list @endpoint %u...\n", __func__, (unsigned int)p->EndPoint);
+		RegisterFormat_t reg;
+		memcpy(&reg, &default_RegisterFormat_t, sizeof(reg));
+		reg.EndPoint = p->EndPoint;
+		{
+			reg.AppNumInClusters = p->AppNumInClusters;
+			int i;
+			for (i =0; i < reg.AppNumInClusters; i++)
+			{
+				reg.AppInClusterList[i] = p->AppInClusterList[i];
+			}
+		}
+		{
+			reg.AppNumOutClusters = p->AppNumOutClusters;
+			int i;
+			for (i =0; i < reg.AppNumOutClusters; i++)
+			{
+				reg.AppOutClusterList[i] = p->AppOutClusterList[i];
+			}
+		}
+
+		{
+			int32_t status = 0;
+			status = afRegister(&reg);
+			if (status != SUCCESS)
+			{
+				is_OK = 0;
+			}
+		}
+
+	}
+	{
+		if (is_OK)
+		{
+			printf("%s: ends OK\n", __func__);
+		}
+		else
+		{
+			printf("%s: ERROR, ends non OK\n", __func__);
+		}
+
+	}
+	return is_OK;
 }
 
 static void displayDevices(void)
@@ -1283,6 +1541,7 @@ uint32_t appInit(void)
 	sysRegisterCallbacks(mtSysCb);
 	zdoRegisterCallbacks(mtZdoCb);
 	afRegisterCallbacks(mtAfCb);
+	sapiRegisterCallbacks(mtSapiCb);
 
 	init_handle_app();
 	// initialize the handle app stati machine
@@ -1379,6 +1638,23 @@ void* appProcess(void *argument)
 			else if (++handle_app.num_msgs_flushed >= def_max_messages_flushed)
 			{
 				handle_app_error(enum_app_error_code_too_many_messages_flushed);
+			}
+			break;
+		}
+		case enum_app_status_restart_network:
+		{
+			handle_app.devState = DEV_HOLD;
+
+			int32_t status = restartNetwork();
+			if (status != -1)
+			{
+				syslog(LOG_INFO, "Network up");
+				handle_app.status = enum_app_status_get_IEEE_address;
+			}
+			else
+			{
+				syslog(LOG_ERR, "Unable to restart Network");
+				handle_app_error(enum_app_error_code_unable_to_start_network);
 			}
 			break;
 		}
@@ -1512,6 +1788,11 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_tx_msgs:
 		{
+			if (is_required_network_restart())
+			{
+				handle_app.status = enum_app_status_restart_network;
+				break;
+			}
 			handle_app.status = enum_app_status_rx_msgs;
 #define def_use_only_zigbee_queue_messages
 #ifdef def_use_only_zigbee_queue_messages

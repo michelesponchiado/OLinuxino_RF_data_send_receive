@@ -20,6 +20,7 @@
 #include <poll.h>
 #include <arpa/inet.h>
 #include "ASAC_ZigBee_network_commands.h"
+#include "dataSendRcv.h"
 
 typedef struct _type_input_cluster_table_elem
 {
@@ -33,6 +34,8 @@ typedef enum
 	enum_add_input_cluster_table_retcode_OK_already_present,
 	enum_add_input_cluster_table_retcode_ERR_no_room,
 	enum_add_input_cluster_table_retcode_ERR_invalid_endpoint,
+	enum_add_input_cluster_table_retcode_ERR_too_many_in_commands,
+	enum_add_input_cluster_table_retcode_ERR_too_many_out_commands,
 	enum_add_input_cluster_table_retcode_ERR_unknwon,
 	enum_add_input_cluster_table_retcode_numof
 }enum_add_input_cluster_table_retcode;
@@ -60,5 +63,13 @@ void walk_endpoints_clusters_init(void);
 unsigned int is_OK_walk_endpoints_clusters_next(type_endpoint_cluster *p);
 
 void init_input_cluster_table(void);
+
+typedef enum
+{
+	enum_get_next_end_point_command_list_retcode_OK = 0,
+	enum_get_next_end_point_command_list_retcode_empty,
+	enum_get_next_end_point_command_list_retcode_numof
+}enum_get_next_end_point_command_list_retcode;
+enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uint8_t prev_end_point, type_Af_user *p);
 
 #endif /* INPUT_CLUSTER_TABLE_H_ */

@@ -15,6 +15,7 @@ typedef enum
 	enum_app_status_flush_messages_init,
 	enum_app_status_flush_messages_do,
 	enum_app_status_start_network,
+	enum_app_status_restart_network,
 	enum_app_status_get_IEEE_address,
 	enum_app_status_sysOsalNvWrite,
 	enum_app_status_set_TX_power,

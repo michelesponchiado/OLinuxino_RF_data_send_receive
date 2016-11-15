@@ -43,9 +43,19 @@
 extern "C"
 {
 #endif
+typedef struct _type_Af_user
+{
+	uint8_t EndPoint;
+	uint8_t AppNumInClusters;
+	uint16_t AppInClusterList[16];
+	uint8_t AppNumOutClusters;
+	uint16_t AppOutClusterList[16];
+} type_Af_user;
 
-int appInit(void);
-void appProcess(void *argument);
+unsigned int is_OK_registerAf_user(type_Af_user *p);
+void require_network_restart(void);
+uint32_t appInit(void);
+void *appProcess(void *argument);
 void* appMsgProcess(void *argument);
 void appInitQ(void);
 

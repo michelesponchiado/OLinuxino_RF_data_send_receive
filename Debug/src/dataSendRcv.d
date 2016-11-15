@@ -11,7 +11,8 @@ src/dataSendRcv.o: ../src/dataSendRcv.c \
  ../src/ts_util.h ../src/ZigBee_messages.h \
  ../src/ASAC_ZigBee_network_commands.h ../src/my_queues.h \
  ../src/ASACZ_app.h ../src/ASACZ_devices_list.h \
- ../src/ASACZ_message_history.h ../src/timeout_utils.h
+ ../src/ASACZ_message_history.h ../src/timeout_utils.h \
+ ../src/dataSendRcv.h ../src/input_cluster_table.h
 
 /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/rpc/rpc.h:
 
@@ -46,3 +47,7 @@ src/dataSendRcv.o: ../src/dataSendRcv.c \
 ../src/ASACZ_message_history.h:
 
 ../src/timeout_utils.h:
+
+../src/dataSendRcv.h:
+
+../src/input_cluster_table.h:

@@ -60,6 +60,7 @@
 #include "server_thread.h"
 #include "simple_server.h"
 #include "ASACZ_devices_list.h"
+#include "input_cluster_table.h"
 
 void *rpcTask(void *argument)
 {

@@ -5,10 +5,16 @@
  *      Author: michele
  */
 
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <syslog.h>
 #include "input_cluster_table.h"
+#include "dataSendRcv.h"
 
 #define def_min_valid_endpoint 1
-#define def_max_valid_endpoint 0xf0
+// the last end point is reserved ASAC
+#define def_max_valid_endpoint (0xf0 - 1)
 #define def_invalid_endpoint 0
 
 
@@ -165,9 +171,87 @@ static void delete_clusters(type_ASAC_ZigBee_interface_network_input_cluster_reg
 }
 
 
+static enum_add_input_cluster_table_retcode add_af_user(type_Af_user *p, uint16_t input_cluster_id)
+{
+	enum_add_input_cluster_table_retcode r = enum_add_input_cluster_table_retcode_OK;
+	if (p->AppNumInClusters < sizeof(p->AppInClusterList)/sizeof(p->AppInClusterList[0]))
+	{
+		p->AppInClusterList[p->AppNumInClusters] = input_cluster_id;
+		p->AppNumInClusters++;
+		printf("%s: end point %u, adding in cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
+	}
+	else
+	{
+		r = enum_add_input_cluster_table_retcode_ERR_too_many_in_commands;
+		printf("%s: ERROR too many in commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
+		syslog(LOG_ERR, "%s: ERROR too many in commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
+	}
+	if (p->AppNumOutClusters < sizeof(p->AppOutClusterList)/sizeof(p->AppOutClusterList[0]))
+	{
+		p->AppOutClusterList[p->AppNumOutClusters] = input_cluster_id;
+		p->AppNumOutClusters++;
+		printf("%s: end point %u, adding out cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
+	}
+	else
+	{
+		r = enum_add_input_cluster_table_retcode_ERR_too_many_out_commands;
+		printf("%s: ERROR too many out commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
+		syslog(LOG_ERR, "%s: ERROR too many out commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
+	}
+	return r;
+
+}
+
+
+enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uint8_t prev_end_point, type_Af_user *p)
+{
+	enum_get_next_end_point_command_list_retcode r = enum_get_next_end_point_command_list_retcode_OK;
+	memset(p, 0, sizeof(*p));
+	pthread_mutex_lock(&input_cluster_table.mtx);
+		unsigned int found_end_point = 0;
+		if (r == enum_get_next_end_point_command_list_retcode_OK)
+		{
+			{
+				enum_add_input_cluster_table_retcode add_retcode = enum_add_input_cluster_table_retcode_OK;
+				unsigned int idx;
+				for (idx = 0; (idx < input_cluster_table.numof) && (add_retcode == enum_add_input_cluster_table_retcode_OK); idx++)
+				{
+					type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[idx];
+					if (!found_end_point)
+					{
+						if (p_elem->cluster.endpoint > prev_end_point)
+						{
+							found_end_point = 1;
+							p->EndPoint = p_elem->cluster.endpoint;
+							add_retcode = add_af_user(p, p_elem->cluster.input_cluster_id);
+						}
+					}
+					else
+					{
+						if (p_elem->cluster.endpoint == p->EndPoint)
+						{
+							add_retcode = add_af_user(p, p_elem->cluster.input_cluster_id);
+						}
+					}
+				}
+			}
+
+		}
+		if (!found_end_point)
+		{
+			r = enum_get_next_end_point_command_list_retcode_empty;
+		}
+	pthread_mutex_unlock(&input_cluster_table.mtx);
+
+	return r;
+}
+
+
+
 enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_elem *pelem_to_add)
 {
 	enum_add_input_cluster_table_retcode r = enum_add_input_cluster_table_retcode_OK;
+	type_Af_user u;
 
 	pthread_mutex_lock(&input_cluster_table.mtx);
 		if (r == enum_add_input_cluster_table_retcode_OK)
@@ -190,24 +274,52 @@ enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_
 		{
 			// delete all of the elements with the same cluster!
 			delete_clusters(&pelem_to_add->cluster);
-			// already existing ? nothing to do!
-			if (is_OK_find_input_cluster_entry(pelem_to_add, NULL))
 			{
-				r = enum_add_input_cluster_table_retcode_OK_already_present;
+				memset(&u, 0, sizeof(u));
+				u.EndPoint = pelem_to_add->cluster.endpoint;
+				unsigned int idx;
+				for (idx = 0; (idx < input_cluster_table.numof) && (r == enum_add_input_cluster_table_retcode_OK); idx++)
+				{
+					type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[idx];
+					if (p_elem->cluster.endpoint == u.EndPoint)
+					{
+						r = add_af_user(&u, p_elem->cluster.input_cluster_id);
+					}
+				}
 			}
-			else
+
+			if (r == enum_add_input_cluster_table_retcode_OK)
 			{
-				type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[input_cluster_table.numof];
-				*p_elem = *pelem_to_add;
-				++input_cluster_table.numof;
-				sort_input_cluster_table();
+				// already existing ? nothing to do!
+				if (is_OK_find_input_cluster_entry(pelem_to_add, NULL))
+				{
+					r = enum_add_input_cluster_table_retcode_OK_already_present;
+				}
+				else
+				{
+					type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[input_cluster_table.numof];
+					r = add_af_user(&u, pelem_to_add->cluster.input_cluster_id);
+					if (r == enum_add_input_cluster_table_retcode_OK)
+					{
+						*p_elem = *pelem_to_add;
+						++input_cluster_table.numof;
+						// sort the table, the element added is possibly not ordered
+						sort_input_cluster_table();
+					}
+				}
 			}
+			if (r == enum_add_input_cluster_table_retcode_OK)
 			{
     			char *ip = inet_ntoa(pelem_to_add->si_other.sin_addr);
     			printf("%s: added NEW ep:%i, cluster:%i, ip:%s, port=%u\n", __func__,(int)pelem_to_add->cluster.endpoint, (int)pelem_to_add->cluster.input_cluster_id, ip, (unsigned int)pelem_to_add->si_other.sin_port);
 			}
 		}
 	pthread_mutex_unlock(&input_cluster_table.mtx);
+	if (r == enum_add_input_cluster_table_retcode_OK)
+	{
+		require_network_restart();
+		printf("%s: network restart required\n", __func__);
+	}
 
 	return r;
 }

@@ -23,6 +23,13 @@ void start_queue_message_Tx(void)
 {
 	init_my_queue(&handle_messages_Tx.queue);
 	pthread_mutex_init(&handle_messages_Tx.mtx, NULL);
+	{
+		pthread_mutexattr_t mutexattr;
+
+		pthread_mutexattr_init(&mutexattr);
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&handle_messages_Tx.mtx, &mutexattr);
+	}
 }
 
 unsigned int is_OK_push_Tx_outside_message(type_ASAC_ZigBee_interface_command_outside_send_message_req *p, uint32_t *p_id)

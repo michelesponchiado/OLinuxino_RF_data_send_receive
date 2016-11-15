@@ -100,6 +100,13 @@ void init_ASACZ_device_list(void)
 {
 	memset(&ASACZ_device_list, 0, sizeof(ASACZ_device_list));
 	pthread_mutex_init(&handle_ASACZ_device_list.mtx, NULL);
+	{
+		pthread_mutexattr_t mutexattr;
+
+		pthread_mutexattr_init(&mutexattr);
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&handle_ASACZ_device_list.mtx, &mutexattr);
+	}
 }
 
 enum_add_ASACZ_device_list_header_retcode add_ASACZ_device_list_header(type_struct_ASACZ_device_header *p_device_header)

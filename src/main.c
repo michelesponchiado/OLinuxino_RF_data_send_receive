@@ -83,6 +83,7 @@ void *appInMessageTask(void *argument)
 {
 	while (1)
 	{
+		//usleep(1000);
 		appMsgProcess(NULL);
 	}
 }
@@ -159,12 +160,21 @@ static void my_at_exit(void)
 
 int main(int argc, char* argv[])
 {
+
 	type_handle_server_socket handle_server_socket = {0};
 	// open the system log
 	open_syslog();
 	syslog(LOG_INFO, "The application starts");
 	memset(&threads_cancel_info, 0, sizeof(threads_cancel_info));
 	atexit(my_at_exit);
+
+	handle_server_socket.port_number = def_port_number;
+    if ((argc >= 2) && (strncasecmp(argv[1],"udpport=",8)==0))
+    {
+		handle_server_socket.port_number = atoi(&argv[1][8]);
+        syslog(LOG_INFO, "Forcing UDP port %u", (unsigned int )handle_server_socket.port_number);
+    }
+    syslog(LOG_INFO, "Using UDP port %u", (unsigned int )handle_server_socket.port_number);
 
 // call the initialization procedures
 	init_ASACZ_device_list();
@@ -176,7 +186,7 @@ int main(int argc, char* argv[])
 	dbg_print(PRINT_LEVEL_INFO, "%s -- %s %s\n", argv[0], __DATE__, __TIME__);
 
 	// accept only 1
-	if (argc < 2)
+	if (argc < 3)
 	{
 #ifdef OLINUXINO
 		dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/ttyS1\n\n");
@@ -186,10 +196,12 @@ int main(int argc, char* argv[])
 		selected_serial_port = "/dev/ttyUSB1";
 #endif
 	}
-	else
+	else if ((argc >= 3) && (strncasecmp(argv[2],"serialport=",11)==0))
 	{
-		selected_serial_port = argv[1];
+		selected_serial_port = &argv[2][11];
+	    syslog(LOG_INFO, "Forcing serial port %s", selected_serial_port);
 	}
+    syslog(LOG_INFO, "Using serial port %s", selected_serial_port);
 
 	int serialPortFd = rpcOpen(selected_serial_port, 0);
 	if (serialPortFd == -1)

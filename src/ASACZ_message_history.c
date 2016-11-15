@@ -33,6 +33,13 @@ void message_history_tx_init(void)
 {
 	memset(&ASACZ_message_tx_history[0], 0, sizeof(ASACZ_message_tx_history));
 	pthread_mutex_init(&ASACZ_message_tx_history_handle.mtx, NULL);
+	{
+		pthread_mutexattr_t mutexattr;
+
+		pthread_mutexattr_init(&mutexattr);
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&ASACZ_message_tx_history_handle.mtx, &mutexattr);
+	}
 }
 
 static void add_timestamp(type_ASACZ_message_tx_history * p, enum_message_history_status s)

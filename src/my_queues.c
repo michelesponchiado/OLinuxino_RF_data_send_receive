@@ -12,6 +12,13 @@ void init_my_queue(type_my_queue *p)
 {
 	memset(p,0,sizeof(*p));
 	pthread_mutex_init(&p->mtx, NULL);
+	{
+		pthread_mutexattr_t mutexattr;
+
+		pthread_mutexattr_init(&mutexattr);
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&p->mtx, &mutexattr);
+	}
 }
 
 

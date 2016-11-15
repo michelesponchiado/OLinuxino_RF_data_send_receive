@@ -29,6 +29,13 @@ void init_input_cluster_table(void)
 {
 	memset(&input_cluster_table,0,sizeof(input_cluster_table));
 	pthread_mutex_init(&input_cluster_table.mtx, NULL);
+	{
+		pthread_mutexattr_t mutexattr;
+
+		pthread_mutexattr_init(&mutexattr);
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&input_cluster_table.mtx, &mutexattr);
+	}
 }
 /**
  * Search for the end-point/cluster_id passed, returns NULL if not found, else returns the pointer to the passed structure, filled with the socket informations

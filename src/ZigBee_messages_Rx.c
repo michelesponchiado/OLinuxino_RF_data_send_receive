@@ -24,6 +24,13 @@ void start_queue_message_Rx(void)
 {
 	init_my_queue(&handle_messages_Rx.queue);
 	pthread_mutex_init(&handle_messages_Rx.mtx, NULL);
+	{
+		pthread_mutexattr_t mutexattr;
+
+		pthread_mutexattr_init(&mutexattr);
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&handle_messages_Rx.mtx, &mutexattr);
+	}
 }
 
 unsigned int is_OK_push_Rx_outside_message(type_ASAC_ZigBee_interface_command_received_message_callback *p, uint32_t *p_id)
@@ -36,7 +43,7 @@ unsigned int is_OK_push_Rx_outside_message(type_ASAC_ZigBee_interface_command_re
 		{
 			case enum_push_my_queue_retcode_OK:
 			{
-				uint32_t message_id = * p_id;
+				//uint32_t message_id = * p_id;
 				retcode = 1;
 				break;
 			}

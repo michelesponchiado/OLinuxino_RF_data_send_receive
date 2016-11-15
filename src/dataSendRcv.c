@@ -188,6 +188,13 @@ void init_handle_app(void)
 	handle_app.devState = DEV_HOLD;
 	handle_app.channel_index = 11;
 	pthread_mutex_init(&handle_app.mtx_id, NULL);
+	{
+		pthread_mutexattr_t mutexattr;
+
+		pthread_mutexattr_init(&mutexattr);
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&handle_app.mtx_id, &mutexattr);
+	}
 }
 unsigned int get_app_new_trans_id(uint32_t message_id)
 {
@@ -255,6 +262,7 @@ static type_datasendrcv_stats stats;
 //ZDO Callbacks
 static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState);
 static uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg);
+static uint8_t mtZdoIEEEAddrRspCb(IeeeAddrRspFormat_t *msg);
 static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg);
 static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg);
 
@@ -318,8 +326,8 @@ static mtSysCb_t mtSysCb =
 
 static mtZdoCb_t mtZdoCb =
 	{ NULL,       // MT_ZDO_NWK_ADDR_RSP
-	        NULL,      // MT_ZDO_IEEE_ADDR_RSP
-	        NULL,      // MT_ZDO_NODE_DESC_RSP
+			mtZdoIEEEAddrRspCb,      // MT_ZDO_IEEE_ADDR_RSP
+			NULL,      // MT_ZDO_NODE_DESC_RSP
 	        NULL,     // MT_ZDO_POWER_DESC_RSP
 	        mtZdoSimpleDescRspCb,    // MT_ZDO_SIMPLE_DESC_RSP
 	        mtZdoActiveEpRspCb,      // MT_ZDO_ACTIVE_EP_RSP
@@ -423,56 +431,46 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState)
 	switch (newDevState)
 	{
 	case DEV_HOLD:
-		dbg_print(PRINT_LEVEL_INFO,
-		        "mtZdoStateChangeIndCb: Initialized - not started automatically\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: Initialized - not started automatically\n");
 		break;
 	case DEV_INIT:
-		dbg_print(PRINT_LEVEL_INFO,
-		        "mtZdoStateChangeIndCb: Initialized - not connected to anything\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: Initialized - not connected to anything\n");
 		break;
 	case DEV_NWK_DISC:
-		dbg_print(PRINT_LEVEL_INFO,
-		        "mtZdoStateChangeIndCb: Discovering PAN's to join\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: Discovering PAN's to join\n");
 		consolePrint("Network Discovering\n");
 		break;
 	case DEV_NWK_JOINING:
-		dbg_print(PRINT_LEVEL_INFO, "mtZdoStateChangeIndCb: Joining a PAN\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: Joining a PAN\n");
 		consolePrint("Network Joining\n");
 		break;
 	case DEV_NWK_REJOIN:
-		dbg_print(PRINT_LEVEL_INFO,
-		        "mtZdoStateChangeIndCb: ReJoining a PAN, only for end devices\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: ReJoining a PAN, only for end devices\n");
 		consolePrint("Network Rejoining\n");
 		break;
 	case DEV_END_DEVICE_UNAUTH:
 		consolePrint("Network Authenticating\n");
-		dbg_print(PRINT_LEVEL_INFO,
-		        "mtZdoStateChangeIndCb: Joined but not yet authenticated by trust center\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: Joined but not yet authenticated by trust center\n");
 		break;
 	case DEV_END_DEVICE:
 		consolePrint("Network Joined\n");
-		dbg_print(PRINT_LEVEL_INFO,
-		        "mtZdoStateChangeIndCb: Started as device after authentication\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: Started as device after authentication\n");
 		break;
 	case DEV_ROUTER:
 		consolePrint("Network Joined\n");
-		dbg_print(PRINT_LEVEL_INFO,
-		        "mtZdoStateChangeIndCb: Device joined, authenticated and is a router\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: Device joined, authenticated and is a router\n");
 		break;
 	case DEV_COORD_STARTING:
 		consolePrint("Network Starting\n");
-		dbg_print(PRINT_LEVEL_INFO,
-		        "mtZdoStateChangeIndCb: Started as Zigbee Coordinator\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: Started as Zigbee Coordinator\n");
 		break;
 	case DEV_ZB_COORD:
 		consolePrint("Network Started\n");
-		dbg_print(PRINT_LEVEL_INFO,
-		        "mtZdoStateChangeIndCb: Started as Zigbee Coordinator\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: Started as Zigbee Coordinator\n");
 		break;
 	case DEV_NWK_ORPHAN:
 		consolePrint("Network Orphaned\n");
-		dbg_print(PRINT_LEVEL_INFO,
-		        "mtZdoStateChangeIndCb: Device has lost information about its parent\n");
+		syslog(LOG_INFO,"mtZdoStateChangeIndCb: Device has lost information about its parent\n");
 		break;
 	default:
 		dbg_print(PRINT_LEVEL_INFO, "mtZdoStateChangeIndCb: unknown state");
@@ -483,6 +481,7 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState)
 
 	return SUCCESS;
 }
+
 
 /**
  * End point description
@@ -681,6 +680,31 @@ static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg)
 }
 
 /**
+ * Node description
+ */
+static uint8_t mtZdoIEEEAddrRspCb(IeeeAddrRspFormat_t *msg)
+{
+	if (msg->Status == MT_RPC_SUCCESS)
+	{
+		type_struct_ASACZ_device_header device_header;
+		memset(&device_header, 0, sizeof(device_header));
+		device_header.IEEE_address = msg->IEEEAddr;
+		device_header.network_short_address = msg->NwkAddr;
+		syslog(LOG_INFO, "Found device @ IEEE address 0x%lX", device_header.IEEE_address);
+		enum_add_ASACZ_device_list_header_retcode r = add_ASACZ_device_list_header(&device_header);
+		if (r != enum_add_ASACZ_device_list_header_retcode_OK)
+		{
+			stats.device_list.add_header.ERR++;
+		}
+		else
+		{
+			stats.device_list.add_header.OK++;
+		}
+	}
+	return msg->Status;
+}
+
+/**
  * End device announce callback
  */
 static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg)
@@ -699,6 +723,7 @@ static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg)
 			u.u8 = msg->Capabilities;
 			device_header.MAC_capabilities = u.s;
 		}
+		syslog(LOG_INFO, "Device 0x%lX just joined the network", device_header.IEEE_address);
 		enum_add_ASACZ_device_list_header_retcode r = add_ASACZ_device_list_header(&device_header);
 		if (r != enum_add_ASACZ_device_list_header_retcode_OK)
 		{
@@ -752,6 +777,7 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 	{
 		uint32_t id;
 		type_ASAC_ZigBee_interface_command_received_message_callback m;
+		memset(&m, 0, sizeof(m));
 		{
 			type_ASAC_ZigBee_src_id *ph = &m.src_id;
 
@@ -761,6 +787,8 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 			ph->source_endpoint 		= msg->SrcEndpoint;
 			ph->transaction_id 			= msg->TransSeqNum;
 		}
+		m.message_length = msg->Len;
+		memcpy(m.message, msg->Data, m.message_length);
 		if (!is_OK_push_Rx_outside_message(&m, &id))
 		{
 			syslog(LOG_ERR, "Unable to put received message in rx queue");
@@ -1075,7 +1103,8 @@ static int32_t registerAf(void)
 	reg.LatencyReq = 0;
 	reg.AppNumInClusters = 1;
 	reg.AppInClusterList[0] = 0x0006;
-	reg.AppNumOutClusters = 0;
+	reg.AppNumOutClusters = 1;
+	reg.AppOutClusterList[0] = 0x0006;
 
 	status = afRegister(&reg);
 	return status;
@@ -1104,6 +1133,16 @@ static void displayDevices(void)
 		char *devtype =
 		        (nodeList[i].Type == DEVICETYPE_ROUTER ?
 		                "ROUTER" : "COORDINATOR");
+		// asks info about the node, if coordinator, so we can add it to the device list
+		if (nodeList[i].Type == DEVICETYPE_COORDINATOR)
+		{
+			IeeeAddrReqFormat_t IEEEreq;
+			IEEEreq.ShortAddr = nodeList[i].NodeAddr;
+			IEEEreq.ReqType = 0; // signle device response
+			IEEEreq.StartIndex = 0; // start from first
+			zdoIeeeAddrReq(&IEEEreq);
+			rpcWaitMqClientMsg(200);
+		}
 
 		consolePrint("Type: %s\n", devtype);
 		actReq.DstAddr = nodeList[i].NodeAddr;
@@ -1121,6 +1160,21 @@ static void displayDevices(void)
 			if (type == DEVICETYPE_ENDDEVICE)
 			{
 				consolePrint("Type: END DEVICE\n");
+
+				// asks info about the node, so we can add it to the device list
+				{
+					IeeeAddrReqFormat_t IEEEreq;
+					IEEEreq.ShortAddr = nodeList[i].NodeAddr;
+					IEEEreq.ReqType = 0; // signle device response
+					IEEEreq.StartIndex = 0; // start from first
+					zdoIeeeAddrReq(&IEEEreq);
+					rpcWaitMqClientMsg(200);
+					while (status != -1)
+					{
+						status = rpcWaitMqClientMsg(200);
+					}
+				}
+
 				actReq.DstAddr = nodeList[i].childs[cI].ChildAddr;
 				actReq.NwkAddrOfInterest = nodeList[i].childs[cI].ChildAddr;
 				zdoActiveEpReq(&actReq);
@@ -1265,6 +1319,7 @@ void* appMsgProcess(void *argument)
 
 void* appProcess(void *argument)
 {
+	usleep(1000);
 	switch(handle_app.status)
 	{
 		default:
@@ -1437,7 +1492,6 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_rx_msgs:
 		{
-			rpcWaitMqClientMsg(10);
 			handle_app.status = enum_app_status_tx_msgs;
 			break;
 		}
@@ -1488,7 +1542,7 @@ void* appProcess(void *argument)
 						}
 						else
 						{
-							message_history_tx_set_error(handle_app.message_id, enum_message_history_error_unable_to_send_DATAREQ);
+
 							syslog(LOG_INFO, "Message with id = %u sent OK", handle_app.message_id);
 						}
 					}
@@ -1496,7 +1550,7 @@ void* appProcess(void *argument)
 			}
 			else
 			{
-				syslog(LOG_ERR, "Unable to pop a message from the Zigbee queue");
+				//syslog(LOG_ERR, "Unable to pop a message from the Zigbee queue");
 			}
 
 #else

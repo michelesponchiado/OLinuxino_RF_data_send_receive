@@ -321,7 +321,7 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 
 		if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &phs_in->si_other))
 		{
-			syslog(LOG_INFO,"%s: reply sent OK", __func__);
+			//syslog(LOG_INFO,"%s: reply sent OK", __func__);
 		}
 		else
 		{
@@ -572,7 +572,7 @@ typedef struct _type_ASACZ_UDP_server_handle
 {
 	enum_ASACZ_read_source read_source;
 	enum_ASACZ_server_status server_status;
-	type_handle_server_socket hss;
+	type_handle_server_socket *phss;
 	type_handle_socket_in handle_socket_in;
 }type_ASACZ_UDP_server_handle;
 static type_ASACZ_UDP_server_handle h;
@@ -580,14 +580,18 @@ static type_ASACZ_UDP_server_handle h;
 
 void * ASACZ_UDP_server_thread(void *arg)
 {
-	//type_thread_info *tinfo = arg;
 	memset(&h, 0, sizeof(h));
+	h.phss = (type_handle_server_socket *)arg;
+	if (!h.phss->port_number)
+	{
+		h.phss->port_number = def_port_number;
+	}
 	h.handle_socket_in.slen = sizeof(h.handle_socket_in.si_other);
-	syslog(LOG_INFO, "%s: Server thread starts", __func__);
+	syslog(LOG_INFO, "%s: Server thread starts on port %i", __func__, (int)h.phss->port_number);
 
 	// opens the socket
-	h.hss.socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-	if (h.hss.socket_fd < 0)
+	h.phss->socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+	if (h.phss->socket_fd < 0)
 	{
 		syslog(LOG_ERR, "%s: Error opening the socket: %s", __func__, strerror(errno));
 		exit(EXIT_FAILURE);
@@ -596,13 +600,13 @@ void * ASACZ_UDP_server_thread(void *arg)
 
 	// mark the socket as NON blocking
 	{
-		int flags = fcntl(h.hss.socket_fd, F_GETFL, 0);
+		int flags = fcntl(h.phss->socket_fd, F_GETFL, 0);
 		if (flags == -1)
 		{
 			syslog(LOG_ERR, "%s: Error reading the socket flags: %s",__func__, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
-		if (fcntl(h.hss.socket_fd, F_SETFL, flags | O_NONBLOCK) == -1)
+		if (fcntl(h.phss->socket_fd, F_SETFL, flags | O_NONBLOCK) == -1)
 		{
 			syslog(LOG_ERR, "%s: Error setting the socket flag O_NONBLOCK: %s",__func__, strerror(errno));
 			exit(EXIT_FAILURE);
@@ -613,13 +617,14 @@ void * ASACZ_UDP_server_thread(void *arg)
 
 	// do the bind
 	{
-		struct sockaddr_in * p = &h.hss.server_address;
+		struct sockaddr_in * p = &h.phss->server_address;
 		p->sin_family = AF_INET;
 		p->sin_addr.s_addr = INADDR_ANY;
-		p->sin_port = htons(def_port_number);
-		if (bind(h.hss.socket_fd, (struct sockaddr *) p,sizeof(*p)) < 0)
+		uint16_t port_number = h.phss->port_number;
+		p->sin_port = htons(port_number);
+		if (bind(h.phss->socket_fd, (struct sockaddr *) p,sizeof(*p)) < 0)
 		{
-			syslog(LOG_ERR, "%s: Unable to bind the socket on port %i: %s",__func__,def_port_number, strerror(errno));
+			syslog(LOG_ERR, "%s: Unable to bind the socket on port %u: %s",__func__,(unsigned int)port_number, strerror(errno));
 			exit(EXIT_FAILURE);
 		}
 	}
@@ -663,7 +668,7 @@ void * ASACZ_UDP_server_thread(void *arg)
 #elif def_local_ASACSOCKET_test
 
 	// loop handling incoming packets
-    while (h.hss.status_accept_connection != enum_status_accept_connection_ended)
+    while (h.phss->status_accept_connection != enum_status_accept_connection_ended)
     {
     	// sleep some time
     	usleep(def_sleep_time_between_cycles_us);
@@ -698,7 +703,7 @@ void * ASACZ_UDP_server_thread(void *arg)
     		case enum_ASACZ_server_status_read_ZigBee:
     		{
     			h.server_status = enum_ASACZ_server_status_begin_loop;
-    			enum_check_outside_messages_from_ZigBee_retcode r = check_outside_messages_from_ZigBee(&h.hss);
+    			enum_check_outside_messages_from_ZigBee_retcode r = check_outside_messages_from_ZigBee(h.phss);
     			switch(r)
     			{
     				case enum_check_outside_messages_from_ZigBee_retcode_OK:
@@ -718,7 +723,7 @@ void * ASACZ_UDP_server_thread(void *arg)
         	{
         		h.server_status = enum_ASACZ_server_status_begin_loop;
         		//try to receive some data, this is a NON-blocking call
-                int n_received_bytes = recvfrom(h.hss.socket_fd, h.hss.buffer, sizeof(h.hss.buffer), 0, (struct sockaddr *) &h.handle_socket_in.si_other, &h.handle_socket_in.slen);
+                int n_received_bytes = recvfrom(h.phss->socket_fd, h.phss->buffer, sizeof(h.phss->buffer), 0, (struct sockaddr *) &h.handle_socket_in.si_other, &h.handle_socket_in.slen);
                 // check if some data have been received
                 if (n_received_bytes == -1)
                 {
@@ -726,22 +731,22 @@ void * ASACZ_UDP_server_thread(void *arg)
                 	continue;
                 }
         		//print details of the client/peer and the data received
-        		syslog(LOG_INFO,"%s: Received packet from %s, port %d", __func__, inet_ntoa(h.handle_socket_in.si_other.sin_addr), ntohs(h.handle_socket_in.si_other.sin_port));
+        		//syslog(LOG_INFO,"%s: Received packet from %s, port %d", __func__, inet_ntoa(h.handle_socket_in.si_other.sin_addr), ntohs(h.handle_socket_in.si_other.sin_port));
 
         		// check if the packet received is a valid message or not
-        		enum_check_ASACSOCKET_formatted_message retcode_check = check_ASACSOCKET_formatted_message(h.hss.buffer, n_received_bytes);
+        		enum_check_ASACSOCKET_formatted_message retcode_check = check_ASACSOCKET_formatted_message(h.phss->buffer, n_received_bytes);
         		// was the check OK?
         		if (retcode_check != enum_check_ASACSOCKET_formatted_message_OK)
         		{
         			syslog(LOG_ERR,"%s: Check error %i / %s", __func__, (int)retcode_check , string_of_check_ASACSOCKET_return_code(retcode_check));
         			continue;
         		}
-        		syslog(LOG_INFO,"%s: The message is valid",__func__);
+        		//syslog(LOG_INFO,"%s: The message is valid",__func__);
 
-        		type_struct_ASACSOCKET_msg * p = (type_struct_ASACSOCKET_msg *)h.hss.buffer;
+        		type_struct_ASACSOCKET_msg * p = (type_struct_ASACSOCKET_msg *)h.phss->buffer;
         		type_ASAC_Zigbee_interface_request *pzmessage_rx = (type_ASAC_Zigbee_interface_request *)&(p->body);
         		// handle the request
-        		if (handle_ASACZ_request(pzmessage_rx, &h.handle_socket_in, &h.hss) < 0)
+        		if (handle_ASACZ_request(pzmessage_rx, &h.handle_socket_in, h.phss) < 0)
         		{
         			syslog(LOG_ERR,"%s: request handled with error", __func__);
         		}
@@ -754,8 +759,8 @@ void * ASACZ_UDP_server_thread(void *arg)
 #endif
 
     // the thread ends here
-    h.hss.is_running = 0;
-    h.hss.is_terminated =1;
+    h.phss->is_running = 0;
+    h.phss->is_terminated =1;
 
     return 0;
 

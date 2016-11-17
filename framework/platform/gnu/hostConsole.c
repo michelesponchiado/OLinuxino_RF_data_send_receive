@@ -85,8 +85,8 @@ char consoleGetCh()
 	//struct termios old, new;
 	char c;
 
-	struct termios old =
-		{ 0 };
+	struct termios old ;
+	memset(&old, 0, sizeof(old));
 
 	fflush(stdout);
 	if (tcgetattr(0, &old) < 0)

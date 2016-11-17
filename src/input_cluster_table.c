@@ -149,7 +149,7 @@ static void delete_clusters(type_ASAC_ZigBee_interface_network_input_cluster_reg
 	        			char *ip = inet_ntoa(p_cur_elem->si_other.sin_addr);
 	        			printf("%s: removed old ep:%i, cluster:%i, ip:%s, port=%u\n", __func__,(int)p_cur_elem->cluster.endpoint,(int)p_cur_elem->cluster.input_cluster_id, ip, (unsigned int)p_cur_elem->si_other.sin_port);
 					}
-					int idx_copy;
+					unsigned int idx_copy;
 					for (idx_copy = idx; (idx_copy + 1 < input_cluster_table.numof) ; idx_copy++)
 					{
 						type_input_cluster_table_elem *p_cur_elem = &input_cluster_table.queue[idx_copy];

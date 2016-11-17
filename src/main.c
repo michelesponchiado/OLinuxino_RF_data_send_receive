@@ -114,6 +114,14 @@ typedef struct _type_thread_id_created_info
 
 type_thread_id_created_info threads_cancel_info[enum_thread_id_numof];
 
+#ifdef ANDROID
+void thread_exit_handler(int sig)
+{
+printf("this signal is %d \n", sig);
+pthread_exit(0);
+} 
+#endif
+
 static void my_at_exit(void)
 {
 	enum_thread_id e;
@@ -128,6 +136,13 @@ static void my_at_exit(void)
 			syslog(LOG_INFO, "Trying to cancel initialized thread id %i", (int)e);
 			threads_cancel_info[e].created_OK = 0;
 			pthread_t t = threads_cancel_info[e].t;
+#ifdef ANDROID
+			int s;
+			if ( (s = pthread_kill(t, SIGUSR1)) != 0)
+			{
+				printf("Error cancelling thread %d, error = %d (%s)", (int)t, s, strerror(s));
+			}
+#else
 			int s;
 			s = pthread_cancel(t);
 			if (s != 0)
@@ -152,6 +167,7 @@ static void my_at_exit(void)
 					syslog(LOG_ERR, "Error canceling thread id %i", (int)e);
 				}
 			}
+#endif
 		}
 	}
 	syslog(LOG_INFO, "The application closes");
@@ -162,7 +178,19 @@ static void my_at_exit(void)
 int main(int argc, char* argv[])
 {
 
-	type_handle_server_socket handle_server_socket = {0};
+	type_handle_server_socket handle_server_socket;
+	memset(&handle_server_socket, 0, sizeof(handle_server_socket));
+#ifdef ANDROID
+	{
+		struct sigaction actions;
+		memset(&actions, 0, sizeof(actions));
+		sigemptyset(&actions.sa_mask);
+		actions.sa_flags = 0;
+		actions.sa_handler = thread_exit_handler;
+		sigaction(SIGUSR1,&actions,NULL);
+	}
+#endif
+
 	// open the system log
 	open_syslog();
 	syslog(LOG_INFO, "The application starts");
@@ -184,18 +212,30 @@ int main(int argc, char* argv[])
 
 #ifndef def_test_without_Zigbee
 	char * selected_serial_port;
+#ifdef ANDROID
+	selected_serial_port = "/dev/ttymxc2";
+#endif
 
 	dbg_print(PRINT_LEVEL_INFO, "%s -- %s %s\n", argv[0], __DATE__, __TIME__);
 
 	// accept only 1
 	if (argc < 3)
 	{
-#ifdef OLINUXINO
-		dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/ttyS1\n\n");
-		selected_serial_port = "/dev/ttyS1";
+#ifdef ANDROID
+	{
+		extern int radio_asac_barebone_on();
+		radio_asac_barebone_on();
+	}
+	selected_serial_port = "/dev/ttymxc2";
+	printf("Opening serial port %s\n", selected_serial_port);
 #else
-		dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/USB1\n\n");
-		selected_serial_port = "/dev/ttyUSB1";
+	#ifdef OLINUXINO
+			dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/ttyS1\n\n");
+			selected_serial_port = "/dev/ttyS1";
+	#else
+			dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/USB1\n\n");
+			selected_serial_port = "/dev/ttyUSB1";
+	#endif
 #endif
 	}
 	else if ((argc >= 3) && (strncasecmp(argv[2],"serialport=",11)==0))

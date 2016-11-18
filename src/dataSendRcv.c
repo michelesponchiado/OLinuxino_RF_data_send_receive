@@ -760,7 +760,7 @@ static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg)
 			u.u8 = msg->Capabilities;
 			device_header.MAC_capabilities = u.s;
 		}
-		syslog(LOG_INFO, "Device 0x%lX just joined the network", device_header.IEEE_address);
+		syslog(LOG_INFO, "Device 0x%" PRIx64 " just joined the network", device_header.IEEE_address);
 		enum_add_ASACZ_device_list_header_retcode r = add_ASACZ_device_list_header(&device_header);
 		if (r != enum_add_ASACZ_device_list_header_retcode_OK)
 		{

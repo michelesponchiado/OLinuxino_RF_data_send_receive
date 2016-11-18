@@ -61,13 +61,13 @@
 							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.1233714610" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.archiver.538720256" name="Cross GCC Archiver" superClass="cdt.managedbuild.tool.gnu.cross.archiver"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.assembler.58780125" name="Cross GCC Assembler" superClass="cdt.managedbuild.tool.gnu.cross.assembler">
-								<option id="gnu.both.asm.option.include.paths.283869644" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" valueType="includePath"/>
+								<option id="gnu.both.asm.option.include.paths.283869644" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths"/>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1044990935" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="framework/mt/Zdo|src_libfds700|framework/platform/gnu|framework/mt/Sys|framework/mt|framework|framework/mt/Af|framework/mt/Sapi|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="radio_asac_barebone.c|framework/mt/Zdo|src_libfds700|framework/platform/gnu|framework/mt/Sys|framework/mt|framework|framework/mt/Af|framework/mt/Sapi|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 						<entry excluding="Sapi|Sys|Zdo|Af" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="framework/mt"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="framework/mt/Af"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="framework/mt/Sapi"/>
@@ -122,7 +122,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="framework" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="radio_asac_barebone.c|framework" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>
@@ -191,7 +191,7 @@
 						</toolChain>
 					</folderInfo>
 					<sourceEntries>
-						<entry excluding="src_libfds700|framework|src|framework/platform/gnu|framework/mt|framework/mt/Zdo|framework/mt/Sys|framework/mt/Sapi|framework/mt/Af" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="radio_asac_barebone.c|src_libfds700|framework|src|framework/platform/gnu|framework/mt|framework/mt/Zdo|framework/mt/Sys|framework/mt/Sapi|framework/mt/Af" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 						<entry excluding="Af|Sapi|Sys|Zdo" flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="framework/mt"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="framework/mt/Af"/>
 						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="framework/mt/Sapi"/>

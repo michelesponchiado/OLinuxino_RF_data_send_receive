@@ -37,7 +37,7 @@
 typedef struct _type_handle_socket_in
 {
 	struct sockaddr_in si_other;
-	unsigned int slen;
+	socklen_t slen;
 }type_handle_socket_in;
 
 static void error(const char *msg)
@@ -109,7 +109,7 @@ void connection_housekeeping(type_handle_server_socket *p_handle_server_socket)
 		return;
 	}
 	unsigned int change_detected = 0;
-	int i;
+	unsigned int i;
 	for (i = 0; i < sizeof(p_handle_server_socket->active_connections)/sizeof(p_handle_server_socket->active_connections[0]); i++)
 	{
 		type_thread_info *p_t = &p_handle_server_socket->active_connections[i];
@@ -141,7 +141,8 @@ void connection_housekeeping(type_handle_server_socket *p_handle_server_socket)
 unsigned int is_OK_shutdown_server(type_handle_server_socket *p)
 {
 	p->shutdown = 1;
-	struct timespec ts_timeout = {0};
+	struct timespec ts_timeout;
+	memset(&ts_timeout, 0, sizeof(ts_timeout));
 	if (clock_gettime(CLOCK_REALTIME, &ts_timeout) == -1)
 	{
 		error("ERROR getting current time while waiting for a free thread from the pool!");
@@ -151,7 +152,8 @@ unsigned int is_OK_shutdown_server(type_handle_server_socket *p)
 	while(!p->is_terminated)
 	{
 		usleep(2000);
-		struct timespec ts_now = {0};
+		struct timespec ts_now;
+		memset(&ts_now, 0, sizeof(ts_now));
 		if (clock_gettime(CLOCK_REALTIME, &ts_now) == -1)
 		{
 			error("ERROR getting current time while waiting for a free thread from the pool!");
@@ -310,7 +312,8 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 	}
 
 	{
-		type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
+		type_ASAC_Zigbee_interface_command_reply zmessage_tx;
+		memset(&zmessage_tx, 0, sizeof(zmessage_tx));
 		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_input_cluster_register_req;
 		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),input_cluster_register);
 		type_ASAC_ZigBee_interface_network_input_cluster_register_reply * p_icr_reply = &zmessage_tx.reply.input_cluster_register;
@@ -380,7 +383,8 @@ int handle_ASACZ_request_input_cluster_unregister_req(type_ASAC_Zigbee_interface
 	}
 
 	{
-		type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
+		type_ASAC_Zigbee_interface_command_reply zmessage_tx;
+		memset(&zmessage_tx, 0, sizeof(zmessage_tx));
 		zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_input_cluster_unregister_req;
 		unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),input_cluster_unregister);
 		type_ASAC_ZigBee_interface_network_input_cluster_unregister_reply * p_icr_reply = &zmessage_tx.reply.input_cluster_unregister;
@@ -405,7 +409,8 @@ int handle_ASACZ_request_input_cluster_unregister_req(type_ASAC_Zigbee_interface
 int handle_ASACZ_request_echo_req(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
 {
 	int retcode = 0;
-	type_ASAC_Zigbee_interface_command_reply zmessage_tx = {0};
+	type_ASAC_Zigbee_interface_command_reply zmessage_tx;
+	memset(&zmessage_tx, 0, sizeof(zmessage_tx));
 	zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_echo_req;
 	unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),echo);
 	type_ASAC_ZigBee_interface_network_echo_reply * p_echo_reply = &zmessage_tx.reply.echo;
@@ -595,6 +600,7 @@ void * ASACZ_UDP_server_thread(void *arg)
 	}
 	h.handle_socket_in.slen = sizeof(h.handle_socket_in.si_other);
 	syslog(LOG_INFO, "%s: Server thread starts on port %i", __func__, (int)h.phss->port_number);
+	printf("%s: Server thread starts on port %i", __func__, (int)h.phss->port_number);
 
 	// opens the socket
 	h.phss->socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -604,6 +610,7 @@ void * ASACZ_UDP_server_thread(void *arg)
 		exit(EXIT_FAILURE);
 	}
 	syslog(LOG_INFO, "%s: Socket created OK", __func__);
+	printf("%s: Socket created OK", __func__);
 
 	// mark the socket as NON blocking
 	{
@@ -636,6 +643,7 @@ void * ASACZ_UDP_server_thread(void *arg)
 		}
 	}
 	syslog(LOG_INFO, "%s: Bind OK", __func__);
+	printf("%s: Bind OK", __func__);
 
 #if def_local_preformatted_test
 

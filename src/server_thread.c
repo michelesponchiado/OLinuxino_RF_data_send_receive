@@ -174,7 +174,8 @@ void * thread_start(void *arg)
 
 
     // set global thread timeout clock, if needed
-	struct timespec ts_timeout_thread = {0};
+	struct timespec ts_timeout_thread;
+	memset(&ts_timeout_thread, 0, sizeof(ts_timeout_thread));
 
     while (thread_server_status != enum_thread_server_status_ended)
     {
@@ -187,7 +188,8 @@ void * thread_start(void *arg)
     	}
     	if (tinfo->thread_timeout_seconds)
     	{
-    		struct timespec ts_now = {0};
+    		struct timespec ts_now;
+		memset(&ts_now, 0, sizeof(ts_now));
     		if (clock_gettime(CLOCK_REALTIME, &ts_now) == -1)
     		{
     			syslog(LOG_ERR, "unable to get CLOCK_REALTIME");
@@ -250,7 +252,8 @@ void * thread_start(void *arg)
     	    		break;
     			}
 
-    			struct pollfd pfd = {0};
+    			struct pollfd pfd;
+			memset(&pfd, 0, sizeof(pfd));
 				pfd.fd = tinfo->socket_fd;
 				pfd.events = POLLIN | POLLHUP | POLLRDNORM | POLLRDHUP;
 				pfd.revents = 0;
@@ -280,7 +283,7 @@ void * thread_start(void *arg)
     		}
     		case enum_thread_server_status_write:
     		{
-            	int n = write(tinfo->socket_fd,tinfo->tx_buffer,tinfo->tx_buffer_chars_written);
+            	unsigned int n = write(tinfo->socket_fd,tinfo->tx_buffer,tinfo->tx_buffer_chars_written);
             	if (n != tinfo->tx_buffer_chars_written)
         		{
 	    			syslog(LOG_ERR, "error %i on socket write operation", n);

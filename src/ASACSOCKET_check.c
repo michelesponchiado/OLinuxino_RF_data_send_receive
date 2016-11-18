@@ -72,7 +72,7 @@ const char * string_of_check_ASACSOCKET_return_code(enum_check_ASACSOCKET_format
 }
 
 // useful to check whether a received message is in the proper format or not
-enum_check_ASACSOCKET_formatted_message check_ASACSOCKET_formatted_message(char *buffer, int buf_len)
+enum_check_ASACSOCKET_formatted_message check_ASACSOCKET_formatted_message(char *buffer, unsigned int buf_len)
 {
 	enum_check_ASACSOCKET_formatted_message r = enum_check_ASACSOCKET_formatted_message_OK;
 	type_struct_ASACSOCKET_msg * p =(type_struct_ASACSOCKET_msg *) buffer;

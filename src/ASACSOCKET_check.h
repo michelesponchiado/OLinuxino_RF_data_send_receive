@@ -82,7 +82,7 @@ typedef struct _type_struct_ASACSOCKET_check_stats
 extern type_struct_ASACSOCKET_check_stats ASACSOCKET_check_stats;
 
 // useful to check whether a received message is in the proper format or not
-enum_check_ASACSOCKET_formatted_message check_ASACSOCKET_formatted_message(char *buffer, int buf_len);
+enum_check_ASACSOCKET_formatted_message check_ASACSOCKET_formatted_message(char *buffer, unsigned int buf_len);
 
 // useful to build a message in the proper format to be sent through ASACSOCKET message
 enum_build_ASACSOCKET_formatted_message build_ASACSOCKET_formatted_message(type_struct_ASACSOCKET_msg * p, char *buffer, int buf_len, unsigned int *pui_message_size);

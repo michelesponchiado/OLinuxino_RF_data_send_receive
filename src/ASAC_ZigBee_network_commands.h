@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#define def_ASACZ_ZIGBEE_NETWORK_COMMANDS_VERSION "15"
+#define def_ASACZ_ZIGBEE_NETWORK_COMMANDS_VERSION "16"
 
 
 typedef enum
@@ -36,6 +36,8 @@ typedef enum
 	enum_ASAC_ZigBee_interface_command_network_firmware_version_req,
 // device list has changed, sent from the server to all the clients with registered commands/cluster
 	enum_ASAC_ZigBee_interface_command_device_list_changed_signal,
+// my own IEEE address request
+	enum_ASAC_ZigBee_interface_command_network_my_IEEE_req,
 
 // the commands used by the administrator
 	enum_ASAC_ZigBee_interface_command_administrator_first = 0x30000000,
@@ -177,7 +179,6 @@ typedef struct _type_ASAC_ZigBee_interface_network_device_list_reply
 	uint32_t sequence_valid;		//!< this is set to 1 if the request is valid; if not, the client must restart the list request from start_index 0
 									//!< because the device list has changed
 	uint32_t list_ends_here;		//!< this is set to 1 if the device list has been fully reported, if it is 0, another query starting from start_index+num_devices_in_chunk is needed
-	uint64_t my_IEEE_address;		//!< my IEEE address
 	uint32_t num_devices_in_chunk;	//!< the number of devices in the chunk
 	type_device_list_chunk list_chunk[def_max_device_list_chunk];
 }__attribute__((__packed__)) type_ASAC_ZigBee_interface_network_device_list_reply ;
@@ -190,6 +191,33 @@ typedef struct _type_ASAC_ZigBee_interface_network_device_list_reply
 //
 //
 
+
+//
+//
+//
+// my IEEE begins here
+//
+//
+//
+typedef struct _type_ASAC_ZigBee_interface_network_my_IEEE_req
+{
+	uint32_t unused; 	//!< not used
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_network_my_IEEE_req;
+
+
+typedef struct _type_ASAC_ZigBee_interface_network_my_IEEE_reply
+{
+	uint32_t is_valid_IEEE_address;			//!< if 0, the IEEE address is not valid
+	uint64_t IEEE_address; 					//!< the current sequence number
+}__attribute__((__packed__)) type_ASAC_ZigBee_interface_network_my_IEEE_reply ;
+
+//
+//
+//
+// my IEEE ends here
+//
+//
+//
 
 
 //
@@ -327,6 +355,7 @@ typedef struct _type_ASAC_Zigbee_interface_request
 		type_ASAC_ZigBee_interface_network_echo_req echo;
 		type_ASAC_ZigBee_interface_network_device_list_req device_list;
 		type_ASAC_ZigBee_interface_network_firmware_version_req firmware_version;
+		type_ASAC_ZigBee_interface_network_my_IEEE_req my_IEEE;
 
 	}req;
 }type_ASAC_Zigbee_interface_request;
@@ -350,6 +379,7 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 		type_ASAC_ZigBee_interface_network_device_list_reply device_list;
 		type_ASAC_ZigBee_interface_network_firmware_version_reply firmware_version;
 		type_ASAC_ZigBee_interface_network_device_list_changed_signal device_list_changed;
+		type_ASAC_ZigBee_interface_network_my_IEEE_reply my_IEEE;
 
 		// reply to an unknown command
 		type_ASAC_ZigBee_interface_unknown_reply unknown;

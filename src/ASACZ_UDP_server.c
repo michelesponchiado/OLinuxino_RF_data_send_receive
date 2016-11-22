@@ -529,10 +529,6 @@ int handle_ASACZ_request_device_list_req(type_ASAC_Zigbee_interface_request *pzm
 		p_device_list_reply->sequence_valid	= get_device_list.sequence_valid;
 		p_device_list_reply->sequence		= get_device_list.sequence;
 		p_device_list_reply->list_ends_here	= get_device_list.list_ends_here;
-		uint64_t my_ieee_adress = 0;
-		is_OK_get_my_radio_IEEE_address(&my_ieee_adress);
-		//printf("\t my IEEE address	: 0x%" PRIx64 "\n", my_ieee_adress);
-		p_device_list_reply->my_IEEE_address = my_ieee_adress;
 		unsigned int num_devices_copied;
 		for (num_devices_copied = 0; (num_devices_copied < get_device_list.num_devices_in_chunk) && (num_devices_copied < def_max_device_to_read); num_devices_copied++)
 		{
@@ -590,6 +586,31 @@ int handle_ASACZ_request_firmware_version_req(type_ASAC_Zigbee_interface_request
 	}
 
 	return retcode;
+}
+
+int handle_ASACZ_request_my_IEEE_req(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
+{
+	int retcode = 0;
+	type_ASAC_Zigbee_interface_command_reply zmessage_tx;
+	zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_my_IEEE_req;
+	unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),my_IEEE);
+	type_ASAC_ZigBee_interface_network_my_IEEE_reply * p_reply = &zmessage_tx.reply.my_IEEE;
+	if (is_OK_get_my_radio_IEEE_address(&p_reply->IEEE_address))
+	{
+		p_reply->is_valid_IEEE_address = 1;
+	}
+
+	if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &phs_in->si_other))
+	{
+		syslog(LOG_INFO,"%s: reply sent OK", __func__);
+	}
+	else
+	{
+		syslog(LOG_ERR,"%s: unable to send the reply", __func__);
+		retcode = -1;
+	}
+	return retcode;
+
 }
 
 
@@ -676,6 +697,12 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 		case enum_ASAC_ZigBee_interface_command_network_firmware_version_req:
 		{
 			retcode = handle_ASACZ_request_firmware_version_req(pzmessage_rx, phs_in, phss);
+			break;
+		}
+
+		case enum_ASAC_ZigBee_interface_command_network_my_IEEE_req:
+		{
+			retcode = handle_ASACZ_request_my_IEEE_req(pzmessage_rx, phs_in, phss);
 			break;
 		}
 

@@ -363,11 +363,6 @@ unsigned int is_OK_get_device_IEEE_list(uint32_t start_index, uint32_t sequence,
 		unsigned int idx_device;
 		for (idx_device = start_index; (idx_device < ASACZ_device_list.num_of_devices) && (num_devices_in_chunk < def_max_device_to_find) && (num_devices_in_chunk < max_num_of_devices_to_return); idx_device++)
 		{
-			// skip the very first device, i.e. me
-			if (idx_device == 0)
-			{
-				continue;
-			}
 			type_struct_ASACZ_device_list_element *p_curdevice = &ASACZ_device_list.list[idx_device];
 			p->IEEE_chunk[num_devices_in_chunk++] = p_curdevice->device_header.IEEE_address;
 		}

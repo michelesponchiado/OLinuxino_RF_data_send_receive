@@ -811,7 +811,7 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 #if 1
 	uint64_t IEEE_address;
 	consolePrint("%s: message from device @ Short Address 0x%X\n", __func__,(unsigned int)msg->SrcAddr);
-	if (!is_OK_get_IEEE_from_network_short_address(msg->SrcAddr, &IEEE_address))
+	if (!is_OK_get_IEEE_from_network_short_address(msg->SrcAddr, &IEEE_address, enum_device_lifecycle_action_do_refresh_rx))
 	{
 		consolePrint("%s: UNKNOWN DEVICE @ Short Address 0x%X\n", __func__,(unsigned int)msg->SrcAddr);
 		syslog(LOG_ERR, "Unknown short address 0x%X on incoming message", (uint32_t)msg->SrcAddr);
@@ -1590,6 +1590,30 @@ void* appMsgProcess(void *argument)
 	}
 
 	return 0;
+}
+
+uint32_t is_OK_get_my_radio_IEEE_address(uint64_t *p)
+{
+	volatile type_handle_app_IEEE_address ieee_1;
+	volatile type_handle_app_IEEE_address ieee_2;
+	unsigned int i;
+	unsigned int found = 0;
+	for (i = 0; i < 20; i++)
+	{
+		ieee_1 = handle_app.IEEE_address;
+		ieee_2 = handle_app.IEEE_address;
+		if(memcmp((const void *)&ieee_1, (const void *)&ieee_2, sizeof(ieee_1)) == 0)
+		{
+			found = 1;
+			break;
+		}
+	}
+	if (!found || !is_valid_IEEE_address((type_handle_app_IEEE_address *)&ieee_1))
+	{
+		return 0;
+	}
+	*p = ieee_1.address;
+	return 1;
 }
 
 

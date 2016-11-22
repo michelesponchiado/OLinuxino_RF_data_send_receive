@@ -87,6 +87,14 @@ typedef struct _type_struct_ASACZ_device_header
 	uint64_t	IEEE_address;				//!< the IEEE 64-bit address of the device
 	type_struct_ASACZ_MAC_capabilities MAC_capabilities;	//!< the MAC capabilities
 }type_struct_ASACZ_device_header;
+/**
+ * The device life cycle information
+ */
+typedef struct _type_struct_ASACZ_device_lifecycle
+{
+	int64_t put_in_list_epoch_time_ms;
+	int64_t last_msg_rx_epoch_time_ms;
+}type_struct_ASACZ_device_lifecycle;
 
 /**
  * An element in the device list
@@ -94,6 +102,7 @@ typedef struct _type_struct_ASACZ_device_header
 typedef struct _type_struct_ASACZ_device_list_element
 {
 	type_struct_ASACZ_device_header device_header;
+	type_struct_ASACZ_device_lifecycle lifecycle;
 	type_struct_ASACZ_end_point_list end_point_list;	//!< the structure of the active end-points of the device
 }type_struct_ASACZ_device_list_element;
 
@@ -117,10 +126,17 @@ void init_ASACZ_device_list(void);
  * returns the network short address form the IEEE address
  */
 unsigned int is_OK_get_network_short_address_from_IEEE(uint64_t IEEE_address, uint16_t * p_network_short_address);
+
+typedef enum
+{
+	enum_device_lifecycle_action_do_nothing = 0,
+	enum_device_lifecycle_action_do_refresh_rx,
+	enum_device_lifecycle_action_numof
+}enum_device_lifecycle_action;
 /**
  * returns the IEEE address form the network short address
  */
-unsigned int is_OK_get_IEEE_from_network_short_address(uint16_t network_short_address, uint64_t *p_IEEE_address);
+unsigned int is_OK_get_IEEE_from_network_short_address(uint16_t network_short_address, uint64_t *p_IEEE_address, enum_device_lifecycle_action e);
 /**
  * Adds/resets a device in the list
  */
@@ -168,5 +184,20 @@ typedef enum
 	enum_walk_ASACZ_device_list_retcode_numof
 }enum_walk_ASACZ_device_list_retcode;
 enum_walk_ASACZ_device_list_retcode walk_ASACZ_device_list(type_walk_ASACZ_device_list *p, uint8_t *p_buffer, unsigned int max_bytes);
+
+
+#define def_max_IEEE_in_list_chunk 128
+typedef struct _type_struct_device_list
+{
+	uint32_t start_index;			//!< the index of the first element in list
+	uint32_t sequence; 				//!< the current sequence number
+	uint32_t sequence_valid;		//!< this is set to 1 if the request is valid; if not, the client must restart the list request from start_index 0
+									//!< because the device list has changed
+	uint32_t list_ends_here;		//!< this is set to 1 if the device list has been fully reported, if it is 0, another query starting from start_index+num_devices_in_chunk is needed
+	uint32_t num_devices_in_chunk;	//!< the number of devices in the chunk
+	uint64_t IEEE_chunk[def_max_IEEE_in_list_chunk];
+}type_struct_device_list;
+
+unsigned int is_OK_get_device_IEEE_list(uint32_t start_index, uint32_t sequence, type_struct_device_list *p, uint32_t max_num_of_devices_to_return);
 
 #endif /* ASACZ_DEVICES_LIST_H_ */

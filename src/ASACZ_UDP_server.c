@@ -33,6 +33,8 @@
 #include "ASAC_ZigBee_network_commands.h"
 #include "input_cluster_table.h"
 #include "ZigBee_messages.h"
+#include "ASACZ_devices_list.h"
+#include "ASACZ_firmware_version.h"
 
 typedef struct _type_handle_socket_in
 {
@@ -429,6 +431,90 @@ int handle_ASACZ_request_echo_req(type_ASAC_Zigbee_interface_request *pzmessage_
 	return retcode;
 }
 
+int handle_ASACZ_request_device_list_req(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
+{
+	int retcode = 0;
+	type_ASAC_Zigbee_interface_command_reply zmessage_tx;
+	// resets the reply buffer
+	memset(&zmessage_tx, 0, sizeof(zmessage_tx));
+	zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_device_list_req;
+	unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx), device_list);
+	type_ASAC_ZigBee_interface_network_device_list_req * p_device_list_req = &pzmessage_rx->req.device_list;
+	type_ASAC_ZigBee_interface_network_device_list_reply * p_device_list_reply = &zmessage_tx.reply.device_list;
+	p_device_list_reply->start_index 	= p_device_list_req->start_index;
+#define def_max_device_to_read (sizeof(p_device_list_reply->list_chunk) / sizeof(p_device_list_reply->list_chunk[0]))
+
+	type_struct_device_list get_device_list;
+	if (is_OK_get_device_IEEE_list(p_device_list_req->start_index, p_device_list_req->sequence, &get_device_list, def_max_device_to_read))
+	{
+		syslog(LOG_INFO,"%s: device list chunk read OK", __func__);
+		p_device_list_reply->sequence_valid	= get_device_list.sequence_valid;
+		p_device_list_reply->sequence		= get_device_list.sequence;
+		p_device_list_reply->list_ends_here	= get_device_list.list_ends_here;
+		uint64_t my_ieee_adress = 0;
+		is_OK_get_my_radio_IEEE_address(&my_ieee_adress);
+		//printf("\t my IEEE address	: 0x%" PRIx64 "\n", my_ieee_adress);
+		p_device_list_reply->my_IEEE_address = my_ieee_adress;
+		unsigned int num_devices_copied;
+		for (num_devices_copied = 0; (num_devices_copied < get_device_list.num_devices_in_chunk) && (num_devices_copied < def_max_device_to_read); num_devices_copied++)
+		{
+			p_device_list_reply->list_chunk[num_devices_copied].IEEE_address = get_device_list.IEEE_chunk[num_devices_copied];
+		}
+		p_device_list_reply->num_devices_in_chunk = num_devices_copied;
+		if (num_devices_copied < get_device_list.num_devices_in_chunk)
+		{
+			p_device_list_reply->list_ends_here	= 0;
+		}
+	}
+	if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &phs_in->si_other))
+	{
+		syslog(LOG_INFO,"%s: chunk list sent OK", __func__);
+	}
+	else
+	{
+		syslog(LOG_ERR,"%s: unable to send the chunk list", __func__);
+		retcode = -1;
+	}
+
+	return retcode;
+}
+
+
+int handle_ASACZ_request_firmware_version_req(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
+{
+	int retcode = 0;
+	type_ASAC_Zigbee_interface_command_reply zmessage_tx;
+	// resets the reply buffer
+	memset(&zmessage_tx, 0, sizeof(zmessage_tx));
+	zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_firmware_version_req;
+	unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx), firmware_version);
+	//type_ASAC_ZigBee_interface_network_firmware_version_req * p_firmware_version_req = &pzmessage_rx->req.firmware_version;
+	type_ASAC_ZigBee_interface_network_firmware_version_reply * p_firmware_version_reply = &zmessage_tx.reply.firmware_version;
+
+	type_ASACZ_firmware_version firmware_version;
+	get_ASACZ_firmware_version_whole_struct(&firmware_version);
+	p_firmware_version_reply->major_number 	= firmware_version.major_number;
+	p_firmware_version_reply->middle_number = firmware_version.middle_number;
+	p_firmware_version_reply->minor_number 	= firmware_version.minor_number;
+	p_firmware_version_reply->build_number 	= firmware_version.build_number;
+	snprintf((char*)p_firmware_version_reply->date_and_time, sizeof(p_firmware_version_reply->date_and_time), "%s",firmware_version.date_and_time);
+	snprintf((char*)p_firmware_version_reply->patch, sizeof(p_firmware_version_reply->patch), "%s",firmware_version.patch);
+	snprintf((char*)p_firmware_version_reply->notes, sizeof(p_firmware_version_reply->notes), "%s",firmware_version.notes);
+	snprintf((char*)p_firmware_version_reply->string, sizeof(p_firmware_version_reply->string), "%s",firmware_version.string);
+	if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &phs_in->si_other))
+	{
+		syslog(LOG_INFO,"%s: firmware version sent OK", __func__);
+	}
+	else
+	{
+		syslog(LOG_ERR,"%s: unable to send the firmware version", __func__);
+		retcode = -1;
+	}
+
+	return retcode;
+}
+
+
 int handle_ASACZ_request_outside_send_message(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
 {
 	int retcode = 0;
@@ -500,6 +586,18 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 		case enum_ASAC_ZigBee_interface_command_outside_send_message:
 		{
 			retcode = handle_ASACZ_request_outside_send_message(pzmessage_rx, phs_in, phss);
+			break;
+		}
+
+		case enum_ASAC_ZigBee_interface_command_network_device_list_req:
+		{
+			retcode = handle_ASACZ_request_device_list_req(pzmessage_rx, phs_in, phss);
+			break;
+		}
+
+		case enum_ASAC_ZigBee_interface_command_network_firmware_version_req:
+		{
+			retcode = handle_ASACZ_request_firmware_version_req(pzmessage_rx, phs_in, phss);
 			break;
 		}
 

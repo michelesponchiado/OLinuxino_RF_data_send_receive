@@ -58,6 +58,7 @@ uint32_t appInit(void);
 void *appProcess(void *argument);
 void* appMsgProcess(void *argument);
 void appInitQ(void);
+uint32_t is_OK_get_my_radio_IEEE_address(uint64_t *p);
 
 
 #ifdef __cplusplus

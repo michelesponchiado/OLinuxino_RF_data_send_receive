@@ -60,6 +60,7 @@
 #include "server_thread.h"
 #include "simple_server.h"
 #include "ASACZ_devices_list.h"
+#include "ASACZ_firmware_version.h"
 #include "input_cluster_table.h"
 
 void *rpcTask(void *argument)
@@ -206,6 +207,13 @@ int main(int argc, char* argv[])
     syslog(LOG_INFO, "Using UDP port %u", (unsigned int )handle_server_socket.port_number);
 
 // call the initialization procedures
+    {
+        init_ASACZ_firmware_version();
+        char v[128];
+    	get_ASACZ_firmware_version_string(v, sizeof(v));
+        syslog(LOG_INFO, "Firmware version: %s", v);
+        printf("%s: firmware version: %s\n", __func__, v);
+    }
 	init_ASACZ_device_list();
 	init_input_cluster_table();
 

@@ -20,6 +20,5 @@ framework/mt/Zdo \
 framework/mt \
 framework/platform/gnu \
 framework/rpc \
-. \
 src \
 

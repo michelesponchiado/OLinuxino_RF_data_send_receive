@@ -10,6 +10,8 @@
 
 #include <stdint.h>
 
+#define def_ASACZ_ZIGBEE_NETWORK_COMMANDS_VERSION "15"
+
 
 typedef enum
 {
@@ -28,6 +30,12 @@ typedef enum
 	enum_ASAC_ZigBee_interface_command_network_echo_req,
 // unregister an input cluster
 	enum_ASAC_ZigBee_interface_command_network_input_cluster_unregister_req,
+// device list request
+	enum_ASAC_ZigBee_interface_command_network_device_list_req,
+// server program firmware version request
+	enum_ASAC_ZigBee_interface_command_network_firmware_version_req,
+// device list has changed, sent from the server to all the clients with registered commands/cluster
+	enum_ASAC_ZigBee_interface_command_device_list_changed,
 
 // the commands used by the administrator
 	enum_ASAC_ZigBee_interface_command_administrator_first = 0x30000000,
@@ -145,6 +153,88 @@ typedef struct _type_ASAC_ZigBee_interface_network_echo_reply
 //
 //
 //
+// device list begins here
+//
+//
+//
+typedef struct _type_ASAC_ZigBee_interface_network_device_list_req
+{
+	uint32_t start_index; 	//!< 0 means from the very beginning
+	uint32_t sequence; 		//!< if index > 0, this should be the same received when the very first message was sent
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_network_device_list_req;
+
+
+#define def_max_device_list_chunk 128
+typedef struct _type_device_list_chunk
+{
+	uint64_t	IEEE_address;				//!< the IEEE 64-bit address of the device
+}type_device_list_chunk;
+
+typedef struct _type_ASAC_ZigBee_interface_network_device_list_reply
+{
+	uint32_t start_index;			//!< the index of the first element in list
+	uint32_t sequence; 				//!< the current sequence number
+	uint32_t sequence_valid;		//!< this is set to 1 if the request is valid; if not, the client must restart the list request from start_index 0
+									//!< because the device list has changed
+	uint32_t list_ends_here;		//!< this is set to 1 if the device list has been fully reported, if it is 0, another query starting from start_index+num_devices_in_chunk is needed
+	uint64_t my_IEEE_address;		//!< my IEEE address
+	uint32_t num_devices_in_chunk;	//!< the number of devices in the chunk
+	type_device_list_chunk list_chunk[def_max_device_list_chunk];
+}__attribute__((__packed__)) type_ASAC_ZigBee_interface_network_device_list_reply ;
+
+//
+//
+//
+// device list ends here
+//
+//
+//
+
+
+
+//
+//
+//
+// firmware version begins here
+//
+//
+//
+/**
+ * the firmware version request
+ */
+typedef struct _type_ASAC_ZigBee_interface_network_firmware_version_req
+{
+	uint32_t as_yet_unused; 	//!< as the name says
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_network_firmware_version_req;
+
+
+/**
+ * the firmware version reply
+ */
+typedef struct _type_ASAC_ZigBee_interface_network_firmware_version_reply
+{
+	uint32_t major_number;			//!< the version major number
+	uint32_t middle_number;			//!< the version middle number
+	uint32_t minor_number;			//!< the version minor number
+	uint32_t build_number;			//!< the build number
+	uint8_t	date_and_time[64];		//!< the version date and time
+	uint8_t	patch[64];				//!< the version patch
+	uint8_t	notes[64];				//!< the version notes
+	uint8_t	string[256];			//!< the version string
+}__attribute__((__packed__)) type_ASAC_ZigBee_interface_network_firmware_version_reply ;
+
+//
+//
+//
+// firmware version ends here
+//
+//
+//
+
+
+//
+//
+//
 // SEND OUTSIDE MESSAGE begins here
 //
 //
@@ -230,6 +320,8 @@ typedef struct _type_ASAC_Zigbee_interface_request
 		type_ASAC_ZigBee_interface_network_input_cluster_register_req input_cluster_register;
 		type_ASAC_ZigBee_interface_network_input_cluster_unregister_req input_cluster_unregister;
 		type_ASAC_ZigBee_interface_network_echo_req echo;
+		type_ASAC_ZigBee_interface_network_device_list_req device_list;
+		type_ASAC_ZigBee_interface_network_firmware_version_req firmware_version;
 
 	}req;
 }type_ASAC_Zigbee_interface_request;
@@ -250,6 +342,8 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 		type_ASAC_ZigBee_interface_network_input_cluster_register_reply input_cluster_register;
 		type_ASAC_ZigBee_interface_network_input_cluster_unregister_reply input_cluster_unregister;
 		type_ASAC_ZigBee_interface_network_echo_reply echo;
+		type_ASAC_ZigBee_interface_network_device_list_reply device_list;
+		type_ASAC_ZigBee_interface_network_firmware_version_reply firmware_version;
 
 		// reply to an unknown command
 		type_ASAC_ZigBee_interface_unknown_reply unknown;

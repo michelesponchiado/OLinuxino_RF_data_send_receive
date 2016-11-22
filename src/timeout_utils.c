@@ -30,6 +30,7 @@ static void get_current_epoch_time_ms(long long int *plli)
 	*plli = timestamp_msec;
 }
 
+
 void initialize_my_timeout(type_my_timeout *p)
 {
 	get_current_epoch_time_ms(p);

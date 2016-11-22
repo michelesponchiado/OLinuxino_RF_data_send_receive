@@ -7,6 +7,7 @@ C_SRCS += \
 ../src/ASACSOCKET_check.c \
 ../src/ASACZ_UDP_server.c \
 ../src/ASACZ_devices_list.c \
+../src/ASACZ_firmware_version.c \
 ../src/ASACZ_message_history.c \
 ../src/ZigBee_messages_Rx.c \
 ../src/ZigBee_messages_Tx.c \
@@ -23,6 +24,7 @@ OBJS += \
 ./src/ASACSOCKET_check.o \
 ./src/ASACZ_UDP_server.o \
 ./src/ASACZ_devices_list.o \
+./src/ASACZ_firmware_version.o \
 ./src/ASACZ_message_history.o \
 ./src/ZigBee_messages_Rx.o \
 ./src/ZigBee_messages_Tx.o \
@@ -39,6 +41,7 @@ C_DEPS += \
 ./src/ASACSOCKET_check.d \
 ./src/ASACZ_UDP_server.d \
 ./src/ASACZ_devices_list.d \
+./src/ASACZ_firmware_version.d \
 ./src/ASACZ_message_history.d \
 ./src/ZigBee_messages_Rx.d \
 ./src/ZigBee_messages_Tx.d \

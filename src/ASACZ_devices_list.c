@@ -9,6 +9,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <pthread.h>
+#include <time.h>
+#include <sys/timeb.h>  /* ftime, timeb (for timestamp in millisecond) */
+#include <sys/time.h>   /* gettimeofday, timeval (for timestamp in microsecond) */
 #include "ASACZ_devices_list.h"
 
 static type_struct_ASACZ_device_list ASACZ_device_list;
@@ -20,6 +23,46 @@ typedef struct _type_handle_ASACZ_device_list
 }type_handle_ASACZ_device_list;
 
 static type_handle_ASACZ_device_list handle_ASACZ_device_list;
+
+static int64_t get_current_epoch_time_ms(void)
+{
+	struct timeb timer_msec;
+	int64_t timestamp_msec; // timestamp in milliseconds
+	if (!ftime(&timer_msec))
+	{
+		timestamp_msec = ((int64_t) timer_msec.time) * 1000ll +	(int64_t) timer_msec.millitm;
+	}
+	else
+	{
+		timestamp_msec = -1;
+	}
+	return timestamp_msec;
+}
+
+static void init_device_lifecycle(type_struct_ASACZ_device_list_element *p)
+{
+	if (!p)
+	{
+		return;
+	}
+	int64_t t = get_current_epoch_time_ms();
+	type_struct_ASACZ_device_lifecycle * p_lifecycle = &(p->lifecycle);
+	memset(p_lifecycle, 0, sizeof(*p_lifecycle));
+	p_lifecycle->put_in_list_epoch_time_ms = t;
+	p_lifecycle->last_msg_rx_epoch_time_ms = t;
+}
+
+static void refresh_device_lifecycle_rx(type_struct_ASACZ_device_list_element *p)
+{
+	if (!p)
+	{
+		return;
+	}
+	int64_t t = get_current_epoch_time_ms();
+	type_struct_ASACZ_device_lifecycle * p_lifecycle = &(p->lifecycle);
+	p_lifecycle->last_msg_rx_epoch_time_ms = t;
+}
+
 
 static type_struct_ASACZ_device_list_element * find_ASACZ_device_list_by_IEEE_address(uint64_t IEEE_address)
 {
@@ -78,7 +121,8 @@ unsigned int is_OK_get_network_short_address_from_IEEE(uint64_t IEEE_address, ui
 	return isOK;
 }
 
-unsigned int is_OK_get_IEEE_from_network_short_address(uint16_t network_short_address, uint64_t *p_IEEE_address)
+
+unsigned int is_OK_get_IEEE_from_network_short_address(uint16_t network_short_address, uint64_t *p_IEEE_address, enum_device_lifecycle_action e)
 {
 	unsigned int isOK = 1;
 	type_struct_ASACZ_device_list_element * p = find_ASACZ_device_list_by_network_short_address(network_short_address);
@@ -88,6 +132,19 @@ unsigned int is_OK_get_IEEE_from_network_short_address(uint16_t network_short_ad
 	}
 	if (isOK)
 	{
+		switch(e)
+		{
+			case enum_device_lifecycle_action_do_nothing:
+			default:
+			{
+				break;
+			}
+			case enum_device_lifecycle_action_do_refresh_rx:
+			{
+				refresh_device_lifecycle_rx(p);
+				break;
+			}
+		}
 		if (p_IEEE_address)
 		{
 			*p_IEEE_address = p->device_header.IEEE_address;
@@ -127,6 +184,7 @@ enum_add_ASACZ_device_list_header_retcode add_ASACZ_device_list_header(type_stru
 				{
 					unsigned int idx_new_device = ASACZ_device_list.num_of_devices;
 					p_device = &ASACZ_device_list.list[idx_new_device];
+					ASACZ_device_list.num_of_devices++;
 				}
 			}
 		}
@@ -138,7 +196,7 @@ enum_add_ASACZ_device_list_header_retcode add_ASACZ_device_list_header(type_stru
 				memset(p_device, 0, sizeof(*p_device));
 				// store the header informations
 				p_device->device_header = *p_device_header;
-				ASACZ_device_list.num_of_devices++;
+				init_device_lifecycle(p_device);
 				handle_ASACZ_device_list.num_of_sequence++;
 			}
 			else
@@ -165,6 +223,7 @@ enum_add_ASACZ_device_list_end_points_retcode add_ASACZ_device_list_end_points(u
 		}
 		if (r == enum_add_ASACZ_device_list_end_points_retcode_OK)
 		{
+			refresh_device_lifecycle_rx(p_device);
 			type_struct_ASACZ_end_point_list *p_end_point_list = &p_device->end_point_list;
 			if (num_of_end_points >= sizeof(p_end_point_list->list)/sizeof(p_end_point_list->list[0]))
 			{
@@ -276,3 +335,42 @@ enum_walk_ASACZ_device_list_retcode walk_ASACZ_device_list(type_walk_ASACZ_devic
 	pthread_mutex_unlock(&handle_ASACZ_device_list.mtx);
 	return r;
 }
+
+
+unsigned int is_OK_get_device_IEEE_list(uint32_t start_index, uint32_t sequence, type_struct_device_list *p, uint32_t max_num_of_devices_to_return)
+{
+	unsigned int is_OK = 1;
+	memset(p, 0, sizeof(*p));
+	pthread_mutex_lock(&handle_ASACZ_device_list.mtx);
+	if (is_OK)
+	{
+		if ((start_index > 0) && (sequence != handle_ASACZ_device_list.num_of_sequence))
+		{
+			is_OK = 0;
+		}
+	}
+	if (is_OK)
+	{
+		p->start_index 		= start_index;
+		p->sequence 		= handle_ASACZ_device_list.num_of_sequence;
+		p->sequence_valid 	= 1;
+		uint32_t num_devices_in_chunk = 0;
+#define def_max_device_to_find (sizeof(p->IEEE_chunk) / sizeof(p->IEEE_chunk[0]))
+		unsigned int idx_device;
+		for (idx_device = start_index; (idx_device < ASACZ_device_list.num_of_devices) && (num_devices_in_chunk < def_max_device_to_find) && (num_devices_in_chunk < max_num_of_devices_to_return); idx_device++)
+		{
+			type_struct_ASACZ_device_list_element *p_curdevice = &ASACZ_device_list.list[idx_device];
+			p->IEEE_chunk[num_devices_in_chunk++] = p_curdevice->device_header.IEEE_address;
+		}
+		p->num_devices_in_chunk = num_devices_in_chunk;
+		p->list_ends_here = (idx_device >= ASACZ_device_list.num_of_devices) ? 1: 0;
+	}
+	pthread_mutex_unlock(&handle_ASACZ_device_list.mtx);
+	if (!is_OK)
+	{
+		p->sequence_valid = 0;
+	}
+	return is_OK;
+}
+
+

@@ -61,6 +61,8 @@ typedef struct _type_endpoint_cluster
 
 void walk_endpoints_clusters_init(void);
 unsigned int is_OK_walk_endpoints_clusters_next(type_endpoint_cluster *p);
+void walk_sockets_endpoints_clusters_init(void);
+unsigned int is_OK_walk_sockets_endpoints_clusters_next(struct sockaddr_in  *p_si_other);
 
 void init_input_cluster_table(void);
 

@@ -26,6 +26,7 @@ typedef struct _type_input_cluster_table
 	type_input_cluster_table_elem queue[def_N_elements_input_cluster_table];
 	int walk_current_endpoint;
 	pthread_mutex_t mtx;
+	uint32_t idx_walk_socket;
 
 }type_input_cluster_table;
 
@@ -367,7 +368,27 @@ void walk_endpoints_clusters_init(void)
 {
 	input_cluster_table.walk_current_endpoint = -1;
 }
+void walk_sockets_endpoints_clusters_init(void)
+{
+	input_cluster_table.idx_walk_socket = 0;
+}
 
+unsigned int is_OK_walk_sockets_endpoints_clusters_next(struct sockaddr_in  *p_si_other)
+{
+	unsigned int is_OK = 0;
+	pthread_mutex_lock(&input_cluster_table.mtx);
+		if (input_cluster_table.idx_walk_socket >= input_cluster_table.numof)
+		{
+			is_OK = 0;
+		}
+		else
+		{
+			is_OK = 1;
+			*p_si_other = input_cluster_table.queue[input_cluster_table.idx_walk_socket++].si_other;
+		}
+	pthread_mutex_unlock(&input_cluster_table.mtx);
+	return is_OK;
+}
 
 
 unsigned int is_OK_walk_endpoints_clusters_next(type_endpoint_cluster *p)

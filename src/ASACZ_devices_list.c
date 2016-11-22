@@ -24,7 +24,7 @@ typedef struct _type_handle_ASACZ_device_list
 
 static type_handle_ASACZ_device_list handle_ASACZ_device_list;
 
-static int64_t get_current_epoch_time_ms(void)
+int64_t get_current_epoch_time_ms(void)
 {
 	struct timeb timer_msec;
 	int64_t timestamp_msec; // timestamp in milliseconds
@@ -336,6 +336,10 @@ enum_walk_ASACZ_device_list_retcode walk_ASACZ_device_list(type_walk_ASACZ_devic
 	return r;
 }
 
+uint32_t get_device_list_sequence_number(void)
+{
+	return handle_ASACZ_device_list.num_of_sequence;
+}
 
 unsigned int is_OK_get_device_IEEE_list(uint32_t start_index, uint32_t sequence, type_struct_device_list *p, uint32_t max_num_of_devices_to_return)
 {

@@ -35,7 +35,7 @@ typedef enum
 // server program firmware version request
 	enum_ASAC_ZigBee_interface_command_network_firmware_version_req,
 // device list has changed, sent from the server to all the clients with registered commands/cluster
-	enum_ASAC_ZigBee_interface_command_device_list_changed,
+	enum_ASAC_ZigBee_interface_command_device_list_changed_signal,
 
 // the commands used by the administrator
 	enum_ASAC_ZigBee_interface_command_administrator_first = 0x30000000,
@@ -231,6 +231,11 @@ typedef struct _type_ASAC_ZigBee_interface_network_firmware_version_reply
 //
 //
 
+typedef struct _type_ASAC_ZigBee_interface_network_device_list_changed_signal
+{
+	uint32_t sequence_number;
+}__attribute__((__packed__)) type_ASAC_ZigBee_interface_network_device_list_changed_signal;
+
 
 //
 //
@@ -344,6 +349,7 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 		type_ASAC_ZigBee_interface_network_echo_reply echo;
 		type_ASAC_ZigBee_interface_network_device_list_reply device_list;
 		type_ASAC_ZigBee_interface_network_firmware_version_reply firmware_version;
+		type_ASAC_ZigBee_interface_network_device_list_changed_signal device_list_changed;
 
 		// reply to an unknown command
 		type_ASAC_ZigBee_interface_unknown_reply unknown;

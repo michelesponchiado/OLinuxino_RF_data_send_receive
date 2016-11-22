@@ -337,6 +337,84 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 	return retcode;
 }
 
+typedef struct _type_struct_elem_socket_already_sent
+{
+	in_port_t sin_port;			/* Port number.  */
+	struct in_addr sin_addr;
+}type_struct_elem_socket_already_sent;
+#define def_max_list_socket_already_sent 128
+typedef struct _type_struct_list_socket_already_sent
+{
+	uint32_t numof;
+	type_struct_elem_socket_already_sent list[def_max_list_socket_already_sent];
+}type_struct_list_socket_already_sent;
+static type_struct_list_socket_already_sent list_socket_already_sent;
+void init_list_socket_already_sent(type_struct_list_socket_already_sent *p)
+{
+	memset(p, 0, sizeof(*p));
+}
+uint32_t add_if_not_exist_list_socket_already_sent(type_struct_list_socket_already_sent *p, type_struct_elem_socket_already_sent *p_new_elem)
+{
+	uint32_t found = 0;
+	uint32_t i;
+	for (i = 0; i < p->numof && !found; i++)
+	{
+		type_struct_elem_socket_already_sent *p_elem = &p->list[i];
+		if (memcmp(p_elem, p_new_elem, sizeof(*p_elem)) == 0)
+		{
+			found = 1;
+		}
+	}
+	if (!found)
+	{
+		int new_elem_idx = p->numof;
+		if (new_elem_idx >= def_max_list_socket_already_sent)
+		{
+			new_elem_idx = 0;
+		}
+		else
+		{
+			p->numof++;
+		}
+		type_struct_elem_socket_already_sent *p_elem = &p->list[new_elem_idx];
+		*p_elem = *p_new_elem;
+	}
+	return !found;
+}
+
+void notify_all_clients_device_list_changed(type_handle_server_socket *phss, uint32_t sequence_number)
+{
+	type_ASAC_Zigbee_interface_command_reply zmessage_tx;
+	memset(&zmessage_tx, 0, sizeof(zmessage_tx));
+	zmessage_tx.code = enum_ASAC_ZigBee_interface_command_device_list_changed_signal;
+	unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),device_list_changed);
+	type_ASAC_ZigBee_interface_network_device_list_changed_signal * p_reply = &zmessage_tx.reply.device_list_changed;
+
+	p_reply->sequence_number = sequence_number;
+	walk_sockets_endpoints_clusters_init();
+	init_list_socket_already_sent(&list_socket_already_sent);
+
+	struct sockaddr_in si_other;
+	while(is_OK_walk_sockets_endpoints_clusters_next(&si_other))
+	{
+		type_struct_elem_socket_already_sent si;
+		si.sin_addr = si_other.sin_addr;
+		si.sin_port = si_other.sin_port;
+		if (add_if_not_exist_list_socket_already_sent(&list_socket_already_sent, &si))
+		{
+			printf("%s: sending notification @%s, port %u\n", __func__, inet_ntoa(si.sin_addr), (unsigned int)si.sin_port);
+			if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size,phss->socket_fd, &si_other))
+			{
+			}
+			else
+			{
+				syslog(LOG_ERR,"%s: unable to send the reply", __func__);
+			}
+		}
+	}
+
+}
+
 int handle_ASACZ_request_input_cluster_unregister_req(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
 {
 	int retcode = 0;
@@ -684,6 +762,8 @@ typedef struct _type_ASACZ_UDP_server_handle
 	enum_ASACZ_server_status server_status;
 	type_handle_server_socket *phss;
 	type_handle_socket_in handle_socket_in;
+	uint32_t device_list_sequence_number;
+	uint64_t last_time_checked_device_list_ms;
 }type_ASACZ_UDP_server_handle;
 static type_ASACZ_UDP_server_handle h;
 
@@ -795,6 +875,22 @@ void * ASACZ_UDP_server_thread(void *arg)
     		}
     		case enum_ASACZ_server_status_begin_loop:
     		{
+    			// every N milliseconds checks for device list changes
+    			{
+					#define def_period_check_device_list_ms 5000
+					int64_t now = get_current_epoch_time_ms();
+					if ((now < h.last_time_checked_device_list_ms) || (now > h.last_time_checked_device_list_ms + def_period_check_device_list_ms))
+					{
+						h.last_time_checked_device_list_ms = now;
+						uint32_t new_device_list_sequence_number = get_device_list_sequence_number();
+						if (new_device_list_sequence_number != h.device_list_sequence_number)
+						{
+							h.device_list_sequence_number = new_device_list_sequence_number;
+							notify_all_clients_device_list_changed(h.phss, h.device_list_sequence_number);
+						}
+					}
+    			}
+
     	    	switch (h.read_source)
     	    	{
     	    		case enum_ASACZ_read_source_socket:

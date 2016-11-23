@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#ifdef ANDROID
+
 #include <stdio.h>
 #include <termios.h>
 #include <unistd.h>
@@ -350,4 +350,3 @@ int green_LED_set(int off0_on1)
 }
 
 
-#endif

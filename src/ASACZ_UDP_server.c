@@ -15,15 +15,17 @@
 #include <string.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <inttypes.h>
 #include <syslog.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/ioctl.h>
 #include <sys/time.h>
-#include <netinet/in.h>
 #include <pthread.h>
 #include <poll.h>
 #include <arpa/inet.h>
+#include <netinet/in.h>
+
 
 #include "ts_util.h"
 #include "server_thread.h"
@@ -337,11 +339,7 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 	return retcode;
 }
 
-typedef struct _type_struct_elem_socket_already_sent
-{
-	in_port_t sin_port;			/* Port number.  */
-	struct in_addr sin_addr;
-}type_struct_elem_socket_already_sent;
+typedef struct sockaddr_in type_struct_elem_socket_already_sent;
 #define def_max_list_socket_already_sent 128
 typedef struct _type_struct_list_socket_already_sent
 {
@@ -398,8 +396,7 @@ void notify_all_clients_device_list_changed(type_handle_server_socket *phss, uin
 	while(is_OK_walk_sockets_endpoints_clusters_next(&si_other))
 	{
 		type_struct_elem_socket_already_sent si;
-		si.sin_addr = si_other.sin_addr;
-		si.sin_port = si_other.sin_port;
+		si = si_other;
 		if (add_if_not_exist_list_socket_already_sent(&list_socket_already_sent, &si))
 		{
 			printf("%s: sending notification @%s, port %u\n", __func__, inet_ntoa(si.sin_addr), (unsigned int)si.sin_port);
@@ -797,7 +794,7 @@ typedef struct _type_ASACZ_UDP_server_handle
 	type_handle_server_socket *phss;
 	type_handle_socket_in handle_socket_in;
 	uint32_t device_list_sequence_number;
-	uint64_t last_time_checked_device_list_ms;
+	int64_t last_time_checked_device_list_ms;
 }type_ASACZ_UDP_server_handle;
 static type_ASACZ_UDP_server_handle h;
 

@@ -2,6 +2,8 @@
 #
 # Android.mk for dataSendRcv
 #
+
+ifeq ($(BOARD_HAS_ASACZ),true)
 LOCAL_PATH:= $(call my-dir)
 
 include $(CLEAR_VARS)
@@ -22,6 +24,7 @@ LOCAL_SRC_FILES := \
 	src/ASACZ_devices_list.c		\
 	src/ASACZ_message_history.c		\
 	src/ASACZ_UDP_server.c			\
+	src/ASACZ_firmware_version.c		\
 	src/crc32.c				\
 	src/dataSendRcv.c			\
 	src/input_cluster_table.c		\
@@ -57,5 +60,7 @@ LOCAL_STATIC_LIBRARIES += libcutils libc libm
 LOCAL_LDLIBS := -lpthread -lrt
 
 include $(BUILD_EXECUTABLE)
+
+endif
 
 

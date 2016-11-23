@@ -93,6 +93,8 @@ uint8_t gDstEndPoint = 1;
 
 #define def_timeout_wait_callbacks_do_ms 10000
 
+static void set_link_quality_current_value(uint8_t v);
+
 
 static const RegisterFormat_t default_RegisterFormat_t =
 {
@@ -176,6 +178,57 @@ static unsigned int is_valid_IEEE_address(type_handle_app_IEEE_address *p)
 	return p->valid;
 }
 
+typedef enum
+{
+	enum_link_quality_level_unknown = 0,
+	enum_link_quality_level_low,
+	enum_link_quality_level_normal,
+	enum_link_quality_level_good,
+	enum_link_quality_level_excellent,
+	enum_link_quality_level_numof
+}enum_link_quality_level;
+
+static char * get_link_quality_string(enum_link_quality_level level)
+{
+	char *pc = "unknown";
+	switch(level)
+	{
+		case enum_link_quality_level_unknown:
+		default:
+		{
+			break;
+		}
+		case enum_link_quality_level_low:
+		{
+			pc = "low";
+			break;
+		}
+		case enum_link_quality_level_normal:
+		{
+			pc = "normal";
+			break;
+		}
+		case enum_link_quality_level_good:
+		{
+			pc = "good";
+			break;
+		}
+		case enum_link_quality_level_excellent:
+		{
+			pc = "excellent";
+			break;
+		}
+	}
+	return pc;
+}
+
+typedef struct _type_link_quality
+{
+	enum_link_quality_level level;
+	uint8_t v;
+	int32_t v_dBm;
+}type_link_quality;
+
 typedef struct _type_handle_app
 {
 	enum_app_status status;
@@ -197,8 +250,21 @@ typedef struct _type_handle_app
 	unsigned int channel_index; // channel index, between 11 and 26
 	unsigned int network_restart_req;
 	unsigned int network_restart_ack;
+	type_link_quality link_quality;
 }type_handle_app;
 static type_handle_app handle_app;
+char * get_app_current_link_quality_string(void)
+{
+	return get_link_quality_string(handle_app.link_quality.level);
+}
+uint8_t get_app_current_link_quality_value_energy_detected(void)
+{
+	return handle_app.link_quality.v;
+}
+int32_t get_app_current_link_quality_value_dBm(void)
+{
+	return handle_app.link_quality.v_dBm;
+}
 
 void init_handle_app(void)
 {
@@ -811,6 +877,13 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 #if 1
 	uint64_t IEEE_address;
 	consolePrint("%s: message from device @ Short Address 0x%X\n", __func__,(unsigned int)msg->SrcAddr);
+	set_link_quality_current_value(msg->LinkQuality);
+	consolePrint("%s: link quality: %s (%u / %i dBm)\n", __func__
+			, get_app_current_link_quality_string()
+			, (unsigned int )get_app_current_link_quality_value_energy_detected()
+			, (int )get_app_current_link_quality_value_dBm()
+			);
+
 	if (!is_OK_get_IEEE_from_network_short_address(msg->SrcAddr, &IEEE_address, enum_device_lifecycle_action_do_refresh_rx))
 	{
 		consolePrint("%s: UNKNOWN DEVICE @ Short Address 0x%X\n", __func__,(unsigned int)msg->SrcAddr);
@@ -1614,6 +1687,43 @@ uint32_t is_OK_get_my_radio_IEEE_address(uint64_t *p)
 	}
 	*p = ieee_1.address;
 	return 1;
+}
+
+
+
+static void set_link_quality_current_value(uint8_t v)
+{
+#define def_max_dBm 10
+#define def_min_dBm -97
+
+	//	High quality: 90% ~= -55db
+	//	Medium quality: 50% ~= -75db
+	//  Low quality: 30% ~= -85db
+	//  Unusable quality: 8% ~= -96db
+
+	int32_t v_dBm = v;
+	v_dBm = def_min_dBm + (v_dBm * (def_max_dBm - def_min_dBm)) / 256;
+
+	enum_link_quality_level level = enum_link_quality_level_low;
+	if (v_dBm >= -55)
+	{
+		level = enum_link_quality_level_excellent;
+	}
+	else if (v_dBm >= -65)
+	{
+		level = enum_link_quality_level_good;
+	}
+	else if (v_dBm >= -75)
+	{
+		level = enum_link_quality_level_normal;
+	}
+	else
+	{
+		level = enum_link_quality_level_low;
+	}
+	handle_app.link_quality.level = level;
+	handle_app.link_quality.v = v;
+	handle_app.link_quality.v_dBm = v_dBm;
 }
 
 

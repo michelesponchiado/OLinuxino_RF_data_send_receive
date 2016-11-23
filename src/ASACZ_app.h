@@ -34,5 +34,8 @@ void start_handle_app(void);
 void restart_handle_app(void);
 unsigned int is_in_error_app(void);
 enum_app_status get_app_status(void);
+char * get_app_current_link_quality_string(void);
+uint8_t get_app_current_link_quality_value_energy_detected(void);
+int32_t get_app_current_link_quality_value_dBm(void);
 
 #endif /* ASACZ_APP_H_ */

@@ -10,13 +10,16 @@
 #include <string.h>
 #include "ASACZ_firmware_version.h"
 
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	16
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	17
 #define def_ASACZ_firmware_version_MAJOR_NUMBER 	0
 #define def_ASACZ_firmware_version_MIDDLE_NUMBER 	1
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	2
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
 #define def_ASACZ_firmware_version_NOTES 			"internal version"
+
+// 0.1.2 build 17
+//   adding the link quality information
 
 static type_ASACZ_firmware_version ASACZ_firmware_version;
 

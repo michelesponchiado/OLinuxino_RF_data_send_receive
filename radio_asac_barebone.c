@@ -13,7 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+#ifdef ANDROID
 
 #include <stdio.h>
 #include <termios.h>
@@ -350,3 +350,4 @@ int green_LED_set(int off0_on1)
 }
 
 
+#endif

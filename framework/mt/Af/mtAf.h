@@ -225,7 +225,7 @@ typedef struct
 	uint32_t TimeStamp;
 	uint8_t TransSeqNum;
 	uint8_t Len;
-	uint8_t Data[99];
+	uint8_t Data[256];
 } IncomingMsgFormat_t;
 
 typedef struct

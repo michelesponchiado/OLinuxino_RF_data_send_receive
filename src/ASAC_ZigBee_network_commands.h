@@ -10,7 +10,7 @@
 
 #include <stdint.h>
 
-#define def_ASACZ_ZIGBEE_NETWORK_COMMANDS_VERSION "16"
+#define def_ASACZ_ZIGBEE_NETWORK_COMMANDS_VERSION "18"
 
 
 typedef enum
@@ -38,6 +38,8 @@ typedef enum
 	enum_ASAC_ZigBee_interface_command_device_list_changed_signal,
 // my own IEEE address request
 	enum_ASAC_ZigBee_interface_command_network_my_IEEE_req,
+// signal strength request
+	enum_ASAC_ZigBee_interface_command_network_signal_strength_req,
 
 // the commands used by the administrator
 	enum_ASAC_ZigBee_interface_command_administrator_first = 0x30000000,
@@ -259,6 +261,39 @@ typedef struct _type_ASAC_ZigBee_interface_network_firmware_version_reply
 //
 //
 
+
+
+//
+//
+//
+// signal strength request begins here
+//
+//
+//
+
+typedef struct _type_ASAC_ZigBee_interface_network_signal_strength_req
+{
+	uint32_t unused;
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_network_signal_strength_req;
+
+typedef struct _type_ASAC_ZigBee_interface_network_signal_strength_reply
+{
+	uint32_t level_min0_max4; 	// 4 = excellent, 3 = good, 2 = normal, 1 = low, 0 = unknown
+	uint32_t v_0_255;			// the value between 0..255, this is the one value the radio chip sends me
+	int32_t v_dBm;				// the value in dBm I extrapolate, usually this is less than zero!
+	int64_t milliseconds_ago; 	// states how many milliseconds ago was the latest signal strength received
+}__attribute__((__packed__)) type_ASAC_ZigBee_interface_network_signal_strength_reply ;
+
+//
+//
+//
+// signal strength ends here
+//
+//
+//
+
+
+
 typedef struct _type_ASAC_ZigBee_interface_network_device_list_changed_signal
 {
 	uint32_t sequence_number;
@@ -356,6 +391,7 @@ typedef struct _type_ASAC_Zigbee_interface_request
 		type_ASAC_ZigBee_interface_network_device_list_req device_list;
 		type_ASAC_ZigBee_interface_network_firmware_version_req firmware_version;
 		type_ASAC_ZigBee_interface_network_my_IEEE_req my_IEEE;
+		type_ASAC_ZigBee_interface_network_signal_strength_req signal_strength;
 
 	}req;
 }type_ASAC_Zigbee_interface_request;
@@ -380,6 +416,7 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 		type_ASAC_ZigBee_interface_network_firmware_version_reply firmware_version;
 		type_ASAC_ZigBee_interface_network_device_list_changed_signal device_list_changed;
 		type_ASAC_ZigBee_interface_network_my_IEEE_reply my_IEEE;
+		type_ASAC_ZigBee_interface_network_signal_strength_reply signal_strength;
 
 		// reply to an unknown command
 		type_ASAC_ZigBee_interface_unknown_reply unknown;

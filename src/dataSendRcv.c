@@ -178,15 +178,7 @@ static unsigned int is_valid_IEEE_address(type_handle_app_IEEE_address *p)
 	return p->valid;
 }
 
-typedef enum
-{
-	enum_link_quality_level_unknown = 0,
-	enum_link_quality_level_low,
-	enum_link_quality_level_normal,
-	enum_link_quality_level_good,
-	enum_link_quality_level_excellent,
-	enum_link_quality_level_numof
-}enum_link_quality_level;
+
 
 static char * get_link_quality_string(enum_link_quality_level level)
 {
@@ -222,12 +214,27 @@ static char * get_link_quality_string(enum_link_quality_level level)
 	return pc;
 }
 
+
+
 typedef struct _type_link_quality
 {
-	enum_link_quality_level level;
-	uint8_t v;
-	int32_t v_dBm;
+	pthread_mutex_t mtx_id;
+	type_link_quality_body b; // the epoch time when the link quality was updated
 }type_link_quality;
+
+void init_link_quality(type_link_quality *p)
+{
+	memset(p, 0, sizeof(*p));
+	pthread_mutex_init(&p->mtx_id, NULL);
+	{
+		pthread_mutexattr_t mutexattr;
+
+		pthread_mutexattr_init(&mutexattr);
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&p->mtx_id, &mutexattr);
+	}
+}
+
 
 typedef struct _type_handle_app
 {
@@ -255,15 +262,22 @@ typedef struct _type_handle_app
 static type_handle_app handle_app;
 char * get_app_current_link_quality_string(void)
 {
-	return get_link_quality_string(handle_app.link_quality.level);
+	return get_link_quality_string(handle_app.link_quality.b.level);
 }
 uint8_t get_app_current_link_quality_value_energy_detected(void)
 {
-	return handle_app.link_quality.v;
+	return handle_app.link_quality.b.v;
 }
 int32_t get_app_current_link_quality_value_dBm(void)
 {
-	return handle_app.link_quality.v_dBm;
+	return handle_app.link_quality.b.v_dBm;
+}
+void get_app_last_link_quality(type_link_quality_body *p_dst)
+{
+	type_link_quality *p = &handle_app.link_quality;
+	pthread_mutex_lock(&p->mtx_id);
+		*p_dst = p->b;
+	pthread_mutex_unlock(&p->mtx_id);
 }
 
 void init_handle_app(void)
@@ -279,6 +293,7 @@ void init_handle_app(void)
 		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
 		pthread_mutex_init(&handle_app.mtx_id, &mutexattr);
 	}
+	init_link_quality(&handle_app.link_quality);
 }
 unsigned int get_app_new_trans_id(uint32_t message_id)
 {
@@ -1721,9 +1736,17 @@ static void set_link_quality_current_value(uint8_t v)
 	{
 		level = enum_link_quality_level_low;
 	}
-	handle_app.link_quality.level = level;
-	handle_app.link_quality.v = v;
-	handle_app.link_quality.v_dBm = v_dBm;
+	// set all of the body properties
+	type_link_quality_body lq_body;
+	lq_body.level = level;
+	lq_body.v = v;
+	lq_body.v_dBm = v_dBm;
+	lq_body.t = get_current_epoch_time_ms();
+	// save the properties
+	type_link_quality *p = &handle_app.link_quality;
+	pthread_mutex_lock(&p->mtx_id);
+		p->b = lq_body;
+	pthread_mutex_unlock(&p->mtx_id);
 }
 
 

@@ -12,6 +12,7 @@
 #include <time.h>
 #include <sys/timeb.h>  /* ftime, timeb (for timestamp in millisecond) */
 #include <sys/time.h>   /* gettimeofday, timeval (for timestamp in microsecond) */
+#include "timeout_utils.h"
 #include "ASACZ_devices_list.h"
 
 static type_struct_ASACZ_device_list ASACZ_device_list;
@@ -24,20 +25,6 @@ typedef struct _type_handle_ASACZ_device_list
 
 static type_handle_ASACZ_device_list handle_ASACZ_device_list;
 
-int64_t get_current_epoch_time_ms(void)
-{
-	struct timeb timer_msec;
-	int64_t timestamp_msec; // timestamp in milliseconds
-	if (!ftime(&timer_msec))
-	{
-		timestamp_msec = ((int64_t) timer_msec.time) * 1000ll +	(int64_t) timer_msec.millitm;
-	}
-	else
-	{
-		timestamp_msec = -1;
-	}
-	return timestamp_msec;
-}
 
 static void init_device_lifecycle(type_struct_ASACZ_device_list_element *p)
 {

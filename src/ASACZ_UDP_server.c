@@ -28,6 +28,7 @@
 
 
 #include "ts_util.h"
+#include "timeout_utils.h"
 #include "server_thread.h"
 #include "simple_server.h"
 #include "dbgPrint.h"
@@ -37,6 +38,7 @@
 #include "ZigBee_messages.h"
 #include "ASACZ_devices_list.h"
 #include "ASACZ_firmware_version.h"
+#include "ASACZ_app.h"
 
 typedef struct _type_handle_socket_in
 {
@@ -618,6 +620,39 @@ int handle_ASACZ_request_my_IEEE_req(type_ASAC_Zigbee_interface_request *pzmessa
 }
 
 
+int handle_ASACZ_request_signal_strength_req(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
+{
+	int retcode = 0;
+	type_ASAC_Zigbee_interface_command_reply zmessage_tx;
+	zmessage_tx.code = enum_ASAC_ZigBee_interface_command_network_signal_strength_req;
+	unsigned int zmessage_size = def_size_ASAC_Zigbee_interface_reply((&zmessage_tx),signal_strength);
+	type_ASAC_ZigBee_interface_network_signal_strength_reply * p_reply = &zmessage_tx.reply.signal_strength;
+	type_link_quality_body lqb;
+	get_app_last_link_quality(&lqb);
+	p_reply->level_min0_max4 = lqb.level;
+	p_reply->v_0_255 = lqb.v;
+	p_reply->v_dBm = lqb.v_dBm;
+	int64_t ago = get_current_epoch_time_ms();
+	ago -= lqb.t;
+	if (ago < 0)
+	{
+		ago = 0;
+	}
+	p_reply->milliseconds_ago = ago;
+
+	if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &phs_in->si_other))
+	{
+		syslog(LOG_INFO,"%s: reply sent OK", __func__);
+	}
+	else
+	{
+		syslog(LOG_ERR,"%s: unable to send the reply", __func__);
+		retcode = -1;
+	}
+	return retcode;
+
+}
+
 int handle_ASACZ_request_outside_send_message(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_handle_socket_in *phs_in, type_handle_server_socket *phss)
 {
 	int retcode = 0;
@@ -707,6 +742,12 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 		case enum_ASAC_ZigBee_interface_command_network_my_IEEE_req:
 		{
 			retcode = handle_ASACZ_request_my_IEEE_req(pzmessage_rx, phs_in, phss);
+			break;
+		}
+
+		case enum_ASAC_ZigBee_interface_command_network_signal_strength_req:
+		{
+			retcode = handle_ASACZ_request_signal_strength_req(pzmessage_rx, phs_in, phss);
 			break;
 		}
 

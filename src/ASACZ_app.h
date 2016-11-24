@@ -38,4 +38,25 @@ char * get_app_current_link_quality_string(void);
 uint8_t get_app_current_link_quality_value_energy_detected(void);
 int32_t get_app_current_link_quality_value_dBm(void);
 
+
+typedef enum
+{
+	enum_link_quality_level_unknown = 0,
+	enum_link_quality_level_low,
+	enum_link_quality_level_normal,
+	enum_link_quality_level_good,
+	enum_link_quality_level_excellent,
+	enum_link_quality_level_numof
+}enum_link_quality_level;
+
+typedef struct _type_link_quality_body
+{
+	enum_link_quality_level level;
+	uint8_t v;
+	int32_t v_dBm;
+	int64_t t; // the last epoch time when the link quality was updated
+}type_link_quality_body;
+
+void get_app_last_link_quality(type_link_quality_body *p);
+
 #endif /* ASACZ_APP_H_ */

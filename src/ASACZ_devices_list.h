@@ -201,5 +201,5 @@ typedef struct _type_struct_device_list
 unsigned int is_OK_get_device_IEEE_list(uint32_t start_index, uint32_t sequence, type_struct_device_list *p, uint32_t max_num_of_devices_to_return);
 
 uint32_t get_device_list_sequence_number(void);
-int64_t get_current_epoch_time_ms(void);
+
 #endif /* ASACZ_DEVICES_LIST_H_ */

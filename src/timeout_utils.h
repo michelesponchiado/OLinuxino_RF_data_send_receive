@@ -9,7 +9,8 @@
 #define TIMEOUT_UTILS_H_
 
 #include <stdint.h>
-typedef long long int type_my_timeout;
+int64_t get_current_epoch_time_ms(void);
+typedef int64_t type_my_timeout;
 void initialize_my_timeout(type_my_timeout *p);
 unsigned int is_my_timeout_elapsed_ms(type_my_timeout *p, unsigned int timeout_ms);
 

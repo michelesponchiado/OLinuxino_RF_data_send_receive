@@ -521,7 +521,7 @@ int handle_ASACZ_request_device_list_req(type_ASAC_Zigbee_interface_request *pzm
 	p_device_list_reply->start_index 	= p_device_list_req->start_index;
 #define def_max_device_to_read (sizeof(p_device_list_reply->list_chunk) / sizeof(p_device_list_reply->list_chunk[0]))
 	uint64_t my_IEEE_address = 0;
-	uint32_t is_valid_IEEE_address = is_OK_get_my_radio_IEEE_address(&my_IEEE_address);
+	uint32_t ui_is_valid_my_IEEE_address = is_OK_get_my_radio_IEEE_address(&my_IEEE_address);
 
 	type_struct_device_list get_device_list;
 	if (is_OK_get_device_IEEE_list(p_device_list_req->start_index, p_device_list_req->sequence, &get_device_list, def_max_device_to_read))
@@ -531,17 +531,22 @@ int handle_ASACZ_request_device_list_req(type_ASAC_Zigbee_interface_request *pzm
 		p_device_list_reply->sequence		= get_device_list.sequence;
 		p_device_list_reply->list_ends_here	= get_device_list.list_ends_here;
 		unsigned int num_devices_copied = 0;
+		unsigned int num_devices_skipped_OK = 0;
 		unsigned int num_devices_read;
 		for (num_devices_read = 0; (num_devices_read < get_device_list.num_devices_in_chunk) && (num_devices_read < def_max_device_to_read); num_devices_read++)
 		{
 			uint64_t cur_IEEE_address = get_device_list.IEEE_chunk[num_devices_read];
-			if (!is_valid_IEEE_address || (cur_IEEE_address != my_IEEE_address))
+			if (ui_is_valid_my_IEEE_address && (cur_IEEE_address == my_IEEE_address))
+			{
+				num_devices_skipped_OK++;
+			}
+			else
 			{
 				p_device_list_reply->list_chunk[num_devices_copied++].IEEE_address = cur_IEEE_address;
 			}
 		}
 		p_device_list_reply->num_devices_in_chunk = num_devices_copied;
-		if (num_devices_copied < get_device_list.num_devices_in_chunk)
+		if (num_devices_copied + num_devices_skipped_OK < get_device_list.num_devices_in_chunk)
 		{
 			p_device_list_reply->list_ends_here	= 0;
 		}

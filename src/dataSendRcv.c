@@ -1498,7 +1498,7 @@ static void displayDevices(void)
 		        (nodeList[i].Type == DEVICETYPE_ROUTER ?
 		                "ROUTER" : "COORDINATOR");
 		// asks info about the node, if coordinator, so we can add it to the device list
-		if (nodeList[i].Type == DEVICETYPE_COORDINATOR)
+		//if (nodeList[i].Type == DEVICETYPE_COORDINATOR)
 		{
 			IeeeAddrReqFormat_t IEEEreq;
 			IEEEreq.ShortAddr = nodeList[i].NodeAddr;

@@ -92,7 +92,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_input_cluster_register_reply
 {
 	uint8_t endpoint;			// the end-point to register
 	uint16_t input_cluster_id;	// the input cluster (command) to register
-	enum_input_cluster_register_reply_retcode retcode;	// the return code
+	uint32_t retcode;	// the return code
 } __attribute__((__packed__)) type_ASAC_ZigBee_interface_network_input_cluster_register_reply ;
 
 
@@ -172,7 +172,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_device_list_req
 typedef struct _type_device_list_chunk
 {
 	uint64_t	IEEE_address;				//!< the IEEE 64-bit address of the device
-}type_device_list_chunk;
+}__attribute__((__packed__)) type_device_list_chunk;
 
 typedef struct _type_ASAC_ZigBee_interface_network_device_list_reply
 {
@@ -336,7 +336,7 @@ typedef struct _type_ASAC_ZigBee_interface_command_outside_send_message_reply
 	uint8_t message_length;				// the number of bytes in the message
 	uint32_t retcode; 	// must be of type enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode
 	uint32_t id; 		// the message identifier / handle before it leaves the radio
-}type_ASAC_ZigBee_interface_command_outside_send_message_reply;
+}__attribute__((__packed__)) type_ASAC_ZigBee_interface_command_outside_send_message_reply;
 
 //
 //
@@ -364,7 +364,7 @@ typedef struct _type_ASAC_ZigBee_interface_command_received_message_callback
 typedef struct _type_ASAC_ZigBee_interface_unknown_reply
 {
 	uint32_t the_unknown_code; // the unknown code we got
-}type_ASAC_ZigBee_interface_unknown_reply;
+}__attribute__((__packed__)) type_ASAC_ZigBee_interface_unknown_reply;
 
 
 //

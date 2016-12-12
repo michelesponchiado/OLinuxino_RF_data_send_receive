@@ -1111,8 +1111,13 @@ static int32_t restartNetwork(void)
 	int32_t status;
 	handle_app.initDone = 0;
 	rpcWaitMqClientMsg(2000);
-
+#define def_full_restart_asacz
+#ifndef def_full_restart_asacz
 	status = setNVStartup(0);
+#else
+	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
+#endif
+
 	if (status != MT_RPC_SUCCESS)
 	{
 		syslog(LOG_WARNING, "%s: network startup failed", __func__);
@@ -1124,6 +1129,25 @@ static int32_t restartNetwork(void)
 	sysResetReq(&resReq);
 	//flush the rsp
 	rpcWaitMqClientMsg(200);
+
+#ifdef def_full_restart_asacz
+	syslog(LOG_INFO, "Setting the PAN ID");
+	status = setNVPanID(0xFFFF);
+	if (status != MT_RPC_SUCCESS)
+	{
+		syslog(LOG_WARNING, "setNVPanID failed");
+		return -1;
+	}
+	// this must be between 11 and 26
+#define def_fix_channel 11
+	syslog(LOG_INFO, "Setting the Channel %i", def_fix_channel);
+	status = setNVChanList(1 << def_fix_channel);
+	if (status != MT_RPC_SUCCESS)
+	{
+		syslog(LOG_WARNING, "setNVChanList failed on channel %i", def_fix_channel);
+		return -1;
+	}
+#endif
 
 	// register the default end point
 	registerAf_default();

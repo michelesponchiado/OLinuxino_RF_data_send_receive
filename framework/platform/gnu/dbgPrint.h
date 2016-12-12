@@ -56,6 +56,7 @@ typedef enum
 //#define PRINT_LEVEL PRINT_LEVEL_INFO
 
 void dbg_print(int printf_level, const char *fmt, ...);
+void my_log(int print_level, const char *fmt, ...);
 
 #ifdef __cplusplus
 }

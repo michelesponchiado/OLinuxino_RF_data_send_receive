@@ -107,3 +107,24 @@ void dbg_print(int print_level, const char *fmt, ...)
 		printf("[%lu]%s %s", get_system_time_ms(), str_dbg_level(print_level), c_aux);
 	}
 }
+#ifdef ANDROID
+#include "cutils/log.h"
+#endif
+void my_log(int print_level, const char *fmt, ...)
+{
+	va_list argp;
+	va_start(argp, fmt);
+	char c_aux[256];
+	vsnprintf(c_aux,sizeof(c_aux),fmt, argp);
+	va_end(argp);
+#ifdef ANDROID
+	int android_print_level = LOG_INFO;
+	if (print_level == LOG_ERR)
+	{
+		android_print_level = LOG_ERROR;
+	}
+	ALOG(android_print_level,"%s", c_aux);
+#else
+	syslog(print_level,"%s", c_aux);
+#endif
+}

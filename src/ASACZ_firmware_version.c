@@ -10,7 +10,7 @@
 #include <string.h>
 #include "ASACZ_firmware_version.h"
 
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	22
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	23
 #define def_ASACZ_firmware_version_MAJOR_NUMBER 	0
 #define def_ASACZ_firmware_version_MIDDLE_NUMBER 	1
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	2
@@ -18,6 +18,8 @@
 #define def_ASACZ_firmware_version_PATCH 			""
 #define def_ASACZ_firmware_version_NOTES 			"internal version"
 
+// 0.1.2 build 23
+//   adding Android log
 // 0.1.2 build 22
 //   checking BUG: when entering the network, the devices not always communicate
 // 0.1.2 build 21

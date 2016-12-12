@@ -1061,14 +1061,14 @@ static void refresh_my_endpoint_list(void)
 		actReq.DstAddr = my_short_address;
 		actReq.NwkAddrOfInterest = my_short_address;
 		zdoActiveEpReq(&actReq);
-		rpcGetMqClientMsg();
+		rpcWaitMqClientMsg(15000); //rpcGetMqClientMsg();
 		int32_t status;
 		int nloop = 0;
 		do
 		{
 			status = rpcWaitMqClientMsg(1000);
 			my_log(1,"%s: status = %i, nloop = %i\n", __func__, status, nloop);
-		} while (status != -1 && (++nloop < 10));
+		} while (status != -1 && (++nloop < 30));
 	}
 	my_log(1,"%s: -\n", __func__);
 }
@@ -1107,8 +1107,6 @@ void register_user_end_points(void)
 
 	}
 	printf("%s: refrshing the end point list\n", __func__);
-	//refresh my end point list
-	refresh_my_endpoint_list();
 	printf("%s: - registering end_point\n", __func__);
 	my_log(LOG_INFO,"%s: - registering end_point\n", __func__);
 }
@@ -1187,11 +1185,13 @@ static int32_t restartNetwork(void)
 	if (status == NEW_NETWORK)
 	{
 		dbg_print(PRINT_LEVEL_INFO, "zdoInit NEW_NETWORK\n");
+		my_log(LOG_WARNING, "%s: zdoInit NEW_NETWORK", __func__);
 		status = MT_RPC_SUCCESS;
 	}
 	else if (status == RESTORED_NETWORK)
 	{
 		dbg_print(PRINT_LEVEL_INFO, "zdoInit RESTORED_NETWORK\n");
+		my_log(LOG_WARNING, "%s: zdoInit RESTORED_NETWORK", __func__);
 		status = MT_RPC_SUCCESS;
 	}
 	else
@@ -1200,7 +1200,6 @@ static int32_t restartNetwork(void)
 		printf("%s: ERROR zdoInit failed\n", __func__);
 		status = -1;
 	}
-
 
 	//flush AREQ ZDO State Change messages
 	while (status != -1)
@@ -1228,12 +1227,15 @@ static int32_t restartNetwork(void)
 		if ( retcode )
 		{
 			printf(" *** permit join req ERROR: %i\n", (int)retcode);
+			my_log(LOG_INFO, "%s: permit join req ko", __func__);
 		}
 		else
 		{
 			printf("permit join req OK\n");
+			my_log(LOG_INFO, "%s: permit join req OK", __func__);
 		}
 	}
+
 	//set startup option back to keep configuration in case of reset
 	status = setNVStartup(0);
 	if (handle_app.devState < DEV_END_DEVICE)
@@ -1243,6 +1245,7 @@ static int32_t restartNetwork(void)
 		//start network failed
 		return -1;
 	}
+
 	my_log(LOG_INFO, "%s: network restart OK", __func__);
 	printf("%s: network restart OK\n", __func__);
 
@@ -1572,7 +1575,8 @@ static void displayDevices(void)
 		actReq.DstAddr = nodeList[i].NodeAddr;
 		actReq.NwkAddrOfInterest = nodeList[i].NodeAddr;
 		zdoActiveEpReq(&actReq);
-		rpcGetMqClientMsg();
+//		rpcGetMqClientMsg();
+		rpcWaitMqClientMsg(15000); 
 		do
 		{
 			status = rpcWaitMqClientMsg(1000);
@@ -1603,7 +1607,8 @@ static void displayDevices(void)
 				actReq.NwkAddrOfInterest = nodeList[i].childs[cI].ChildAddr;
 				zdoActiveEpReq(&actReq);
 				status = 0;
-				rpcGetMqClientMsg();
+				//rpcGetMqClientMsg();
+				rpcWaitMqClientMsg(15000); 
 				while (status != -1)
 				{
 					status = rpcWaitMqClientMsg(1000);
@@ -1968,6 +1973,8 @@ void* appProcess(void *argument)
 			if (is_valid_IEEE_address(&handle_app.IEEE_address) && is_valid_Tx_power(&handle_app.Tx_power))
 			{
 				consolePrint("My IEEE Address is: 0x%" PRIx64 "\n", handle_app.IEEE_address.address);
+				//refresh my end point list
+				refresh_my_endpoint_list();
 
 				my_log(LOG_INFO, "Callback OK, going to device init");
 				handle_app.status = enum_app_status_display_devices_init;

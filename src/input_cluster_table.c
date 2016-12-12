@@ -197,7 +197,7 @@ static enum_add_input_cluster_table_retcode add_af_user(type_Af_user *p, uint16_
 	{
 		r = enum_add_input_cluster_table_retcode_ERR_too_many_out_commands;
 		printf("%s: ERROR too many out commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
-		syslog(LOG_ERR, "%s: ERROR too many out commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
+		my_log(LOG_ERR, "%s: ERROR too many out commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
 	}
 	return r;
 
@@ -254,6 +254,7 @@ enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_
 	enum_add_input_cluster_table_retcode r = enum_add_input_cluster_table_retcode_OK;
 	type_Af_user u;
 
+	my_log(1,"%s: adding ep %i/cluster %i\n", __func__, pelem_to_add->cluster.endpoint, pelem_to_add->cluster.input_cluster_id);
 	pthread_mutex_lock(&input_cluster_table.mtx);
 		if (r == enum_add_input_cluster_table_retcode_OK)
 		{
@@ -312,14 +313,18 @@ enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_
 			if (r == enum_add_input_cluster_table_retcode_OK)
 			{
     			char *ip = inet_ntoa(pelem_to_add->si_other.sin_addr);
-    			printf("%s: added NEW ep:%i, cluster:%i, ip:%s, port=%u\n", __func__,(int)pelem_to_add->cluster.endpoint, (int)pelem_to_add->cluster.input_cluster_id, ip, (unsigned int)pelem_to_add->si_other.sin_port);
+    			my_log(1, "%s: added NEW ep:%i, cluster:%i, ip:%s, port=%u\n", __func__,(int)pelem_to_add->cluster.endpoint, (int)pelem_to_add->cluster.input_cluster_id, ip, (unsigned int)pelem_to_add->si_other.sin_port);
 			}
 		}
 	pthread_mutex_unlock(&input_cluster_table.mtx);
 	if (r == enum_add_input_cluster_table_retcode_OK)
 	{
 		require_network_restart();
-		printf("%s: network restart required\n", __func__);
+		my_log(1,"%s: cluster registered OK, network restart required\n", __func__);
+	}
+	else
+	{
+		my_log(1,"%s: cluster register ERROR %i\n", __func__, (int)r);
 	}
 
 	return r;

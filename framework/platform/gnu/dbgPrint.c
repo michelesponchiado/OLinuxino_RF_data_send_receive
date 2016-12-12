@@ -108,6 +108,17 @@ void dbg_print(int print_level, const char *fmt, ...)
 	}
 }
 #ifdef ANDROID
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <libgen.h>
+
+#include "private/android_filesystem_config.h"
 #include "cutils/log.h"
 #endif
 void my_log(int print_level, const char *fmt, ...)
@@ -118,12 +129,7 @@ void my_log(int print_level, const char *fmt, ...)
 	vsnprintf(c_aux,sizeof(c_aux),fmt, argp);
 	va_end(argp);
 #ifdef ANDROID
-	int android_print_level = LOG_INFO;
-	if (print_level == LOG_ERR)
-	{
-		android_print_level = LOG_ERROR;
-	}
-	ALOG(android_print_level,"%s", c_aux);
+	ALOGI("%s", c_aux);
 #else
 	syslog(print_level,"%s", c_aux);
 #endif

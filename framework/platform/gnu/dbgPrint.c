@@ -120,6 +120,8 @@ void dbg_print(int print_level, const char *fmt, ...)
 
 #include "private/android_filesystem_config.h"
 #include "cutils/log.h"
+#else
+#include <syslog.h>
 #endif
 void my_log(int print_level, const char *fmt, ...)
 {

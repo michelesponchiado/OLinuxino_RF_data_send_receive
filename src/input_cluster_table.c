@@ -11,6 +11,7 @@
 #include <syslog.h>
 #include "input_cluster_table.h"
 #include "dataSendRcv.h"
+#include "dbgPrint.h"
 
 #define def_min_valid_endpoint 1
 // the last end point is reserved ASAC

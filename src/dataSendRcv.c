@@ -1128,7 +1128,7 @@ static int32_t restartNetwork(void)
 	resReq.Type = 1;
 	sysResetReq(&resReq);
 	//flush the rsp
-	rpcWaitMqClientMsg(200);
+	rpcWaitMqClientMsg(2000);
 
 #ifdef def_full_restart_asacz
 	my_log(LOG_INFO, "Setting the PAN ID");

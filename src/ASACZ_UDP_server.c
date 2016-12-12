@@ -266,6 +266,7 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 	int retcode = 0;
 	enum_input_cluster_register_reply_retcode r = enum_input_cluster_register_reply_retcode_OK;
 	type_ASAC_ZigBee_interface_network_input_cluster_register_req * p_body_request = &pzmessage_rx->req.input_cluster_register;
+	my_log(LOG_INFO,"%s: end-point %u, cluster %u register request\n",__func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 	if (r == enum_input_cluster_register_reply_retcode_OK)
 	{
 		type_input_cluster_table_elem elem;

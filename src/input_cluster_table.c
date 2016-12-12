@@ -181,18 +181,20 @@ static enum_add_input_cluster_table_retcode add_af_user(type_Af_user *p, uint16_
 		p->AppInClusterList[p->AppNumInClusters] = input_cluster_id;
 		p->AppNumInClusters++;
 		printf("%s: end point %u, adding in cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
+		my_log(1, "%s: end point %u, adding in cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
 	}
 	else
 	{
 		r = enum_add_input_cluster_table_retcode_ERR_too_many_in_commands;
 		printf("%s: ERROR too many in commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
-		syslog(LOG_ERR, "%s: ERROR too many in commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
+		my_log(LOG_ERR, "%s: ERROR too many in commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
 	}
 	if (p->AppNumOutClusters < sizeof(p->AppOutClusterList)/sizeof(p->AppOutClusterList[0]))
 	{
 		p->AppOutClusterList[p->AppNumOutClusters] = input_cluster_id;
 		p->AppNumOutClusters++;
 		printf("%s: end point %u, adding out cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
+		my_log(1, "%s: end point %u, adding out cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
 	}
 	else
 	{
@@ -211,6 +213,7 @@ enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uin
 	memset(p, 0, sizeof(*p));
 	pthread_mutex_lock(&input_cluster_table.mtx);
 		unsigned int found_end_point = 0;
+		my_log(LOG_ERR, "%s: + looking for end point %u\n", __func__, (unsigned int)prev_end_point);
 		if (r == enum_get_next_end_point_command_list_retcode_OK)
 		{
 			{
@@ -218,6 +221,7 @@ enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uin
 				unsigned int idx;
 				for (idx = 0; (idx < input_cluster_table.numof) && (add_retcode == enum_add_input_cluster_table_retcode_OK); idx++)
 				{
+					my_log(LOG_ERR, "%s: idx = %u / %u\n", __func__, (unsigned int)idx (unsigned int)input_cluster_table.numof);
 					type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[idx];
 					if (!found_end_point)
 					{
@@ -239,10 +243,14 @@ enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uin
 			}
 
 		}
+		my_log(LOG_ERR, "%s: + end of loop\n", __func__);
 		if (!found_end_point)
 		{
 			r = enum_get_next_end_point_command_list_retcode_empty;
+			my_log(LOG_ERR, "%s: no endpoint found\n", __func__);
 		}
+		else	
+			my_log(LOG_ERR, "%s: endpoint found OK\n", __func__);
 	pthread_mutex_unlock(&input_cluster_table.mtx);
 
 	return r;

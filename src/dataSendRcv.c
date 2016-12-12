@@ -1047,24 +1047,30 @@ static uint8_t setNVChanList(uint32_t chanList)
 static void refresh_my_endpoint_list(void)
 {
 	uint16_t my_short_address;
+	my_log(1,"%s: +\n", __func__);
 	if (!is_OK_get_network_short_address_from_IEEE(handle_app.IEEE_address.address, &my_short_address))
 	{
 		printf("%s: ERROR unable to refresh my end point list\n", __func__);
+		my_log(1,"%s: ERROR unable to refresh my end point list\n", __func__);
 	}
 	else
 	{
 		printf("%s: refreshing my end point list...\n", __func__);
+		my_log(1,"%s: refreshing my end point list...\n", __func__);
 		ActiveEpReqFormat_t actReq;
 		actReq.DstAddr = my_short_address;
 		actReq.NwkAddrOfInterest = my_short_address;
 		zdoActiveEpReq(&actReq);
 		rpcGetMqClientMsg();
 		int32_t status;
+		int nloop = 0;
 		do
 		{
 			status = rpcWaitMqClientMsg(1000);
-		} while (status != -1);
+			my_log(1,"%s: status = %i, nloop = %i\n", __func__, status, nloop);
+		} while (status != -1 && (++nloop < 10));
 	}
+	my_log(1,"%s: -\n", __func__);
 }
 
 
@@ -1075,6 +1081,7 @@ void register_user_end_points(void)
 	uint8_t prev_end_point = 0;
 	uint32_t nloop = 0;
 	printf("%s: + registering end_point\n", __func__);
+	my_log(LOG_INFO, "%s: + registering end_point\n", __func__);
 	while(++nloop < 256)
 	{
 		type_Af_user u;
@@ -1086,19 +1093,24 @@ void register_user_end_points(void)
 		}
 		prev_end_point = u.EndPoint;
 		printf("%s: registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
+		my_log(LOG_INFO,"%s: registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
 		if (!is_OK_registerAf_user(&u))
 		{
 			printf("%s: ERROR registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
+			my_log(LOG_INFO,"%s: ERROR registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
 		}
 		else
 		{
+			my_log(LOG_INFO,"%s: OK registered end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
 
 		}
 
 	}
+	printf("%s: refrshing the end point list\n", __func__);
 	//refresh my end point list
 	refresh_my_endpoint_list();
 	printf("%s: - registering end_point\n", __func__);
+	my_log(LOG_INFO,"%s: - registering end_point\n", __func__);
 }
 
 
@@ -1110,11 +1122,23 @@ static int32_t restartNetwork(void)
 #endif
 	int32_t status;
 	handle_app.initDone = 0;
+#ifdef ANDROID
+	{
+		extern int radio_asac_barebone_off();
+		radio_asac_barebone_off();
+		usleep(300*1000);
+		extern int radio_asac_barebone_on();
+		radio_asac_barebone_on();
+		usleep(300*1000);
+	}
+#endif
 	rpcWaitMqClientMsg(2000);
 #define def_full_restart_asacz
 #ifndef def_full_restart_asacz
+	my_log(LOG_WARNING, "%s: full restart disabled", __func__);
 	status = setNVStartup(0);
 #else
+	my_log(LOG_WARNING, "%s: full restart ENABLED", __func__);
 	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
 #endif
 
@@ -1149,11 +1173,16 @@ static int32_t restartNetwork(void)
 	}
 #endif
 
+	my_log(LOG_INFO, "channel set OK");
+	my_log(LOG_INFO, "about to call registerAf_default");
 	// register the default end point
 	registerAf_default();
+	my_log(LOG_INFO, "default end point registered OK");
+	my_log(LOG_INFO, "about to call register_user_end_points");
 	// register the user end points
 	register_user_end_points();
 
+	my_log(LOG_INFO, "about to call zdo init");
 	status = zdoInit();
 	if (status == NEW_NETWORK)
 	{
@@ -1454,6 +1483,7 @@ unsigned int is_OK_registerAf_user(type_Af_user *p)
 	{
 
 		printf("%s: refreshing my point list @endpoint %u...\n", __func__, (unsigned int)p->EndPoint);
+		my_log(1,"%s: refreshing my point list @endpoint %u...\n", __func__, (unsigned int)p->EndPoint);
 		RegisterFormat_t reg;
 		memcpy(&reg, &default_RegisterFormat_t, sizeof(reg));
 		reg.EndPoint = p->EndPoint;
@@ -1476,11 +1506,15 @@ unsigned int is_OK_registerAf_user(type_Af_user *p)
 
 		{
 			int32_t status = 0;
+			my_log(1,"%s: about to call register af user\n", __func__, (unsigned int)p->EndPoint);
 			status = afRegister(&reg);
 			if (status != SUCCESS)
 			{
+				my_log(1,"%s: error afregister\n", __func__);
 				is_OK = 0;
 			}
+			else
+				my_log(1,"%s: OK afregister\n", __func__);
 		}
 
 	}
@@ -1488,10 +1522,12 @@ unsigned int is_OK_registerAf_user(type_Af_user *p)
 		if (is_OK)
 		{
 			printf("%s: ends OK\n", __func__);
+			my_log(1,"%s: ends OK\n", __func__);
 		}
 		else
 		{
 			printf("%s: ERROR, ends non OK\n", __func__);
+			my_log(1,"%s: ERROR, ends non OK\n", __func__);
 		}
 
 	}
@@ -1789,6 +1825,11 @@ void* appProcess(void *argument)
 		// if in error, only a restart can change status
 		case enum_app_status_error:
 		{
+			if (is_required_network_restart())
+			{
+				handle_app.status = enum_app_status_restart_network;
+				break;
+			}
 			break;
 		}
 		case enum_app_status_idle:

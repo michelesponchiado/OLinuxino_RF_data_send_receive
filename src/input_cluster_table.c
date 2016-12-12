@@ -221,7 +221,7 @@ enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uin
 				unsigned int idx;
 				for (idx = 0; (idx < input_cluster_table.numof) && (add_retcode == enum_add_input_cluster_table_retcode_OK); idx++)
 				{
-					my_log(LOG_ERR, "%s: idx = %u / %u\n", __func__, (unsigned int)idx (unsigned int)input_cluster_table.numof);
+					my_log(LOG_ERR, "%s: idx = %u / %u\n", __func__, (unsigned int)idx, (unsigned int)input_cluster_table.numof);
 					type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[idx];
 					if (!found_end_point)
 					{

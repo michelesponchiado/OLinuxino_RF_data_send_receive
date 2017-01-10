@@ -10,7 +10,7 @@
 #include <string.h>
 #include "ASACZ_firmware_version.h"
 
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	25
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	26
 #define def_ASACZ_firmware_version_MAJOR_NUMBER 	0
 #define def_ASACZ_firmware_version_MIDDLE_NUMBER 	1
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	2
@@ -18,6 +18,8 @@
 #define def_ASACZ_firmware_version_PATCH 			""
 #define def_ASACZ_firmware_version_NOTES 			"internal version"
 
+// 0.1.2 build 26
+//   start and restart network always use new network; when a new network is created, it is better to start from scratch
 // 0.1.2 build 25
 //   start and restart network always use existing network if available
 // 0.1.2 build 24

@@ -1131,7 +1131,7 @@ static int32_t restartNetwork(void)
 	}
 #endif
 	rpcWaitMqClientMsg(2000);
-//#define def_full_restart_asacz
+#define def_full_restart_asacz
 #ifndef def_full_restart_asacz
 	my_log(LOG_WARNING, "%s: full restart disabled", __func__);
 	status = setNVStartup(0);
@@ -1286,7 +1286,7 @@ static int32_t startNetwork(unsigned int channel_index)
 		}
 	} while (sCh[0] != 'y' && sCh[0] != 'Y' && sCh[0] != 'n' && sCh[0] != 'N');
 #else
-//#define def_new_network
+#define def_new_network
 #ifdef def_new_network
 	my_log(LOG_INFO, "starting a new network");
 	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);

@@ -1131,6 +1131,7 @@ static int32_t restartNetwork(void)
 	}
 #endif
 	rpcWaitMqClientMsg(2000);
+// enable full restart
 #define def_full_restart_asacz
 #ifndef def_full_restart_asacz
 	my_log(LOG_WARNING, "%s: full restart disabled", __func__);

@@ -1864,6 +1864,7 @@ uint8_t set_TX_power(void)
 	*(int8_t*)&req.TxPower = pwr_required_dbm;
 	my_log(LOG_INFO, "setting the TX power to %i dBm\n", (int)pwr_required_dbm);
 	retcode = sysSetTxPower(&req);
+	// removed double set TX power
 	switch(retcode)
 	{
 		case MT_RPC_SUCCESS:

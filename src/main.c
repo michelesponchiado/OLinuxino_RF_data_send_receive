@@ -242,7 +242,6 @@ int main(int argc, char* argv[])
         char v[128];
     	get_ASACZ_firmware_version_string(v, sizeof(v));
         syslog(LOG_INFO, "Firmware version: %s", v);
-        printf("%s: firmware version: %s\n", __func__, v);
     }
 	init_ASACZ_device_list();
 	init_input_cluster_table();
@@ -367,7 +366,7 @@ int main(int argc, char* argv[])
 		}
 #endif
 	}
-	printf("Server ends here\n");
+	dbg_print(PRINT_LEVEL_INFO,"Server ends here");
 	return 0; /* we never get here */
 
 

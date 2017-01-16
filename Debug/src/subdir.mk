@@ -18,7 +18,8 @@ C_SRCS += \
 ../src/my_queues.c \
 ../src/server_thread.c \
 ../src/timeout_utils.c \
-../src/ts_util.c 
+../src/ts_util.c \
+../src/update_end_point_list.c 
 
 OBJS += \
 ./src/ASACSOCKET_check.o \
@@ -35,7 +36,8 @@ OBJS += \
 ./src/my_queues.o \
 ./src/server_thread.o \
 ./src/timeout_utils.o \
-./src/ts_util.o 
+./src/ts_util.o \
+./src/update_end_point_list.o 
 
 C_DEPS += \
 ./src/ASACSOCKET_check.d \
@@ -52,7 +54,8 @@ C_DEPS += \
 ./src/my_queues.d \
 ./src/server_thread.d \
 ./src/timeout_utils.d \
-./src/ts_util.d 
+./src/ts_util.d \
+./src/update_end_point_list.d 
 
 
 # Each subdirectory must supply rules for building sources it contributes

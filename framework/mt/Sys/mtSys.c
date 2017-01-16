@@ -111,7 +111,7 @@ static void processPingSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		PingSrspFormat_t rsp;
 		if (rpcLen < 2)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -204,7 +204,7 @@ static void processGetExtAddrSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		GetExtAddrSrspFormat_t rsp;
 		if (rpcLen < 8)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -278,7 +278,7 @@ static void processRamReadSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		RamReadSrspFormat_t rsp;
 		if (rpcLen < 2)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -402,7 +402,7 @@ static void processResetInd(uint8_t *rpcBuff, uint8_t rpcLen)
 		ResetIndFormat_t rsp;
 		if (rpcLen < 6)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -462,7 +462,7 @@ static void processVersionSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		VersionSrspFormat_t rsp;
 		if (rpcLen < 5)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -538,7 +538,7 @@ static void processOsalNvReadSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		OsalNvReadSrspFormat_t rsp;
 		if (rpcLen < 2)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -758,7 +758,7 @@ static void processOsalNvLengthSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		OsalNvLengthSrspFormat_t rsp;
 		if (rpcLen < 2)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -870,7 +870,7 @@ static void processOsalTimerExpired(uint8_t *rpcBuff, uint8_t rpcLen)
 		OsalTimerExpiredFormat_t rsp;
 		if (rpcLen < 1)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -940,7 +940,7 @@ static void processStackTuneSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		StackTuneSrspFormat_t rsp;
 		if (rpcLen < 1)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -1010,7 +1010,7 @@ static void processAdcReadSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		AdcReadSrspFormat_t rsp;
 		if (rpcLen < 2)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -1081,7 +1081,7 @@ static void processGpioSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		GpioSrspFormat_t rsp;
 		if (rpcLen < 1)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -1135,7 +1135,7 @@ static void processRandomSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		RandomSrspFormat_t rsp;
 		if (rpcLen < 2)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -1239,7 +1239,7 @@ static void processGetTimeSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		GetTimeSrspFormat_t rsp;
 		if (rpcLen < 11)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);
@@ -1318,7 +1318,7 @@ static void processSetTxPowerSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		SetTxPowerSrspFormat_t rsp;
 		if (rpcLen < 1)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			dbg_print(PRINT_LEVEL_ERROR, "%s: wrong length %u", __func__, (unsigned int)rpcLen);
 
 		}
 		//printf("rpcLen = %d\n", rpcLen);

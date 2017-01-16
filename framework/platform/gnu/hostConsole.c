@@ -295,7 +295,7 @@ int consoleGetLine(char *ln, int maxLen)
 		int x;
 		for (x = 1; x <= cPos; x++)
 		{
-			consolePrint("\b");
+			printf("\b");
 		}
 	}
 

@@ -402,7 +402,7 @@ void notify_all_clients_device_list_changed(type_handle_server_socket *phss, uin
 		si = si_other;
 		if (add_if_not_exist_list_socket_already_sent(&list_socket_already_sent, &si))
 		{
-			printf("%s: sending notification @%s, port %u\n", __func__, inet_ntoa(si.sin_addr), (unsigned int)si.sin_port);
+			dbg_print(PRINT_LEVEL_INFO, "%s: sending notification @%s, port %u\n", __func__, inet_ntoa(si.sin_addr), (unsigned int)si.sin_port);
 			if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size,phss->socket_fd, &si_other))
 			{
 			}
@@ -788,27 +788,27 @@ enum_check_outside_messages_from_ZigBee_retcode check_outside_messages_from_ZigB
 		type_ASAC_ZigBee_src_id * psrcid = &p_icr_rx->src_id;
 		// we must check if someone is listening to the end-point/command destination of the outside message
 		struct sockaddr_in s_reply;
-		printf("%s: popped message from ep:%i, cluster_id:%i\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
+		dbg_print(PRINT_LEVEL_VERBOSE,"%s: popped message from ep:%i, cluster_id:%i\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
 
 		if (!p_find_socket_of_input_cluster_end_point_command(&s_reply, psrcid->destination_endpoint, psrcid->cluster_id))
 		{
-			printf("%s: ERROR NO SOCKET BOUND TO ep:%i, cluster_id:%i\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
+			dbg_print(PRINT_LEVEL_ERROR,"%s: ERROR NO SOCKET BOUND TO ep:%i, cluster_id:%i\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
 			my_log(LOG_ERR,"%s: unable to find end_point %u, command %u", __func__, (unsigned int )psrcid->destination_endpoint, (unsigned int)psrcid->cluster_id);
 			r = enum_check_outside_messages_from_ZigBee_retcode_unhandled_end_point_command;
 		}
 		else
 		{
 			char *ip = inet_ntoa(s_reply.sin_addr);
-			printf("%s: OK found socket bound to ep:%i, cluster_id:%i, ip:%s, port=%u\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id, ip, (unsigned int)s_reply.sin_port);
+			dbg_print(PRINT_LEVEL_VERBOSE, "%s: OK found socket bound to ep:%i, cluster_id:%i, ip:%s, port=%u\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id, ip, (unsigned int)s_reply.sin_port);
 			// send the message in callback to the destination registered application
 			if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &s_reply))
 			{
-				printf("%s: message sent OK\n", __func__);
+				dbg_print(PRINT_LEVEL_VERBOSE, "%s: message sent OK\n", __func__);
 				my_log(LOG_INFO,"%s: reply sent OK", __func__);
 			}
 			else
 			{
-				printf("%s: error sending message\n", __func__);
+				dbg_print(PRINT_LEVEL_ERROR,"%s: error sending message\n", __func__);
 				my_log(LOG_ERR,"%s: unable to forward the message", __func__);
 				r = enum_check_outside_messages_from_ZigBee_retcode_unable_to_forward;
 			}
@@ -856,7 +856,6 @@ void * ASACZ_UDP_server_thread(void *arg)
 	}
 	h.handle_socket_in.slen = sizeof(h.handle_socket_in.si_other);
 	my_log(LOG_INFO, "%s: Server thread starts on port %i", __func__, (int)h.phss->port_number);
-	printf("%s: Server thread starts on port %i", __func__, (int)h.phss->port_number);
 
 	// opens the socket
 	h.phss->socket_fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -866,7 +865,6 @@ void * ASACZ_UDP_server_thread(void *arg)
 		exit(EXIT_FAILURE);
 	}
 	my_log(LOG_INFO, "%s: Socket created OK", __func__);
-	printf("%s: Socket created OK", __func__);
 
 	// mark the socket as NON blocking
 	{
@@ -899,7 +897,6 @@ void * ASACZ_UDP_server_thread(void *arg)
 		}
 	}
 	my_log(LOG_INFO, "%s: Bind OK", __func__);
-	printf("%s: Bind OK", __func__);
 
 #if def_local_preformatted_test
 
@@ -920,7 +917,6 @@ void * ASACZ_UDP_server_thread(void *arg)
 		else
 		{
 	        //print details of the client/peer and the data received
-	        printf("Received packet from %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
 			if (!is_OK_check_formatted_message(h.hss.buffer, sizeof(h.hss.buffer)))
 			{
 		        printf("ERROR ON Data: %*.*s\n" , recv_len,recv_len,h.hss.buffer);

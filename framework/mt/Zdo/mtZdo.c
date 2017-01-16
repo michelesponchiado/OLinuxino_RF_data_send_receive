@@ -992,14 +992,15 @@ uint8_t zdoMgmtLeaveReq(MgmtLeaveReqFormat_t *req)
 		cmInd += 8;
 		cmd[cmInd++] = req->RemoveChildre_Rejoin;
 
-		status = rpcSendFrame((MT_RPC_CMD_SREQ | MT_RPC_SYS_ZDO),
-		MT_ZDO_MGMT_LEAVE_REQ, cmd, cmdLen);
-
+		status = rpcSendFrame((MT_RPC_CMD_SREQ | MT_RPC_SYS_ZDO), MT_ZDO_MGMT_LEAVE_REQ, cmd, cmdLen);
+// no need to wait for the leave reply here
+#if 0
 		if (status == MT_RPC_SUCCESS)
 		{
 			rpcWaitMqClientMsg(50);
 			status = srspRpcBuff[2];
 		}
+#endif
 
 		free(cmd);
 		return status;

@@ -212,16 +212,16 @@ int32_t rpcWaitMqClientMsg(uint32_t timeout)
 	int32_t rpcLen, timeLeft = 0, mBefTime, mAftTime;
 	struct timespec to;
 	struct timeval befTime, aftTime;
+	gettimeofday(&befTime, NULL);
 	// calculate timeout
 	to.tv_sec = time(0) + (timeout / 1000);
 	to.tv_nsec = (long) ((long) timeout % 1000) * 1000000L;
 
-	dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: timeout=%d\n", timeout);
+/*	dbg_print(PRINT_LEVEL_INFO, "rpcWaitMqClientMsg: timeout=%d\n", timeout);
 	dbg_print(PRINT_LEVEL_INFO,
 	        "rpcWaitMqClientMsg: waiting on queue %d:%d:%d\n", timeout,
 	        to.tv_sec, to.tv_nsec);
-
-	gettimeofday(&befTime, NULL);
+*/
 	rpcLen = llq_timedreceive(&rpcLlq, (char *) rpcFrame, RPC_MAX_LEN + 1, &to);
 	gettimeofday(&aftTime, NULL);
 	if (rpcLen != -1)

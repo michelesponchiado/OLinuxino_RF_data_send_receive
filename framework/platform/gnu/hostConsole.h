@@ -37,13 +37,13 @@
  */
 #ifndef HOSTCONSOLE_H
 #define HOSTCONSOLE_H
-
+#include "dbgPrint.h"
 #ifdef __cplusplus
 extern "C"
 {
 #endif
 
-#define consolePrint printf
+
 #define consoleClearLn(); printf("%c[2K", 27);
 #define consoleFlush(); fflush(stdout);
 

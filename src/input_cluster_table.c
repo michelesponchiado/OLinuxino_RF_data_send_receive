@@ -154,7 +154,7 @@ static void delete_clusters(type_ASAC_ZigBee_interface_network_input_cluster_reg
 				{
 					{
 	        			char *ip = inet_ntoa(p_cur_elem->si_other.sin_addr);
-	        			printf("%s: removed old ep:%i, cluster:%i, ip:%s, port=%u\n", __func__,(int)p_cur_elem->cluster.endpoint,(int)p_cur_elem->cluster.input_cluster_id, ip, (unsigned int)p_cur_elem->si_other.sin_port);
+	        			dbg_print(PRINT_LEVEL_VERBOSE, "%s: removed old ep:%i, cluster:%i, ip:%s, port=%u\n", __func__,(int)p_cur_elem->cluster.endpoint,(int)p_cur_elem->cluster.input_cluster_id, ip, (unsigned int)p_cur_elem->si_other.sin_port);
 					}
 					unsigned int idx_copy;
 					for (idx_copy = idx; (idx_copy + 1 < input_cluster_table.numof) ; idx_copy++)
@@ -185,26 +185,26 @@ static enum_add_input_cluster_table_retcode add_af_user(type_Af_user *p, uint16_
 	{
 		p->AppInClusterList[p->AppNumInClusters] = input_cluster_id;
 		p->AppNumInClusters++;
-		printf("%s: end point %u, adding in cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
+		dbg_print(PRINT_LEVEL_VERBOSE, "%s: end point %u, adding in cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
 		my_log(1, "%s: end point %u, adding in cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
 	}
 	else
 	{
 		r = enum_add_input_cluster_table_retcode_ERR_too_many_in_commands;
-		printf("%s: ERROR too many in commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
+		dbg_print(PRINT_LEVEL_ERROR, "%s: ERROR too many in commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
 		my_log(LOG_ERR, "%s: ERROR too many in commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
 	}
 	if (p->AppNumOutClusters < sizeof(p->AppOutClusterList)/sizeof(p->AppOutClusterList[0]))
 	{
 		p->AppOutClusterList[p->AppNumOutClusters] = input_cluster_id;
 		p->AppNumOutClusters++;
-		printf("%s: end point %u, adding out cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
+		dbg_print(PRINT_LEVEL_VERBOSE, "%s: end point %u, adding out cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
 		my_log(1, "%s: end point %u, adding out cluster %u\n", __func__, (unsigned int)p->EndPoint, (unsigned int)input_cluster_id);
 	}
 	else
 	{
 		r = enum_add_input_cluster_table_retcode_ERR_too_many_out_commands;
-		printf("%s: ERROR too many out commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
+		dbg_print(PRINT_LEVEL_ERROR, "%s: ERROR too many out commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
 		my_log(LOG_ERR, "%s: ERROR too many out commands specified, end point %u\n", __func__, (unsigned int)p->EndPoint);
 	}
 	return r;
@@ -216,6 +216,8 @@ unsigned int is_OK_fill_end_point_command_list(uint8_t end_point, type_Af_user *
 {
 	unsigned int is_OK = 1;
 	memset(p, 0, sizeof(*p));
+	// setup the needed end_point
+	p->EndPoint = end_point;
 	pthread_mutex_lock(&input_cluster_table.mtx);
 	{
 		unsigned int found_end_point = 0;

@@ -66,6 +66,25 @@ extern uint8_t srspRpcBuff[RPC_MAX_LEN];
  */
 static void processSrsp(uint8_t *rpcBuff, uint8_t rpcLen);
 
+// this is very useful to delete and end point!
+uint8_t afDeleteEndpoint(uint8_t endPoint)
+{
+	uint8_t status;
+
+	type_DeleteFormat_t cmd = {0};
+	cmd.EndPoint = endPoint;
+	status = rpcSendFrame((MT_RPC_CMD_SREQ | MT_RPC_SYS_AF), MT_AF_DELETE, (uint8_t *)&cmd, sizeof(cmd));
+
+	// we don't wait for the reply!
+	//if (status == MT_RPC_SUCCESS)
+	//{
+	//	rpcWaitMqClientMsg(50);
+	//}
+
+	return status;
+}
+
+
 uint8_t afRegister(RegisterFormat_t *req)
 {
 	uint8_t status;
@@ -115,6 +134,7 @@ uint8_t afRegister(RegisterFormat_t *req)
 		return 1;
 	}
 }
+
 
 uint8_t afDataRequest(DataRequestFormat_t *req)
 {
@@ -508,6 +528,26 @@ static void processDataRetrieveSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 	}
 }
 
+static void processDataDeleteSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
+{
+	#define def_expected_length 1
+	if (rpcLen < def_expected_length)
+	{
+		dbg_print(PRINT_LEVEL_ERROR, "Wrong length of data delete reply: %u expected, %u received\n", (unsigned int)def_expected_length, (unsigned int)rpcLen);
+	}
+	else
+	{
+		if (mtAfCbs.pfnAfDataDeleteSrsp)
+		{
+			DataDeleteSrspFormat_t rsp;
+			uint8_t msgIdx = 2;
+			rsp.return_value = rpcBuff[msgIdx++];
+			mtAfCbs.pfnAfDataDeleteSrsp(&rsp);
+		}
+	}
+}
+
+
 uint8_t afApsfConfigSet(ApsfConfigSetFormat_t *req)
 {
 	uint8_t status;
@@ -639,21 +679,26 @@ void afProcess(uint8_t *rpcBuff, uint8_t rpcLen)
  */
 static void processSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 {
-	//copies sresp to local buffer
+	//copies the synchronous response to local buffer
 	memcpy(srspRpcBuff, rpcBuff, rpcLen);
 	//srspRpcLen = rpcLen;
 	switch (rpcBuff[1])
 	{
-	case MT_AF_DATA_RETRIEVE:
-		dbg_print(PRINT_LEVEL_VERBOSE, "afProcess: MT_AF_DATA_RETRIEVE\n");
-		processDataRetrieveSrsp(rpcBuff, rpcLen);
-		break;
-	default:
-		dbg_print(PRINT_LEVEL_INFO,
-		        "processSrsp: unsupported message [%x:%x]\n", rpcBuff[0],
-		        rpcBuff[1]);
-		break;
+		case MT_AF_DATA_RETRIEVE:
+			dbg_print(PRINT_LEVEL_VERBOSE, "%s: MT_AF_DATA_RETRIEVE", __func__);
+			processDataRetrieveSrsp(rpcBuff, rpcLen);
+			break;
+		case MT_AF_DELETE:
+		{
+			dbg_print(PRINT_LEVEL_VERBOSE, "%s: MT_AF_DELETE", __func__);
+			processDataDeleteSrsp(rpcBuff, rpcLen);
+			break;
+		}
+		default:
+		{
+			dbg_print(PRINT_LEVEL_INFO, "processSrsp: unsupported message [%x:%x]\n", rpcBuff[0], rpcBuff[1]);
+			break;
+		}
 	}
-
 }
 

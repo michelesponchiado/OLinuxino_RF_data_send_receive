@@ -43,6 +43,8 @@ extern "C"
 {
 #endif
 
+#define  LOG_TAG    "ASACZ"
+
 typedef enum
 {
 	PRINT_LEVEL_ERROR = 0,
@@ -52,11 +54,10 @@ typedef enum
 	PRINT_LEVEL_VERBOSE
 }enum_print_level;
 
-#define PRINT_LEVEL PRINT_LEVEL_WARNING
-//#define PRINT_LEVEL PRINT_LEVEL_INFO
-
 void dbg_print(int printf_level, const char *fmt, ...);
 void my_log(int print_level, const char *fmt, ...);
+unsigned int get_print_level(void);
+void set_print_level(unsigned int new_level);
 
 #ifdef __cplusplus
 }

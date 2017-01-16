@@ -88,6 +88,22 @@ static IncomingMsgFormat_t txrx_i;
  * LOCAL VARIABLE
  */
 
+static const char *get_af_error_code_string(uint8_t code)
+{
+	const char *s = "unknown";
+	switch(code)
+	{
+		case 0x0: 	{ s = "SUCCESS"; 		break;}
+		case 0x1: 	{ s = "FAILED"; 		break;}
+		case 0x2: 	{ s = "INVALID_PARAM"; 	break;}
+		case 0x10: 	{ s = "MEM FAIL"; 		break;}
+		case 0xCD: 	{ s = "NO ROUTE"; 		break;}
+		default: 	{ 						break;}
+	}
+	return s;
+}
+
+
 uint8_t gSrcEndPoint = 1;
 uint8_t gDstEndPoint = 1;
 
@@ -235,6 +251,19 @@ void init_link_quality(type_link_quality *p)
 	}
 }
 
+typedef struct _type_handle_end_point_update
+{
+	int64_t last_update_epoch_ms;
+	unsigned int call_back_req;
+	unsigned int call_back_ack;
+	unsigned int call_back_return_code;
+}type_handle_end_point_update;
+
+typedef struct _type_leave
+{
+	unsigned int isOK;
+	unsigned int num_ack, num_req;
+}type_leave;
 
 typedef struct _type_handle_app
 {
@@ -258,8 +287,204 @@ typedef struct _type_handle_app
 	unsigned int network_restart_req;
 	unsigned int network_restart_ack;
 	type_link_quality link_quality;
+	type_handle_end_point_update handle_end_point_update;
+	type_leave leave;
+	unsigned int force_shutdown;
 }type_handle_app;
 static type_handle_app handle_app;
+
+#define def_period_check_update_end_point_list_ms 200
+static void reset_time_update_end_point_list(type_handle_end_point_update * p)
+{
+	p->last_update_epoch_ms = get_current_epoch_time_ms();
+}
+static unsigned int is_needed_update_end_point_list(void)
+{
+	unsigned int update_needed = 0;
+	{
+		type_handle_end_point_update * p = &handle_app.handle_end_point_update;
+		unsigned int do_check = 1;
+		int64_t now = get_current_epoch_time_ms();
+		if (now > p->last_update_epoch_ms)
+		{
+			if (now - p->last_update_epoch_ms < def_period_check_update_end_point_list_ms)
+			{
+				do_check = 0;
+			}
+		}
+		if (do_check)
+		{
+			reset_time_update_end_point_list(p);
+			if (!is_empty_update_end_point_list(get_ptr_to_update_end_point_list()))
+			{
+				update_needed = 1;
+			}
+		}
+	}
+	return update_needed;
+}
+
+static void handle_end_points_update(void)
+{
+	type_handle_end_point_update * p = &handle_app.handle_end_point_update;
+	type_update_end_point_list * p_queue = get_ptr_to_update_end_point_list();
+	unsigned int i;
+	// max 3 update loops
+	for (i = 0; i < 3; i++)
+	{
+		uint8_t end_point_to_update;
+		// if there are no end points to update, end of the loop
+		if (!is_OK_get_next_update_end_point_list(p_queue, &end_point_to_update))
+		{
+			break;
+		}
+		dbg_print(PRINT_LEVEL_INFO,"updating end point %u", (unsigned int)end_point_to_update);
+		// increment the number of call back requests
+		p->call_back_req ++;
+		// send the "delete end point" message
+		switch(afDeleteEndpoint(end_point_to_update))
+		{
+			case MT_RPC_SUCCESS:
+			{
+				dbg_print(PRINT_LEVEL_VERBOSE,"end point %u deleted OK", (unsigned int)end_point_to_update);
+				break;
+			}
+			default:
+			{
+				dbg_print(PRINT_LEVEL_ERROR,"error deleting end point %u", (unsigned int)end_point_to_update);
+				break;
+			}
+		}
+		// wait for the call back reply
+#define def_total_timeout_wait_delete_callback_ms 5000
+#define def_base_timeout_wait_delete_callback_ms 20
+#define def_num_loop_wait_delete_callback_ms (def_total_timeout_wait_delete_callback_ms / def_base_timeout_wait_delete_callback_ms)
+		int max_loops = 1 + def_num_loop_wait_delete_callback_ms;
+		unsigned int continue_loop = 1;
+		while(continue_loop )
+		{
+			if (p->call_back_ack == p->call_back_req)
+			{
+				continue_loop = 0;
+				switch(p->call_back_return_code)
+				{
+					case SUCCESS:
+					{
+						dbg_print(PRINT_LEVEL_INFO,"OK received from the callback deleting end point %u", (unsigned int)end_point_to_update);
+						break;
+					}
+					default:
+					{
+						dbg_print(PRINT_LEVEL_ERROR,"Error code %u from the callback deleting end point %u", (unsigned int)p->call_back_return_code, (unsigned int)end_point_to_update);
+						break;
+					}
+				}
+			}
+			else if (max_loops > 0)
+			{
+				max_loops--;
+				rpcWaitMqClientMsg(def_base_timeout_wait_delete_callback_ms);
+			}
+			else
+			{
+				continue_loop = 0;
+				dbg_print(PRINT_LEVEL_ERROR,"timeout waiting for the callback deleting end point %u", (unsigned int)end_point_to_update);
+			}
+		}
+		type_Af_user u;
+		// fill-up the u structure containing all the clusters belonging to the selected end point
+		if (is_OK_fill_end_point_command_list(end_point_to_update, &u))
+		{
+			// now we must register the end point sending the appropriate message to the radio module
+			if (is_OK_registerAf_user(&u))
+			{
+				my_log(LOG_INFO,"%s: OK registered end_point %u (%u commands)\n", __func__, (unsigned int)end_point_to_update, (unsigned int )u.AppNumInClusters);
+			}
+			else
+			{
+				my_log(LOG_ERR,"%s: ERROR registering end_point %u (%u commands)\n", __func__, (unsigned int)end_point_to_update, (unsigned int )u.AppNumInClusters);
+			}
+		}
+		else
+		{
+			dbg_print(PRINT_LEVEL_ERROR,"unable to fill up the end point %u", (unsigned int)end_point_to_update);
+		}
+
+	}
+	// reset the update timeout
+	reset_time_update_end_point_list(p);
+}
+
+void force_zigbee_shutdown(void)
+{
+	handle_app.force_shutdown = 1;
+}
+
+static unsigned int is_required_shutdown(void)
+{
+	return handle_app.force_shutdown;
+}
+
+static void do_shutdown(void)
+{
+	MgmtLeaveReqFormat_t leave_req;
+	memset(&leave_req, 0, sizeof(leave_req));
+	// send the message to the coordinator
+	leave_req.DstAddr = 0;
+	// set my own IEEE address as device address to remove myself from the network
+	memcpy(&leave_req.DeviceAddr[0], &handle_app.IEEE_address.address, sizeof(leave_req.DeviceAddr));
+	// do not remove children etc
+	leave_req.RemoveChildre_Rejoin = 0;
+	handle_app.leave.num_req++;
+	// send the request
+	uint8_t retcode = zdoMgmtLeaveReq(&leave_req);
+	switch(retcode)
+	{
+		case MT_RPC_SUCCESS:
+		{
+			dbg_print(PRINT_LEVEL_INFO,"leave request sent OK!");
+			break;
+		}
+		default:
+		{
+			dbg_print(PRINT_LEVEL_ERROR,"unable to leave the network!");
+			break;
+		}
+	}
+	// wait for the call back reply
+#define def_total_timeout_wait_leave_callback_ms 8000
+#define def_base_timeout_wait_leave_callback_ms 20
+#define def_num_loop_wait_leave_callback_ms (def_total_timeout_wait_leave_callback_ms / def_base_timeout_wait_leave_callback_ms)
+	int max_loops = 1 + def_num_loop_wait_leave_callback_ms;
+	unsigned int continue_loop = 1;
+	while(continue_loop )
+	{
+		if (handle_app.leave.num_req == handle_app.leave.num_ack)
+		{
+			continue_loop = 0;
+			if (handle_app.leave.isOK)
+			{
+				dbg_print(PRINT_LEVEL_INFO,"%s: OK received from the leave callback", __func__);
+				break;
+			}
+			else
+			{
+				dbg_print(PRINT_LEVEL_ERROR,"%s: error from the leave callback", __func__);
+			}
+		}
+		else if (max_loops > 0)
+		{
+			max_loops--;
+			rpcWaitMqClientMsg(def_base_timeout_wait_delete_callback_ms);
+		}
+		else
+		{
+			continue_loop = 0;
+			dbg_print(PRINT_LEVEL_ERROR,"%s: timeout waiting for the leave callback", __func__);
+		}
+	}
+}
+
 char * get_app_current_link_quality_string(void)
 {
 	return get_link_quality_string(handle_app.link_quality.b.level);
@@ -364,6 +589,7 @@ static uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg);
 static uint8_t mtZdoIEEEAddrRspCb(IeeeAddrRspFormat_t *msg);
 static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg);
 static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg);
+static uint8_t mtZdoMgmtLeaveRspCb(MgmtLeaveRspFormat_t *msg);
 
 static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg);
 
@@ -376,6 +602,7 @@ static uint8_t mtSysGetExtAddrSrsp(GetExtAddrSrspFormat_t *msg);
 //AF callbacks
 static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg);
 static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg);
+static uint8_t mtAfDataDeleteSrspCb(DataDeleteSrspFormat_t *msg);
 
 //helper functions
 static uint8_t setNVStartup(uint8_t startupOption);
@@ -424,46 +651,22 @@ static mtSysCb_t mtSysCb =
 
 
 static mtZdoCb_t mtZdoCb =
-	{ NULL,       // MT_ZDO_NWK_ADDR_RSP
-			mtZdoIEEEAddrRspCb,      // MT_ZDO_IEEE_ADDR_RSP
-			NULL,      // MT_ZDO_NODE_DESC_RSP
-	        NULL,     // MT_ZDO_POWER_DESC_RSP
-	        mtZdoSimpleDescRspCb,    // MT_ZDO_SIMPLE_DESC_RSP
-	        mtZdoActiveEpRspCb,      // MT_ZDO_ACTIVE_EP_RSP
-	        NULL,     // MT_ZDO_MATCH_DESC_RSP
-	        NULL,   // MT_ZDO_COMPLEX_DESC_RSP
-	        NULL,      // MT_ZDO_USER_DESC_RSP
-	        NULL,     // MT_ZDO_USER_DESC_CONF
-	        NULL,    // MT_ZDO_SERVER_DISC_RSP
-	        NULL, // MT_ZDO_END_DEVICE_BIND_RSP
-	        NULL,          // MT_ZDO_BIND_RSP
-	        NULL,        // MT_ZDO_UNBIND_RSP
-	        NULL,   // MT_ZDO_MGMT_NWK_DISC_RSP
-	        mtZdoMgmtLqiRspCb,       // MT_ZDO_MGMT_LQI_RSP
-	        NULL,       // MT_ZDO_MGMT_RTG_RSP
-	        NULL,      // MT_ZDO_MGMT_BIND_RSP
-	        NULL,     // MT_ZDO_MGMT_LEAVE_RSP
-	        NULL,     // MT_ZDO_MGMT_DIRECT_JOIN_RSP
-	        NULL,     // MT_ZDO_MGMT_PERMIT_JOIN_RSP
-	        mtZdoStateChangeIndCb,   // MT_ZDO_STATE_CHANGE_IND
-	        mtZdoEndDeviceAnnceIndCb,   // MT_ZDO_END_DEVICE_ANNCE_IND
-	        NULL,        // MT_ZDO_SRC_RTG_IND
-	        NULL,	 //MT_ZDO_BEACON_NOTIFY_IND
-	        NULL,			 //MT_ZDO_JOIN_CNF
-	        NULL,	 //MT_ZDO_NWK_DISCOVERY_CNF
-	        NULL,                    // MT_ZDO_CONCENTRATOR_IND_CB
-	        NULL,         // MT_ZDO_LEAVE_IND
-	        NULL,   //MT_ZDO_STATUS_ERROR_RSP
-	        NULL,  //MT_ZDO_MATCH_DESC_RSP_SENT
-	        NULL, NULL };
+{
+	.pfnZdoIeeeAddrRsp = mtZdoIEEEAddrRspCb,      // MT_ZDO_IEEE_ADDR_RSP
+	.pfnZdoSimpleDescRsp = mtZdoSimpleDescRspCb,    // MT_ZDO_SIMPLE_DESC_RSP
+	.pfnZdoActiveEpRsp = mtZdoActiveEpRspCb,      // MT_ZDO_ACTIVE_EP_RSP
+	.pfnZdoMgmtLqiRsp = mtZdoMgmtLqiRspCb,       // MT_ZDO_MGMT_LQI_RSP
+	.pfnmtZdoStateChangeInd = mtZdoStateChangeIndCb,   // MT_ZDO_STATE_CHANGE_IND
+	.pfnZdoEndDeviceAnnceInd = mtZdoEndDeviceAnnceIndCb,   // MT_ZDO_END_DEVICE_ANNCE_IND
+	.pfnZdoMgmtLeaveRsp = mtZdoMgmtLeaveRspCb,
+};
 
 static mtAfCb_t mtAfCb =
-	{ mtAfDataConfirmCb,				//MT_AF_DATA_CONFIRM
-	        mtAfIncomingMsgCb,				//MT_AF_INCOMING_MSG
-	        NULL,				//MT_AF_INCOMING_MSG_EXT
-	        NULL,			//MT_AF_DATA_RETRIEVE
-	        NULL,			    //MT_AF_REFLECT_ERROR
-	    };
+	{
+		.pfnAfDataConfirm 		= mtAfDataConfirmCb,	// MT_AF_DATA_CONFIRM
+		.pfnAfIncomingMsg 		= mtAfIncomingMsgCb,	// MT_AF_INCOMING_MSG
+		.pfnAfDataDeleteSrsp 	= mtAfDataDeleteSrspCb,	// callback of the synchronous reply to the data delete request
+	};
 
 static mtSapiCb_t mtSapiCb=
 {
@@ -822,6 +1025,13 @@ static uint8_t mtZdoIEEEAddrRspCb(IeeeAddrRspFormat_t *msg)
 	return msg->Status;
 }
 
+static uint8_t mtZdoMgmtLeaveRspCb(MgmtLeaveRspFormat_t *msg)
+{
+	handle_app.leave.isOK = (msg->Status == 0) ? 1 : 0;
+	handle_app.leave.num_ack = handle_app.leave.num_req;
+	return 0;
+}
+
 /**
  * End device announce callback
  */
@@ -884,7 +1094,28 @@ static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg)
 	return msg->Status;
 }
 
-
+static uint8_t mtAfDataDeleteSrspCb(DataDeleteSrspFormat_t *msg)
+{
+	uint8_t retcode = SUCCESS;
+	switch(msg->return_value)
+	{
+		case SUCCESS:
+		{
+			dbg_print(PRINT_LEVEL_VERBOSE,"The end point delete has given OK code %u: %s", msg->return_value, get_af_error_code_string(msg->return_value));
+			break;
+		}
+		default:
+		{
+			retcode = FAILURE;
+			dbg_print(PRINT_LEVEL_ERROR,"The end point delete has given error %u: %s", msg->return_value, get_af_error_code_string(msg->return_value));
+			break;
+		}
+	}
+	type_handle_end_point_update * p = &handle_app.handle_end_point_update;
+	p->call_back_return_code = msg->return_value;
+	p->call_back_ack = p->call_back_req;
+	return retcode;
+}
 static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 {
 	uint8_t retcode = SUCCESS;
@@ -1097,7 +1328,7 @@ void register_user_end_points(void)
 		if (!is_OK_registerAf_user(&u))
 		{
 			printf("%s: ERROR registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
-			my_log(LOG_INFO,"%s: ERROR registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
+			my_log(LOG_ERR,"%s: ERROR registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
 		}
 		else
 		{
@@ -1819,7 +2050,8 @@ static void set_link_quality_current_value(uint8_t v)
 
 void* appProcess(void *argument)
 {
-	usleep(1000);
+	// give some breath to the system
+	usleep(5000);
 	switch(handle_app.status)
 	{
 		default:
@@ -2022,11 +2254,32 @@ void* appProcess(void *argument)
 			handle_app.status = enum_app_status_tx_msgs;
 			break;
 		}
+		case enum_app_status_update_end_points:
+		{
+			handle_end_points_update();
+			handle_app.status = enum_app_status_tx_msgs;
+			break;
+		}
+		case enum_app_status_shutdown:
+		{
+			break;
+		}
 		case enum_app_status_tx_msgs:
 		{
+			if (is_required_shutdown())
+			{
+				do_shutdown();
+				handle_app.status = enum_app_status_shutdown;
+				break;
+			}
 			if (is_required_network_restart())
 			{
 				handle_app.status = enum_app_status_restart_network;
+				break;
+			}
+			if (is_needed_update_end_point_list())
+			{
+				handle_app.status = enum_app_status_update_end_points;
 				break;
 			}
 			handle_app.status = enum_app_status_rx_msgs;

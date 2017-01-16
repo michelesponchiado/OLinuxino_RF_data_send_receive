@@ -26,6 +26,8 @@ typedef enum
 	enum_app_status_display_devices_ends,
 	enum_app_status_rx_msgs,
 	enum_app_status_tx_msgs,
+	enum_app_status_update_end_points,
+	enum_app_status_shutdown,
 	enum_app_status_error,
 	enum_app_status_numof
 }enum_app_status;
@@ -37,7 +39,7 @@ enum_app_status get_app_status(void);
 char * get_app_current_link_quality_string(void);
 uint8_t get_app_current_link_quality_value_energy_detected(void);
 int32_t get_app_current_link_quality_value_dBm(void);
-
+void force_zigbee_shutdown(void);
 
 typedef enum
 {

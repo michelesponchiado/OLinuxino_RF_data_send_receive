@@ -51,6 +51,8 @@
 /*********************************************************************
  * LOCAL VARIABLE
  */
+unsigned int PRINT_LEVEL = PRINT_LEVEL_WARNING;
+//#define PRINT_LEVEL PRINT_LEVEL_INFO
 
 /*********************************************************************
  * LOCAL FUNCTIONS
@@ -59,7 +61,6 @@
 /*********************************************************************
  * API FUNCTIONS
  */
-
 
 const char * str_dbg_level(int level)
 {
@@ -73,6 +74,58 @@ const char * str_dbg_level(int level)
 		return "low level";
 	return "unk";
 
+}
+#ifdef ANDROID
+#include <string.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <libgen.h>
+
+#include "private/android_filesystem_config.h"
+#include "cutils/log.h"
+#else
+#include <syslog.h>
+#endif
+void my_log(int print_level, const char *fmt, ...)
+{
+	va_list argp;
+	va_start(argp, fmt);
+	char c_aux[256];
+	vsnprintf(c_aux,sizeof(c_aux),fmt, argp);
+	va_end(argp);
+#ifdef ANDROID
+	switch(print_level)
+	{
+		case LOG_ERR:
+		{
+			ALOGE("%s", c_aux);
+			break;
+		}
+		case LOG_WARNING:
+		{
+			ALOGW("%s", c_aux);
+			break;
+		}
+		case LOG_INFO:
+		{
+			ALOGI("%s", c_aux);
+			break;
+		}
+		default:
+		{
+			ALOGV("%s", c_aux);
+			break;
+		}
+	}
+
+#else
+	syslog(print_level,"%s", c_aux);
+#endif
 }
 /**************************************************************************************************
  * @fn          dbgPrint
@@ -103,36 +156,45 @@ void dbg_print(int print_level, const char *fmt, ...)
 		char c_aux[256];
 		vsnprintf(c_aux,sizeof(c_aux),fmt, argp);
 		va_end(argp);
-		unsigned long get_system_time_ms(void);
+#ifdef ANDROID
+		switch(print_level)
+		{
+			case PRINT_LEVEL_ERROR:
+			{
+				ALOGE("%s", c_aux);
+				break;
+			}
+			case PRINT_LEVEL_WARNING:
+			{
+				ALOGW("%s", c_aux);
+				break;
+			}
+			case PRINT_LEVEL_INFO:
+			{
+				ALOGI("%s", c_aux);
+				break;
+			}
+			case PRINT_LEVEL_INFO_LOWLEVEL:
+			case PRINT_LEVEL_VERBOSE:
+			default:
+			{
+				ALOGV("%s", c_aux);
+				break;
+			}
+		}
+
+#else
+	unsigned long get_system_time_ms(void);
 		printf("[%lu]%s %s", get_system_time_ms(), str_dbg_level(print_level), c_aux);
+#endif
 	}
 }
-#ifdef ANDROID
-#include <string.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <libgen.h>
 
-#include "private/android_filesystem_config.h"
-#include "cutils/log.h"
-#else
-#include <syslog.h>
-#endif
-void my_log(int print_level, const char *fmt, ...)
+unsigned int get_print_level(void)
 {
-	va_list argp;
-	va_start(argp, fmt);
-	char c_aux[256];
-	vsnprintf(c_aux,sizeof(c_aux),fmt, argp);
-	va_end(argp);
-#ifdef ANDROID
-	ALOGI("%s", c_aux);
-#else
-	syslog(print_level,"%s", c_aux);
-#endif
+	return PRINT_LEVEL;
+}
+void set_print_level(unsigned int new_level)
+{
+	PRINT_LEVEL = new_level;
 }

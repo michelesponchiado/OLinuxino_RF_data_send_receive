@@ -12,11 +12,13 @@
 #include "input_cluster_table.h"
 #include "dataSendRcv.h"
 #include "dbgPrint.h"
+#include "update_end_point_list.h"
 
 #define def_min_valid_endpoint 1
 // the last end point is reserved ASAC
 #define def_max_valid_endpoint (0xf0 - 1)
 #define def_invalid_endpoint 0
+
 
 
 #define def_N_elements_input_cluster_table 128
@@ -28,6 +30,8 @@ typedef struct _type_input_cluster_table
 	int walk_current_endpoint;
 	pthread_mutex_t mtx;
 	uint32_t idx_walk_socket;
+	// the list of end points to update because changed (an element has been insert/deleted/...)
+	type_update_end_point_list update_end_point_list;
 
 }type_input_cluster_table;
 
@@ -44,6 +48,7 @@ void init_input_cluster_table(void)
 		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
 		pthread_mutex_init(&input_cluster_table.mtx, &mutexattr);
 	}
+	init_update_end_point_list(&input_cluster_table.update_end_point_list);
 }
 /**
  * Search for the end-point/cluster_id passed, returns NULL if not found, else returns the pointer to the passed structure, filled with the socket informations
@@ -207,13 +212,53 @@ static enum_add_input_cluster_table_retcode add_af_user(type_Af_user *p, uint16_
 }
 
 
+unsigned int is_OK_fill_end_point_command_list(uint8_t end_point, type_Af_user *p)
+{
+	unsigned int is_OK = 1;
+	memset(p, 0, sizeof(*p));
+	pthread_mutex_lock(&input_cluster_table.mtx);
+	{
+		unsigned int found_end_point = 0;
+		my_log(LOG_INFO, "%s: + loop aggregating end point %u\n", __func__, (unsigned int)end_point);
+		if (is_OK)
+		{
+			enum_add_input_cluster_table_retcode add_retcode = enum_add_input_cluster_table_retcode_OK;
+			unsigned int idx;
+			for (idx = 0; (idx < input_cluster_table.numof) && (add_retcode == enum_add_input_cluster_table_retcode_OK); idx++)
+			{
+				type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[idx];
+				if (p_elem->cluster.endpoint == p->EndPoint)
+				{
+					found_end_point = 1;
+					my_log(LOG_INFO, "%s: adding cluster id %u\n", __func__, (unsigned int)p_elem->cluster.input_cluster_id);
+					add_retcode = add_af_user(p, p_elem->cluster.input_cluster_id);
+				}
+			}
+		}
+		my_log(LOG_ERR, "%s: - end of loop\n", __func__);
+		if (!found_end_point)
+		{
+			is_OK = 0;
+			my_log(LOG_ERR, "%s: no end point %u found\n", __func__, (unsigned int)end_point);
+		}
+		else
+		{
+			my_log(LOG_INFO, "%s: end point %u found OK\n", __func__, (unsigned int)end_point);
+		}
+	}
+	pthread_mutex_unlock(&input_cluster_table.mtx);
+
+	return is_OK;
+}
+
+
 enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uint8_t prev_end_point, type_Af_user *p)
 {
 	enum_get_next_end_point_command_list_retcode r = enum_get_next_end_point_command_list_retcode_OK;
 	memset(p, 0, sizeof(*p));
 	pthread_mutex_lock(&input_cluster_table.mtx);
 		unsigned int found_end_point = 0;
-		my_log(LOG_ERR, "%s: + looking for end point %u\n", __func__, (unsigned int)prev_end_point);
+		my_log(LOG_INFO, "%s: + looking for end point %u\n", __func__, (unsigned int)prev_end_point);
 		if (r == enum_get_next_end_point_command_list_retcode_OK)
 		{
 			{
@@ -221,7 +266,6 @@ enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uin
 				unsigned int idx;
 				for (idx = 0; (idx < input_cluster_table.numof) && (add_retcode == enum_add_input_cluster_table_retcode_OK); idx++)
 				{
-					my_log(LOG_ERR, "%s: idx = %u / %u\n", __func__, (unsigned int)idx, (unsigned int)input_cluster_table.numof);
 					type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[idx];
 					if (!found_end_point)
 					{
@@ -250,7 +294,7 @@ enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uin
 			my_log(LOG_ERR, "%s: no endpoint found\n", __func__);
 		}
 		else	
-			my_log(LOG_ERR, "%s: endpoint found OK\n", __func__);
+			my_log(LOG_INFO, "%s: endpoint found OK\n", __func__);
 	pthread_mutex_unlock(&input_cluster_table.mtx);
 
 	return r;
@@ -309,6 +353,7 @@ enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_
 				else
 				{
 					type_input_cluster_table_elem *p_elem = &input_cluster_table.queue[input_cluster_table.numof];
+					// add the new cluster to the cluster list, if there is room
 					r = add_af_user(&u, pelem_to_add->cluster.input_cluster_id);
 					if (r == enum_add_input_cluster_table_retcode_OK)
 					{
@@ -316,6 +361,11 @@ enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_
 						++input_cluster_table.numof;
 						// sort the table, the element added is possibly not ordered
 						sort_input_cluster_table();
+						// put the end point in the update list
+						if (!is_OK_add_to_update_end_point_list(&input_cluster_table.update_end_point_list, u.EndPoint))
+						{
+							dbg_print(PRINT_LEVEL_ERROR,"Unable to add end point %u to the update list!", (unsigned int )u.EndPoint);
+						}
 					}
 				}
 			}
@@ -328,8 +378,7 @@ enum_add_input_cluster_table_retcode add_input_cluster(type_input_cluster_table_
 	pthread_mutex_unlock(&input_cluster_table.mtx);
 	if (r == enum_add_input_cluster_table_retcode_OK)
 	{
-		require_network_restart();
-		my_log(1,"%s: cluster registered OK, network restart required\n", __func__);
+		my_log(1,"%s: cluster registered OK, end point redefinition is going to happen soon\n", __func__);
 	}
 	else
 	{
@@ -437,4 +486,9 @@ unsigned int is_OK_walk_endpoints_clusters_next(type_endpoint_cluster *p)
 		}
 	pthread_mutex_unlock(&input_cluster_table.mtx);
 	return is_OK;
+}
+
+type_update_end_point_list *get_ptr_to_update_end_point_list(void)
+{
+	return &input_cluster_table.update_end_point_list;
 }

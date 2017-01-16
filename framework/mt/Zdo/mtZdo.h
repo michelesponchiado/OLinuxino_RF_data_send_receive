@@ -636,6 +636,11 @@ typedef struct
 
 typedef struct
 {
+	uint8_t retcode;
+}MgmtLeaveRspCb_t;
+
+typedef struct
+{
 	uint16_t NwkAddr;
 	uint8_t NumInClusters;
 	uint16_t InClusterList[16];

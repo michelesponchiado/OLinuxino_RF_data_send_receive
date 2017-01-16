@@ -1561,6 +1561,8 @@ static void processGetLinkKey(uint8_t *rpcBuff, uint8_t rpcLen)
 	}
 }
 
+
+
 /*********************************************************************
  * @fn      processNwkAddrRsp
  *
@@ -3020,6 +3022,7 @@ static void processSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		dbg_print(PRINT_LEVEL_VERBOSE, "zdoProcess: MT_ZDO_GET_LINK_KEY\n");
 		processGetLinkKey(rpcBuff, rpcLen);
 		break;
+
 	default:
 		dbg_print(PRINT_LEVEL_INFO, "processSrsp: unsupported message\n");
 		break;

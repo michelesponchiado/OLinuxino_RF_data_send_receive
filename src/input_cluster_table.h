@@ -21,6 +21,7 @@
 #include <arpa/inet.h>
 #include "ASAC_ZigBee_network_commands.h"
 #include "dataSendRcv.h"
+#include "update_end_point_list.h"
 
 typedef struct _type_input_cluster_table_elem
 {
@@ -73,5 +74,9 @@ typedef enum
 	enum_get_next_end_point_command_list_retcode_numof
 }enum_get_next_end_point_command_list_retcode;
 enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uint8_t prev_end_point, type_Af_user *p);
+
+// returns the pointer to the end points update list
+type_update_end_point_list *get_ptr_to_update_end_point_list(void);
+unsigned int is_OK_fill_end_point_command_list(uint8_t end_point, type_Af_user *p);
 
 #endif /* INPUT_CLUSTER_TABLE_H_ */

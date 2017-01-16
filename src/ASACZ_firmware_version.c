@@ -10,14 +10,18 @@
 #include <string.h>
 #include "ASACZ_firmware_version.h"
 
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	26
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	1
 #define def_ASACZ_firmware_version_MAJOR_NUMBER 	0
 #define def_ASACZ_firmware_version_MIDDLE_NUMBER 	1
-#define def_ASACZ_firmware_version_MINOR_NUMBER 	2
+#define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
 #define def_ASACZ_firmware_version_NOTES 			"internal version"
 
+// 0.1.3 build 1
+//   - added the delete end point command
+//   - when an end point is added, the network is NOT restarted, but the end point list is updated instead
+//   - when closing the server, the leave command is sent to the coordinator
 // 0.1.2 build 26
 //   start and restart network always use new network; when a new network is created, it is better to start from scratch
 // 0.1.2 build 25

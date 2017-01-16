@@ -59,6 +59,7 @@
 #include "ts_util.h"
 #include "server_thread.h"
 #include "simple_server.h"
+#include "ASACZ_app.h"
 #include "ASACZ_devices_list.h"
 #include "ASACZ_firmware_version.h"
 #include "input_cluster_table.h"
@@ -125,6 +126,35 @@ pthread_exit(0);
 
 static void my_at_exit(void)
 {
+	{
+		dbg_print(PRINT_LEVEL_INFO, "%s: + network shutdown", __func__);
+		force_zigbee_shutdown();
+		unsigned int continue_loop = 1;
+#define def_max_wait_shutdown_ms 12000
+#define def_base_wait_shutdown_ms 100
+#define max_loop_wait_shutdown (1 + def_max_wait_shutdown_ms / def_base_wait_shutdown_ms)
+		int nloop = max_loop_wait_shutdown;
+		while(continue_loop)
+		{
+			enum_app_status s = get_app_status();
+			if (s == enum_app_status_shutdown)
+			{
+				dbg_print(PRINT_LEVEL_INFO, "%s: device has shutdown properly", __func__);
+				continue_loop = 0;
+			}
+			else if (nloop <= 0)
+			{
+				dbg_print(PRINT_LEVEL_ERROR, "%s: timeout waiting for shutdown", __func__);
+				continue_loop = 0;
+			}
+			else
+			{
+				nloop--;
+				usleep(def_base_wait_shutdown_ms * 1000);
+			}
+		}
+		dbg_print(PRINT_LEVEL_INFO, "%s: - network shutdown", __func__);
+	}
 	enum_thread_id e;
 	for (e = (enum_thread_id)0; e < enum_thread_id_numof; e++)
 	{

@@ -116,7 +116,8 @@ typedef struct
 #define MT_AF_REGISTER                       0x00
 #define MT_AF_DATA_REQUEST                   0x01  /* AREQ optional, but no AREQ response. */
 #define MT_AF_DATA_REQUEST_EXT               0x02  /* AREQ optional, but no AREQ response. */
-#define MT_AF_DATA_REQUEST_SRC_RTG            0x03
+#define MT_AF_DATA_REQUEST_SRC_RTG           0x03
+#define MT_AF_DELETE                         0x04	// this is needed to delete and re-instantiate an end point!
 
 #define MT_AF_INTER_PAN_CTL                  0x10
 #define MT_AF_DATA_STORE                     0x11
@@ -135,6 +136,18 @@ typedef struct
 #define afStatus_MEM_FAIL                    0x10
 #define afStatus_NO_ROUTE                    0xCD
 #define afStatus_DUPLICATE									 0xB8
+
+typedef struct _type_DeleteFormat_t
+{
+	uint8_t EndPoint;
+}__attribute__((__packed__))  type_DeleteFormat_t;
+
+typedef struct _DataDeleteSrspFormat_t
+{
+	uint8_t return_value;
+}DataDeleteSrspFormat_t;
+
+
 
 typedef struct
 {
@@ -281,6 +294,7 @@ typedef uint8_t (*mtAfIncomingMsgCb_t)(IncomingMsgFormat_t *msg);
 typedef uint8_t (*mtAfIncomingMsgExt_t)(IncomingMsgExtFormat_t *msg);
 typedef uint8_t (*mtAfDataRetrieveSrspCb_t)(DataRetrieveSrspFormat_t *msg);
 typedef uint8_t (*mtAfReflectErrorCb_t)(ReflectErrorFormat_t *msg);
+typedef uint8_t (*mtAfDataDeleteSrspCb_t)(DataDeleteSrspFormat_t *msg);
 
 typedef struct
 {
@@ -289,10 +303,12 @@ typedef struct
 	mtAfIncomingMsgExt_t pfnAfIncomingMsgExt;			//MT_AF_INCOMING_MSG_EXT
 	mtAfDataRetrieveSrspCb_t pfnAfDataRetrieveSrsp;	//MT_AF_DATA_RETRIEVE
 	mtAfReflectErrorCb_t pfnAfReflectError;			//MT_AF_REFLECT_ERROR
+	mtAfDataDeleteSrspCb_t pfnAfDataDeleteSrsp;
 } mtAfCb_t;
 
 void afRegisterCallbacks(mtAfCb_t cbs);
 void afProcess(uint8_t *rpcBuff, uint8_t rpcLen);
+uint8_t afDeleteEndpoint(uint8_t endPoint);
 uint8_t afRegister(RegisterFormat_t *req);
 uint8_t afDataRequest(DataRequestFormat_t *req);
 uint8_t afDataRequestExt(DataRequestExtFormat_t *req);

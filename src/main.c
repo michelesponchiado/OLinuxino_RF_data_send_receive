@@ -124,15 +124,15 @@ pthread_exit(0);
 } 
 #endif
 
-static void my_at_exit(void)
+static void do_shutdown(void)
 {
 	{
 		dbg_print(PRINT_LEVEL_INFO, "%s: + network shutdown", __func__);
 		force_zigbee_shutdown();
-		unsigned int continue_loop = 1;
-#define def_max_wait_shutdown_ms 12000
+#define def_max_wait_shutdown_ms 8000
 #define def_base_wait_shutdown_ms 100
 #define max_loop_wait_shutdown (1 + def_max_wait_shutdown_ms / def_base_wait_shutdown_ms)
+		unsigned int continue_loop = 1;
 		int nloop = max_loop_wait_shutdown;
 		while(continue_loop)
 		{
@@ -171,7 +171,7 @@ static void my_at_exit(void)
 			int s;
 			if ( (s = pthread_kill(t, SIGUSR1)) != 0)
 			{
-				printf("Error cancelling thread %d, error = %d (%s)", (int)t, s, strerror(s));
+				printf("Error canceling thread %d, error = %d (%s)", (int)t, s, strerror(s));
 			}
 #else
 			int s;
@@ -206,8 +206,46 @@ static void my_at_exit(void)
 	closelog();
 }
 
+#include <signal.h>
+
+
+// Define the function to be called when ctrl-c (SIGINT) signal is sent to process
+void signal_shutdown_callback_handler(int signum)
+{
+	static volatile sig_atomic_t fatal_error_in_progress = 0;
+	// Since this handler is established for more than one kind of signal, it might still get invoked recursively by delivery of some other kind
+	// of signal.  Use a static variable to keep track of that.
+	if (fatal_error_in_progress)
+	{
+		raise (signum);
+	}
+	fatal_error_in_progress = 1;
+
+	dbg_print(PRINT_LEVEL_ERROR, "Caught signal %d\n",signum);
+	printf("+ doing shutdown...\n");
+	// Cleanup and close up stuff here
+	do_shutdown();
+	printf("- doing shutdown...\n");
+
+	// Now re-raise the signal.  We reactivate the signal’s default handling, which is to terminate the process.
+	// We could just call exit or abort, but re-raising the signal sets the return status from the process correctly.
+	signal (signum, SIG_DFL);
+	raise (signum);
+}
+
+static void init_sig_handlers(void)
+{
+   // Register signal and signal handler
+   signal(SIGTERM, signal_shutdown_callback_handler);
+   signal(SIGINT, signal_shutdown_callback_handler);
+   signal(SIGQUIT, signal_shutdown_callback_handler);
+   signal(SIGABRT, signal_shutdown_callback_handler);
+}
+
+
 int main(int argc, char* argv[])
 {
+	init_sig_handlers();
 
 	type_handle_server_socket handle_server_socket;
 	memset(&handle_server_socket, 0, sizeof(handle_server_socket));
@@ -226,7 +264,7 @@ int main(int argc, char* argv[])
 	open_syslog();
 	syslog(LOG_INFO, "The application starts");
 	memset(&threads_cancel_info, 0, sizeof(threads_cancel_info));
-	atexit(my_at_exit);
+	//atexit(my_at_exit);
 
 	handle_server_socket.port_number = def_port_number;
     if ((argc >= 2) && (strncasecmp(argv[1],"udpport=",8)==0))
@@ -267,10 +305,10 @@ int main(int argc, char* argv[])
 	printf("Opening serial port %s\n", selected_serial_port);
 #else
 	#ifdef OLINUXINO
-			dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/ttyS1\n\n");
+			dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/ttyS1\n");
 			selected_serial_port = "/dev/ttyS1";
 	#else
-			dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/USB1\n\n");
+			dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/USB1\n");
 			selected_serial_port = "/dev/ttyUSB1";
 	#endif
 #endif

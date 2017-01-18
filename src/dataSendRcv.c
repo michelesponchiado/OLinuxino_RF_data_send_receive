@@ -408,11 +408,11 @@ static void handle_end_points_update(void)
 			// now we must register the end point sending the appropriate message to the radio module
 			if (is_OK_registerAf_user(&u))
 			{
-				my_log(LOG_INFO,"%s: OK registered end_point %u (%u commands)\n", __func__, (unsigned int)end_point_to_update, (unsigned int )u.AppNumInClusters);
+				my_log(LOG_INFO,"%s: OK registered end_point %u (%u commands)", __func__, (unsigned int)end_point_to_update, (unsigned int )u.AppNumInClusters);
 			}
 			else
 			{
-				my_log(LOG_ERR,"%s: ERROR registering end_point %u (%u commands)\n", __func__, (unsigned int)end_point_to_update, (unsigned int )u.AppNumInClusters);
+				my_log(LOG_ERR,"%s: ERROR registering end_point %u (%u commands)", __func__, (unsigned int)end_point_to_update, (unsigned int )u.AppNumInClusters);
 			}
 		}
 		else
@@ -718,7 +718,7 @@ uint8_t nodeCount = 0;
 static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg)
 {
 
-	dbg_print(PRINT_LEVEL_INFO, "ZNP Version: %d.%d.%d\n", msg->MajorRel, msg->MinorRel, msg->HwRev);
+	dbg_print(PRINT_LEVEL_INFO, "ZNP Version: %d.%d.%d", msg->MajorRel, msg->MinorRel, msg->HwRev);
 	return 0;
 }
 
@@ -727,14 +727,14 @@ static uint8_t mtSysResetIndCb(ResetIndFormat_t *msg)
 static uint8_t mtSysGetExtAddrSrsp(GetExtAddrSrspFormat_t *msg)
 {
 	set_IEEE_address(&handle_app.IEEE_address, msg->ExtAddr);
-	my_log(LOG_INFO, "IEEE address: 0x%lX\n", (long int)get_IEEE_address(&handle_app.IEEE_address));
+	my_log(LOG_INFO, "IEEE address: 0x%lX", (long int)get_IEEE_address(&handle_app.IEEE_address));
 	return 0;
 }
 
 static uint8_t mtSysSetTxPowerSrspCb(SetTxPowerSrspFormat_t *msg)
 {
 	set_Tx_power(&handle_app.Tx_power, (int)msg->TxPower);
-	my_log(LOG_INFO, "Radio power callback: set to %i dBm\n", get_Tx_power(&handle_app.Tx_power));
+	my_log(LOG_INFO, "Radio power callback: set to %i dBm", get_Tx_power(&handle_app.Tx_power));
 	return 0;
 }
 
@@ -758,46 +758,46 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState)
 	switch (newDevState)
 	{
 	case DEV_HOLD:
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Initialized - not started automatically\n");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Initialized - not started automatically");
 		break;
 	case DEV_INIT:
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Initialized - not connected to anything\n");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Initialized - not connected to anything");
 		break;
 	case DEV_NWK_DISC:
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Discovering PAN's to join\n");
-		dbg_print(PRINT_LEVEL_INFO, "Network Discovering\n");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Discovering PAN's to join");
+		dbg_print(PRINT_LEVEL_INFO, "Network Discovering");
 		break;
 	case DEV_NWK_JOINING:
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Joining a PAN\n");
-		dbg_print(PRINT_LEVEL_INFO, "Network Joining\n");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Joining a PAN");
+		dbg_print(PRINT_LEVEL_INFO, "Network Joining");
 		break;
 	case DEV_NWK_REJOIN:
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: ReJoining a PAN, only for end devices\n");
-		dbg_print(PRINT_LEVEL_INFO, "Network Rejoining\n");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: ReJoining a PAN, only for end devices");
+		dbg_print(PRINT_LEVEL_INFO, "Network Rejoining");
 		break;
 	case DEV_END_DEVICE_UNAUTH:
-		dbg_print(PRINT_LEVEL_INFO, "Network Authenticating\n");
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Joined but not yet authenticated by trust center\n");
+		dbg_print(PRINT_LEVEL_INFO, "Network Authenticating");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Joined but not yet authenticated by trust center");
 		break;
 	case DEV_END_DEVICE:
-		dbg_print(PRINT_LEVEL_INFO, "Network Joined\n");
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Started as device after authentication\n");
+		dbg_print(PRINT_LEVEL_INFO, "Network Joined");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Started as device after authentication");
 		break;
 	case DEV_ROUTER:
-		dbg_print(PRINT_LEVEL_INFO, "Network Joined\n");
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Device joined, authenticated and is a router\n");
+		dbg_print(PRINT_LEVEL_INFO, "Network Joined");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Device joined, authenticated and is a router");
 		break;
 	case DEV_COORD_STARTING:
-		dbg_print(PRINT_LEVEL_INFO, "Network Starting\n");
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Started as Zigbee Coordinator\n");
+		dbg_print(PRINT_LEVEL_INFO, "Network Starting");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Started as Zigbee Coordinator");
 		break;
 	case DEV_ZB_COORD:
-		dbg_print(PRINT_LEVEL_INFO, "Network Started\n");
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Started as Zigbee Coordinator\n");
+		dbg_print(PRINT_LEVEL_INFO, "Network Started");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Started as Zigbee Coordinator");
 		break;
 	case DEV_NWK_ORPHAN:
-		dbg_print(PRINT_LEVEL_INFO, "Network Orphaned\n");
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Device has lost information about its parent\n");
+		dbg_print(PRINT_LEVEL_INFO, "Network Orphaned");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Device has lost information about its parent");
 		break;
 	default:
 		dbg_print(PRINT_LEVEL_INFO, "mtZdoStateChangeIndCb: unknown state");
@@ -819,24 +819,23 @@ static uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg)
 	if (msg->Status == MT_RPC_SUCCESS)
 	{
 		{
-			dbg_print(PRINT_LEVEL_INFO, "\tEndpoint: 0x%02X\n", msg->Endpoint);
-			dbg_print(PRINT_LEVEL_INFO, "\tProfileID: 0x%04X\n", msg->ProfileID);
-			dbg_print(PRINT_LEVEL_INFO, "\tDeviceID: 0x%04X\n", msg->DeviceID);
-			dbg_print(PRINT_LEVEL_INFO, "\tDeviceVersion: 0x%02X\n", msg->DeviceVersion);
-			dbg_print(PRINT_LEVEL_INFO, "\tNumInClusters: %d\n", msg->NumInClusters);
+			dbg_print(PRINT_LEVEL_INFO, "End point: 0x%02X", msg->Endpoint);
+			dbg_print(PRINT_LEVEL_INFO, "ProfileID: 0x%04X", msg->ProfileID);
+			dbg_print(PRINT_LEVEL_INFO, "DeviceID: 0x%04X", msg->DeviceID);
+			dbg_print(PRINT_LEVEL_INFO, "DeviceVersion: 0x%02X", msg->DeviceVersion);
+			dbg_print(PRINT_LEVEL_INFO, "NumInClusters: %d", msg->NumInClusters);
 			uint32_t i;
 			for (i = 0; i < msg->NumInClusters; i++)
 			{
-				dbg_print(PRINT_LEVEL_INFO, "\t\tInClusterList[%d]: 0x%04X\n", i,
+				dbg_print(PRINT_LEVEL_INFO, "    InClusterList[%d]: 0x%04X", i,
 				        msg->InClusterList[i]);
 			}
-			dbg_print(PRINT_LEVEL_INFO, "\tNumOutClusters: %d\n", msg->NumOutClusters);
+			dbg_print(PRINT_LEVEL_INFO, "NumOutClusters: %d", msg->NumOutClusters);
 			for (i = 0; i < msg->NumOutClusters; i++)
 			{
-				dbg_print(PRINT_LEVEL_INFO, "\t\tOutClusterList[%d]: 0x%04X\n", i,
+				dbg_print(PRINT_LEVEL_INFO, "    OutClusterList[%d]: 0x%04X", i,
 				        msg->OutClusterList[i]);
 			}
-			dbg_print(PRINT_LEVEL_INFO, "\n");
 		}
 		{
 			type_struct_ASACZ_endpoint_list_element e;
@@ -896,7 +895,7 @@ static uint8_t mtZdoSimpleDescRspCb(SimpleDescRspFormat_t *msg)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_INFO, "SimpleDescRsp Status: FAIL 0x%02X\n", msg->Status);
+		dbg_print(PRINT_LEVEL_INFO, "SimpleDescRsp Status: FAIL 0x%02X", msg->Status);
 	}
 
 	return msg->Status;
@@ -940,7 +939,7 @@ static uint8_t mtZdoMgmtLqiRspCb(MgmtLqiRspFormat_t *msg)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_INFO, "MgmtLqiRsp Status: FAIL 0x%02X\n", msg->Status);
+		dbg_print(PRINT_LEVEL_INFO, "MgmtLqiRsp Status: FAIL 0x%02X", msg->Status);
 	}
 
 	return msg->Status;
@@ -953,19 +952,19 @@ static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg)
 {
 
 	//SimpleDescReqFormat_t simReq;
-	dbg_print(PRINT_LEVEL_INFO, "NwkAddr: 0x%04X\n", msg->NwkAddr);
+	dbg_print(PRINT_LEVEL_INFO, "NwkAddr: 0x%04X", msg->NwkAddr);
 	if (msg->Status == MT_RPC_SUCCESS)
 	{
 		// print on console the end-points list
 		{
-			dbg_print(PRINT_LEVEL_INFO, "Number of end-points: %d\nActive end-points: ", msg->ActiveEPCount);
+			dbg_print(PRINT_LEVEL_INFO, "Number of end-points: %d", (unsigned int) msg->ActiveEPCount);
+			dbg_print(PRINT_LEVEL_INFO, "Active end-points: ");
 			uint32_t i;
 			for (i = 0; i < msg->ActiveEPCount; i++)
 			{
-				dbg_print(PRINT_LEVEL_INFO, "0x%02X\t", msg->ActiveEPList[i]);
+				dbg_print(PRINT_LEVEL_INFO, "    0x%02X", (unsigned int)msg->ActiveEPList[i]);
 
 			}
-			dbg_print(PRINT_LEVEL_INFO, "\n");
 		}
 		// add the end-point list
 		enum_add_ASACZ_device_list_end_points_retcode r = add_ASACZ_device_list_end_points(msg->NwkAddr, msg->ActiveEPCount, msg->ActiveEPList);
@@ -1001,7 +1000,7 @@ static uint8_t mtZdoActiveEpRspCb(ActiveEpRspFormat_t *msg)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_INFO, "ActiveEpRsp Status: FAIL 0x%02X\n", msg->Status);
+		dbg_print(PRINT_LEVEL_INFO, "ActiveEpRsp Status: FAIL 0x%02X", msg->Status);
 		stats.device_list.add_end_points.ERR++;
 	}
 
@@ -1024,12 +1023,12 @@ static uint8_t mtZdoIEEEAddrRspCb(IeeeAddrRspFormat_t *msg)
 		enum_add_ASACZ_device_list_header_retcode r = add_ASACZ_device_list_header(&device_header);
 		if (r != enum_add_ASACZ_device_list_header_retcode_OK)
 		{
-			dbg_print(PRINT_LEVEL_INFO, "%s: ERROR ADDING DEVICE @ IEEE Address 0x%"  PRIx64 " / network address 0x%X\n", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
+			dbg_print(PRINT_LEVEL_INFO, "%s: ERROR ADDING DEVICE @ IEEE Address 0x%"  PRIx64 " / network address 0x%X", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
 			stats.device_list.add_header.ERR++;
 		}
 		else
 		{
-			dbg_print(PRINT_LEVEL_INFO, "%s: *** Device @ IEEE Address 0x%"  PRIx64 " / network address 0x%X added OK\n", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
+			dbg_print(PRINT_LEVEL_INFO, "%s: *** Device @ IEEE Address 0x%"  PRIx64 " / network address 0x%X added OK", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
 			stats.device_list.add_header.OK++;
 		}
 	}
@@ -1074,17 +1073,17 @@ static uint8_t mtZdoEndDeviceAnnceIndCb(EndDeviceAnnceIndFormat_t *msg)
 		enum_add_ASACZ_device_list_header_retcode r = add_ASACZ_device_list_header(&device_header);
 		if (r != enum_add_ASACZ_device_list_header_retcode_OK)
 		{
-			dbg_print(PRINT_LEVEL_INFO, "%s: ERROR ADDING DEVICE @ IEEE Address 0x%"  PRIx64 " / network address 0x%X\n", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
+			dbg_print(PRINT_LEVEL_INFO, "%s: ERROR ADDING DEVICE @ IEEE Address 0x%"  PRIx64 " / network address 0x%X", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
 			stats.device_list.add_header.ERR++;
 		}
 		else
 		{
-			dbg_print(PRINT_LEVEL_INFO, "%s: *** Device @ IEEE Address 0x%"  PRIx64 " / network address 0x%X added OK\n", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
+			dbg_print(PRINT_LEVEL_INFO, "%s: *** Device @ IEEE Address 0x%"  PRIx64 " / network address 0x%X added OK", __func__, device_header.IEEE_address, (unsigned int)device_header.network_short_address);
 			stats.device_list.add_header.OK++;
 		}
 	}
 
-	dbg_print(PRINT_LEVEL_INFO, "\nNew device joined network.\n");
+	dbg_print(PRINT_LEVEL_INFO, "New device joined network");
 	// requests active end-point configuration
 	zdoActiveEpReq(&actReq);
 	return 0;
@@ -1141,9 +1140,9 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 	// incoming message received, we put it in the received messages queue
 #if 1
 	uint64_t IEEE_address;
-	dbg_print(PRINT_LEVEL_INFO, "%s: message from device @ Short Address 0x%X\n", __func__,(unsigned int)msg->SrcAddr);
+	dbg_print(PRINT_LEVEL_INFO, "%s: message from device @ Short Address 0x%X", __func__,(unsigned int)msg->SrcAddr);
 	set_link_quality_current_value(msg->LinkQuality);
-	dbg_print(PRINT_LEVEL_INFO, "%s: link quality: %s (%u / %i dBm)\n", __func__
+	dbg_print(PRINT_LEVEL_INFO, "%s: link quality: %s (%u / %i dBm)", __func__
 			, get_app_current_link_quality_string()
 			, (unsigned int )get_app_current_link_quality_value_energy_detected()
 			, (int )get_app_current_link_quality_value_dBm()
@@ -1151,13 +1150,13 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 
 	if (!is_OK_get_IEEE_from_network_short_address(msg->SrcAddr, &IEEE_address, enum_device_lifecycle_action_do_refresh_rx))
 	{
-		dbg_print(PRINT_LEVEL_INFO, "%s: UNKNOWN DEVICE @ Short Address 0x%X\n", __func__,(unsigned int)msg->SrcAddr);
+		dbg_print(PRINT_LEVEL_INFO, "%s: UNKNOWN DEVICE @ Short Address 0x%X", __func__,(unsigned int)msg->SrcAddr);
 		my_log(LOG_ERR, "Unknown short address 0x%X on incoming message", (uint32_t)msg->SrcAddr);
 		retcode = FAILURE;
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_INFO, "%s: the device is @ IEEE 0x%"  PRIx64 ", Short Address 0x%X\n", __func__,IEEE_address, (unsigned int)msg->SrcAddr);
+		dbg_print(PRINT_LEVEL_INFO, "%s: the device is @ IEEE 0x%"  PRIx64 ", Short Address 0x%X", __func__,IEEE_address, (unsigned int)msg->SrcAddr);
 		uint32_t id;
 		type_ASAC_ZigBee_interface_command_received_message_callback m;
 		memset(&m, 0, sizeof(m));
@@ -1174,13 +1173,13 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 		memcpy(m.message, msg->Data, m.message_length);
 		if (!is_OK_push_Rx_outside_message(&m, &id))
 		{
-			dbg_print(PRINT_LEVEL_INFO, "%s: ERROR PUTTING message in outside queue\n", __func__);
+			dbg_print(PRINT_LEVEL_INFO, "%s: ERROR PUTTING message in outside queue", __func__);
 			my_log(LOG_ERR, "Unable to put received message in rx queue");
 			retcode = FAILURE;
 		}
 		else
 		{
-			dbg_print(PRINT_LEVEL_INFO, "%s: message put OK in outside queue\n", __func__);
+			dbg_print(PRINT_LEVEL_INFO, "%s: message put OK in outside queue", __func__);
 		}
 	}
 #else
@@ -1195,12 +1194,12 @@ static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 	else
 #endif
 	{
-		dbg_print(PRINT_LEVEL_INFO, "%s\n", (char*) msg->Data);
+		dbg_print(PRINT_LEVEL_INFO, "%s", (char*) msg->Data);
 		dbg_print(PRINT_LEVEL_INFO,
-		        "\nIncoming Message from Endpoint 0x%02X and Address 0x%04X:\n",
+		        "Incoming Message from Endpoint 0x%02X and Address 0x%04X:",
 		        msg->SrcEndpoint, msg->SrcAddr);
 		dbg_print(PRINT_LEVEL_INFO,
-		        "\nEnter message to send or type CHANGE to change the destination \nor QUIT to exit:\n");
+		        "Enter message to send or type CHANGE to change the destination or QUIT to exit:");
 	}
 #endif
 	return retcode;
@@ -1222,9 +1221,8 @@ static uint8_t setNVStartup(uint8_t startupOption)
 	nvWrite.Value[0] = startupOption;
 	status = sysOsalNvWrite(&nvWrite);
 
-	dbg_print(PRINT_LEVEL_INFO, "\n");
 
-	dbg_print(PRINT_LEVEL_INFO, "NV Write Startup Option cmd sent[%d]...\n",
+	dbg_print(PRINT_LEVEL_INFO, "NV Write Startup Option cmd sent[%d]...",
 	        status);
 
 	return status;
@@ -1244,8 +1242,8 @@ static uint8_t setNVDevType(uint8_t devType)
 	nvWrite.Value[0] = devType;
 	status = sysOsalNvWrite(&nvWrite);
 
-	dbg_print(PRINT_LEVEL_INFO, "\n");
-	dbg_print(PRINT_LEVEL_INFO, "NV Write Device Type cmd sent... [%d]\n",
+
+	dbg_print(PRINT_LEVEL_INFO, "NV Write Device Type cmd sent... [%d]",
 	        status);
 
 	return status;
@@ -1258,8 +1256,7 @@ static uint8_t setNVPanID(uint32_t panId)
 	uint8_t status;
 	OsalNvWriteFormat_t nvWrite;
 
-	dbg_print(PRINT_LEVEL_INFO, "\n");
-	dbg_print(PRINT_LEVEL_INFO, "NV Write PAN ID cmd sending...\n");
+	dbg_print(PRINT_LEVEL_INFO, "NV Write PAN ID cmd sending...");
 
 	nvWrite.Id = ZCD_NV_PANID;
 	nvWrite.Offset = 0;
@@ -1268,8 +1265,7 @@ static uint8_t setNVPanID(uint32_t panId)
 	nvWrite.Value[1] = HI_UINT16(panId);
 	status = sysOsalNvWrite(&nvWrite);
 
-	dbg_print(PRINT_LEVEL_INFO, "\n");
-	dbg_print(PRINT_LEVEL_INFO, "NV Write PAN ID cmd sent...[%d]\n", status);
+	dbg_print(PRINT_LEVEL_INFO, "NV Write PAN ID cmd sent...[%d]", status);
 
 	return status;
 }
@@ -1288,8 +1284,7 @@ static uint8_t setNVChanList(uint32_t chanList)
 	nvWrite.Value[3] = BREAK_UINT32(chanList, 3);
 	status = sysOsalNvWrite(&nvWrite);
 
-	dbg_print(PRINT_LEVEL_INFO, "\n");
-	dbg_print(PRINT_LEVEL_INFO, "NV Write Channel List cmd sent...[%d]\n",
+	dbg_print(PRINT_LEVEL_INFO, "NV Write Channel List cmd sent...[%d]",
 	        status);
 
 	return status;
@@ -1297,14 +1292,14 @@ static uint8_t setNVChanList(uint32_t chanList)
 static void refresh_my_endpoint_list(void)
 {
 	uint16_t my_short_address;
-	my_log(1,"%s: +\n", __func__);
+	my_log(1,"%s: +", __func__);
 	if (!is_OK_get_network_short_address_from_IEEE(handle_app.IEEE_address.address, &my_short_address))
 	{
-		my_log(1,"%s: ERROR unable to refresh my end point list\n", __func__);
+		my_log(1,"%s: ERROR unable to refresh my end point list", __func__);
 	}
 	else
 	{
-		my_log(1,"%s: refreshing my end point list...\n", __func__);
+		my_log(1,"%s: refreshing my end point list...", __func__);
 		ActiveEpReqFormat_t actReq;
 		actReq.DstAddr = my_short_address;
 		actReq.NwkAddrOfInterest = my_short_address;
@@ -1315,10 +1310,10 @@ static void refresh_my_endpoint_list(void)
 		do
 		{
 			status = rpcWaitMqClientMsg(1000);
-			my_log(1,"%s: status = %i, nloop = %i\n", __func__, status, nloop);
+			my_log(1,"%s: status = %i, nloop = %i", __func__, status, nloop);
 		} while (status != -1 && (++nloop < 30));
 	}
-	my_log(1,"%s: -\n", __func__);
+	my_log(1,"%s: -", __func__);
 }
 
 
@@ -1328,7 +1323,7 @@ void register_user_end_points(void)
 {
 	uint8_t prev_end_point = 0;
 	uint32_t nloop = 0;
-	my_log(LOG_INFO, "%s: + registering end_point\n", __func__);
+	my_log(LOG_INFO, "%s: + registering end_point", __func__);
 	while(++nloop < 256)
 	{
 		type_Af_user u;
@@ -1339,19 +1334,19 @@ void register_user_end_points(void)
 			break;
 		}
 		prev_end_point = u.EndPoint;
-		my_log(LOG_INFO,"%s: registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
+		my_log(LOG_INFO,"%s: registering end_point %u (%u commands)", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
 		if (!is_OK_registerAf_user(&u))
 		{
-			my_log(LOG_ERR,"%s: ERROR registering end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
+			my_log(LOG_ERR,"%s: ERROR registering end_point %u (%u commands)", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
 		}
 		else
 		{
-			my_log(LOG_INFO,"%s: OK registered end_point %u (%u commands)\n", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
+			my_log(LOG_INFO,"%s: OK registered end_point %u (%u commands)", __func__, (unsigned int)prev_end_point, (unsigned int )u.AppNumInClusters);
 
 		}
 
 	}
-	my_log(LOG_INFO,"%s: - registering end_point\n", __func__);
+	my_log(LOG_INFO,"%s: - registering end_point", __func__);
 }
 
 
@@ -1405,7 +1400,7 @@ static int32_t restartNetwork(void)
 	}
 	// this must be between 11 and 26
 #define def_fix_channel 11
-	my_log(LOG_INFO, "Setting the Channel %i", def_fix_channel);
+	my_log(LOG_INFO, "Setting the Channel %i", (int)def_fix_channel);
 	status = setNVChanList(1 << def_fix_channel);
 	if (status != MT_RPC_SUCCESS)
 	{
@@ -1427,13 +1422,13 @@ static int32_t restartNetwork(void)
 	status = zdoInit();
 	if (status == NEW_NETWORK)
 	{
-		dbg_print(PRINT_LEVEL_INFO, "zdoInit NEW_NETWORK\n");
+		dbg_print(PRINT_LEVEL_INFO, "zdoInit NEW_NETWORK");
 		my_log(LOG_WARNING, "%s: zdoInit NEW_NETWORK", __func__);
 		status = MT_RPC_SUCCESS;
 	}
 	else if (status == RESTORED_NETWORK)
 	{
-		dbg_print(PRINT_LEVEL_INFO, "zdoInit RESTORED_NETWORK\n");
+		dbg_print(PRINT_LEVEL_INFO, "zdoInit RESTORED_NETWORK");
 		my_log(LOG_WARNING, "%s: zdoInit RESTORED_NETWORK", __func__);
 		status = MT_RPC_SUCCESS;
 	}
@@ -1505,7 +1500,7 @@ static int32_t startNetwork(unsigned int channel_index)
 
 	do
 	{
-		dbg_print(PRINT_LEVEL_INFO, "Do you wish to start/join a new network? (y/n)\n");
+		dbg_print(PRINT_LEVEL_INFO, "Do you wish to start/join a new network? (y/n)");
 		consoleGetLine(sCh, 128);
 		if (sCh[0] == 'n' || sCh[0] == 'N')
 		{
@@ -1520,7 +1515,7 @@ static int32_t startNetwork(unsigned int channel_index)
 		}
 		else
 		{
-			dbg_print(PRINT_LEVEL_INFO, "Incorrect input please type y or n\n");
+			dbg_print(PRINT_LEVEL_INFO, "Incorrect input please type y or n");
 		}
 	} while (sCh[0] != 'y' && sCh[0] != 'Y' && sCh[0] != 'n' && sCh[0] != 'N');
 #else
@@ -1550,7 +1545,7 @@ static int32_t startNetwork(unsigned int channel_index)
 	{
 #ifndef CC26xx
 		dbg_print(PRINT_LEVEL_INFO,
-		        "Enter device type c: Coordinator, r: Router, e: End Device:\n");
+		        "Enter device type c: Coordinator, r: Router, e: End Device:");
 		consoleGetLine(sCh, 128);
 		cDevType = sCh[0];
 
@@ -1574,7 +1569,7 @@ static int32_t startNetwork(unsigned int channel_index)
 
 		if (status != MT_RPC_SUCCESS)
 		{
-			dbg_print(PRINT_LEVEL_WARNING, "setNVDevType failed\n");
+			dbg_print(PRINT_LEVEL_WARNING, "setNVDevType failed");
 			return 0;
 		}
 #endif //CC26xx
@@ -1612,21 +1607,21 @@ static int32_t startNetwork(unsigned int channel_index)
 	status = zdoInit();
 	if (status == NEW_NETWORK)
 	{
-		my_log(LOG_INFO, "zdoInit NEW_NETWORK\n");
+		my_log(LOG_INFO, "zdoInit NEW_NETWORK");
 		status = MT_RPC_SUCCESS;
 	}
 	else if (status == RESTORED_NETWORK)
 	{
-		my_log(LOG_INFO, "zdoInit RESTORED_NETWORK\n");
+		my_log(LOG_INFO, "zdoInit RESTORED_NETWORK");
 		status = MT_RPC_SUCCESS;
 	}
 	else
 	{
-		my_log(LOG_WARNING, "zdoInit failed\n");
+		my_log(LOG_WARNING, "zdoInit failed");
 		status = -1;
 	}
 
-	my_log(LOG_INFO, "process zdoStatechange callbacks\n");
+	my_log(LOG_INFO, "process zdoStatechange callbacks");
 
 	//flush AREQ ZDO State Change messages
 	while (status != -1)
@@ -1723,7 +1718,7 @@ unsigned int is_OK_registerAf_user(type_Af_user *p)
 	if (is_OK)
 	{
 
-		my_log(1,"%s: refreshing my point list @endpoint %u...\n", __func__, (unsigned int)p->EndPoint);
+		my_log(1,"%s: refreshing my point list @endpoint %u...", __func__, (unsigned int)p->EndPoint);
 		RegisterFormat_t reg;
 		memcpy(&reg, &default_RegisterFormat_t, sizeof(reg));
 		reg.EndPoint = p->EndPoint;
@@ -1746,26 +1741,26 @@ unsigned int is_OK_registerAf_user(type_Af_user *p)
 
 		{
 			int32_t status = 0;
-			my_log(1,"%s: about to call register af user\n", __func__, (unsigned int)p->EndPoint);
+			my_log(1,"%s: about to call register af user", __func__, (unsigned int)p->EndPoint);
 			status = afRegister(&reg);
 			if (status != SUCCESS)
 			{
-				my_log(1,"%s: error afregister\n", __func__);
+				my_log(1,"%s: error afregister", __func__);
 				is_OK = 0;
 			}
 			else
-				my_log(1,"%s: OK afregister\n", __func__);
+				my_log(1,"%s: OK afregister", __func__);
 		}
 
 	}
 	{
 		if (is_OK)
 		{
-			my_log(1,"%s: ends OK\n", __func__);
+			my_log(1,"%s: ends OK", __func__);
 		}
 		else
 		{
-			my_log(1,"%s: ERROR, ends non OK\n", __func__);
+			my_log(1,"%s: ERROR, ends non OK", __func__);
 		}
 
 	}
@@ -1788,7 +1783,7 @@ static void displayDevices(void)
 		status = rpcWaitMqClientMsg(1000);
 	} while (status != -1);
 
-	dbg_print(PRINT_LEVEL_INFO, "\nAvailable devices:\n");
+	dbg_print(PRINT_LEVEL_INFO, "Available devices:");
 	uint8_t i;
 	for (i = 0; i < nodeCount; i++)
 	{
@@ -1806,7 +1801,7 @@ static void displayDevices(void)
 			rpcWaitMqClientMsg(200);
 		}
 
-		dbg_print(PRINT_LEVEL_INFO, "Type: %s\n", devtype);
+		dbg_print(PRINT_LEVEL_INFO, "Type: %s", devtype);
 		actReq.DstAddr = nodeList[i].NodeAddr;
 		actReq.NwkAddrOfInterest = nodeList[i].NodeAddr;
 		zdoActiveEpReq(&actReq);
@@ -1822,7 +1817,7 @@ static void displayDevices(void)
 			uint8_t type = nodeList[i].childs[cI].Type;
 			if (type == DEVICETYPE_ENDDEVICE)
 			{
-				dbg_print(PRINT_LEVEL_INFO, "Type: END DEVICE\n");
+				dbg_print(PRINT_LEVEL_INFO, "Type: END DEVICE");
 
 				// asks info about the node, so we can add it to the device list
 				{
@@ -1851,7 +1846,6 @@ static void displayDevices(void)
 			}
 
 		}
-		dbg_print(PRINT_LEVEL_INFO, "\n");
 
 	}
 }
@@ -1862,19 +1856,19 @@ uint8_t set_TX_power(void)
 	int8_t pwr_required_dbm = 2;
 	SetTxPowerFormat_t req = {0};
 	*(int8_t*)&req.TxPower = pwr_required_dbm;
-	my_log(LOG_INFO, "setting the TX power to %i dBm\n", (int)pwr_required_dbm);
+	my_log(LOG_INFO, "setting the TX power to %i dBm", (int)pwr_required_dbm);
 	retcode = sysSetTxPower(&req);
 	// removed double set TX power
 	switch(retcode)
 	{
 		case MT_RPC_SUCCESS:
 		{
-			my_log(LOG_INFO, "TX power sent result: %s\n", "OK");
+			my_log(LOG_INFO, "TX power sent result: %s", "OK");
 			break;
 		}
 		default:
 		{
-			my_log(LOG_ERR, "TX power sent result: %s\n", "**ERROR**");
+			my_log(LOG_ERR, "TX power sent result: %s", "**ERROR**");
 			break;
 		}
 	}
@@ -2209,7 +2203,7 @@ void* appProcess(void *argument)
 		{
 			if (is_valid_IEEE_address(&handle_app.IEEE_address) && is_valid_Tx_power(&handle_app.Tx_power))
 			{
-				dbg_print(PRINT_LEVEL_INFO, "My IEEE Address is: 0x%" PRIx64 "\n", handle_app.IEEE_address.address);
+				dbg_print(PRINT_LEVEL_INFO, "My IEEE Address is: 0x%" PRIx64 "", handle_app.IEEE_address.address);
 
 				my_log(LOG_INFO, "Callback OK, going to device init");
 				handle_app.status = enum_app_status_display_devices_init;
@@ -2238,7 +2232,7 @@ void* appProcess(void *argument)
 		{
 			//refresh my end point list
 			refresh_my_endpoint_list();
-			dbg_print(PRINT_LEVEL_INFO, "My IEEE Address is: 0x%" PRIx64 "\n", handle_app.IEEE_address.address);
+			dbg_print(PRINT_LEVEL_INFO, "My IEEE Address is: 0x%" PRIx64 "", handle_app.IEEE_address.address);
 			my_log(LOG_INFO, "Display device OK, going to rx/tx mode");
 // wait until a device shows up?
 #warning better to remove this default end point / destination address
@@ -2304,13 +2298,13 @@ void* appProcess(void *argument)
 					uint16_t DstAddr = 0;
 					if (!is_OK_get_network_short_address_from_IEEE(m.dst_id.IEEE_destination_address, &DstAddr))
 					{
-						dbg_print(PRINT_LEVEL_INFO, "%s: ERROR UNKNOWN DST @ IEEE Address 0x%" PRIx64 "\n", __func__, m.dst_id.IEEE_destination_address);
+						dbg_print(PRINT_LEVEL_INFO, "%s: ERROR UNKNOWN DST @ IEEE Address 0x%" PRIx64 "", __func__, m.dst_id.IEEE_destination_address);
 						message_history_tx_set_error(handle_app.message_id, enum_message_history_error_unknown_IEEE_address);
 						my_log(LOG_ERR, "Unable to find device with IEEE address: %" PRIx64 "", m.dst_id.IEEE_destination_address);
 					}
 					else
 					{
-						dbg_print(PRINT_LEVEL_INFO, "%s: sending DST @ IEEE Address 0x%" PRIx64 "\n", __func__, m.dst_id.IEEE_destination_address);
+						dbg_print(PRINT_LEVEL_INFO, "%s: sending DST @ IEEE Address 0x%" PRIx64 "", __func__, m.dst_id.IEEE_destination_address);
 						// store the message length
 						pdr->Len         = m.message_length;
 						// store the message body
@@ -2327,14 +2321,14 @@ void* appProcess(void *argument)
 						// check the return code
 						if (status != MT_RPC_SUCCESS)
 						{
-							dbg_print(PRINT_LEVEL_INFO, "%s: ERROR sending DST @ IEEE Address 0x%" PRIx64 "\n", __func__, m.dst_id.IEEE_destination_address);
+							dbg_print(PRINT_LEVEL_INFO, "%s: ERROR sending DST @ IEEE Address 0x%" PRIx64 "", __func__, m.dst_id.IEEE_destination_address);
 							// mark the data request has been sent OK
 							message_history_tx_set_id_status(handle_app.message_id, enum_message_history_status_datareq_sent);
 							my_log(LOG_ERR, "Unable to send message with id = %u", handle_app.message_id);
 						}
 						else
 						{
-							dbg_print(PRINT_LEVEL_INFO, "%s: sent OK @ IEEE Address 0x%" PRIx64 "\n", __func__, m.dst_id.IEEE_destination_address);
+							dbg_print(PRINT_LEVEL_INFO, "%s: sent OK @ IEEE Address 0x%" PRIx64 "", __func__, m.dst_id.IEEE_destination_address);
 							my_log(LOG_INFO, "Message with id = %u sent OK", handle_app.message_id);
 						}
 					}
@@ -2348,8 +2342,8 @@ void* appProcess(void *argument)
 #else
 	#ifndef def_test_txrx
 				dbg_print(PRINT_LEVEL_INFO,
-						"Enter message to send or type CHANGE to change the destination\n");
-				dbg_print(PRINT_LEVEL_INFO, "or QUIT to exit\n");
+						"Enter message to send or type CHANGE to change the destination");
+				dbg_print(PRINT_LEVEL_INFO, "or QUIT to exit");
 				consoleGetLine(cmd, 128);
 				//handle_app.initDone = 1;
 				if (strcmp(cmd, "CHANGE") == 0)

@@ -266,7 +266,7 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 	int retcode = 0;
 	enum_input_cluster_register_reply_retcode r = enum_input_cluster_register_reply_retcode_OK;
 	type_ASAC_ZigBee_interface_network_input_cluster_register_req * p_body_request = &pzmessage_rx->req.input_cluster_register;
-	my_log(LOG_INFO,"%s: end-point %u, cluster %u register request\n",__func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+	my_log(LOG_INFO,"%s: end-point %u, cluster %u register request",__func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 	if (r == enum_input_cluster_register_reply_retcode_OK)
 	{
 		type_input_cluster_table_elem elem;
@@ -279,25 +279,25 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 		{
 			case enum_add_input_cluster_table_retcode_OK :
 			{
-				my_log(LOG_INFO,"%s: end-point %u, cluster %u registered OK\n",__func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				my_log(LOG_INFO,"%s: end-point %u, cluster %u registered OK",__func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
 			case enum_add_input_cluster_table_retcode_OK_already_present:
 			{
-				my_log(LOG_WARNING,"%s: Input cluster already present: end-point %u, cluster %u\n",__func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				my_log(LOG_WARNING,"%s: Input cluster already present: end-point %u, cluster %u",__func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
 			case enum_add_input_cluster_table_retcode_ERR_no_room:
 			{
 				r = enum_input_cluster_register_reply_retcode_ERR_no_room;
-				my_log(LOG_ERR,"%s: NO ROOM to add end-point %u, cluster %u\n", __func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				my_log(LOG_ERR,"%s: NO ROOM to add end-point %u, cluster %u", __func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
 
 			default:
 			{
 				r = enum_add_input_cluster_table_retcode_ERR_unknwon;
-				my_log(LOG_ERR,"%s: unknown return code %u adding end-point %u, cluster %u\n", __func__, (unsigned int)retcode_input_cluster, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				my_log(LOG_ERR,"%s: unknown return code %u adding end-point %u, cluster %u", __func__, (unsigned int)retcode_input_cluster, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
 		}
@@ -309,10 +309,10 @@ int handle_ASACZ_request_input_cluster_register_req(type_ASAC_Zigbee_interface_r
 		while(is_OK_walk_endpoints_clusters_next(&ec))
 		{
 			int i;
-			dbg_print(PRINT_LEVEL_INFO,"ENDPOINT %u\n", ec.endpoint);
+			dbg_print(PRINT_LEVEL_INFO,"ENDPOINT %u", ec.endpoint);
 			for (i = 0; i < ec.num_clusters; i++)
 			{
-				dbg_print(PRINT_LEVEL_INFO,"\tcluster %u\n", ec.clusters_id[i]);
+				dbg_print(PRINT_LEVEL_INFO,"\tcluster %u", ec.clusters_id[i]);
 			}
 		}
 #endif
@@ -402,7 +402,7 @@ void notify_all_clients_device_list_changed(type_handle_server_socket *phss, uin
 		si = si_other;
 		if (add_if_not_exist_list_socket_already_sent(&list_socket_already_sent, &si))
 		{
-			dbg_print(PRINT_LEVEL_INFO, "%s: sending notification @%s, port %u\n", __func__, inet_ntoa(si.sin_addr), (unsigned int)si.sin_port);
+			dbg_print(PRINT_LEVEL_INFO, "%s: sending notification @%s, port %u", __func__, inet_ntoa(si.sin_addr), (unsigned int)si.sin_port);
 			if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size,phss->socket_fd, &si_other))
 			{
 			}
@@ -435,14 +435,14 @@ int handle_ASACZ_request_input_cluster_unregister_req(type_ASAC_Zigbee_interface
 		{
 			case enum_remove_input_cluster_table_retcode_OK :
 			{
-				my_log(LOG_INFO,"%s: end-point %u, cluster %u un-registered OK\n", __func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				my_log(LOG_INFO,"%s: end-point %u, cluster %u un-registered OK", __func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
 			case enum_remove_input_cluster_table_retcode_ERR_not_found:
 			default:
 			{
 				r = enum_input_cluster_unregister_reply_retcode_ERR_not_found;
-				my_log(LOG_ERR,"%s: unable to find end-point %u, cluster %u to un-register\n", __func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
+				my_log(LOG_ERR,"%s: unable to find end-point %u, cluster %u to un-register", __func__, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}
 		}
@@ -453,10 +453,10 @@ int handle_ASACZ_request_input_cluster_unregister_req(type_ASAC_Zigbee_interface
 		while(is_OK_walk_endpoints_clusters_next(&ec))
 		{
 			int i;
-			dbg_print(PRINT_LEVEL_INFO,"ENDPOINT %u\n", ec.endpoint);
+			dbg_print(PRINT_LEVEL_INFO,"ENDPOINT %u", ec.endpoint);
 			for (i = 0; i < ec.num_clusters; i++)
 			{
-				dbg_print(PRINT_LEVEL_INFO,"\tcluster %u\n", ec.clusters_id[i]);
+				dbg_print(PRINT_LEVEL_INFO,"\tcluster %u", ec.clusters_id[i]);
 			}
 		}
 #endif
@@ -759,7 +759,7 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 
 		default:
 		{
-			my_log(LOG_WARNING,"%s: unknown message code received: 0x%X\n",__func__, pzmessage_rx->code);
+			my_log(LOG_WARNING,"%s: unknown message code received: 0x%X",__func__, pzmessage_rx->code);
 			retcode = -1;
 		}
 	}
@@ -788,27 +788,27 @@ enum_check_outside_messages_from_ZigBee_retcode check_outside_messages_from_ZigB
 		type_ASAC_ZigBee_src_id * psrcid = &p_icr_rx->src_id;
 		// we must check if someone is listening to the end-point/command destination of the outside message
 		struct sockaddr_in s_reply;
-		dbg_print(PRINT_LEVEL_VERBOSE,"%s: popped message from ep:%i, cluster_id:%i\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
+		dbg_print(PRINT_LEVEL_VERBOSE,"%s: popped message from ep:%i, cluster_id:%i", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
 
 		if (!p_find_socket_of_input_cluster_end_point_command(&s_reply, psrcid->destination_endpoint, psrcid->cluster_id))
 		{
-			dbg_print(PRINT_LEVEL_ERROR,"%s: ERROR NO SOCKET BOUND TO ep:%i, cluster_id:%i\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
+			dbg_print(PRINT_LEVEL_ERROR,"%s: ERROR NO SOCKET BOUND TO ep:%i, cluster_id:%i", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
 			my_log(LOG_ERR,"%s: unable to find end_point %u, command %u", __func__, (unsigned int )psrcid->destination_endpoint, (unsigned int)psrcid->cluster_id);
 			r = enum_check_outside_messages_from_ZigBee_retcode_unhandled_end_point_command;
 		}
 		else
 		{
 			char *ip = inet_ntoa(s_reply.sin_addr);
-			dbg_print(PRINT_LEVEL_VERBOSE, "%s: OK found socket bound to ep:%i, cluster_id:%i, ip:%s, port=%u\n", __func__,psrcid->destination_endpoint, psrcid->cluster_id, ip, (unsigned int)s_reply.sin_port);
+			dbg_print(PRINT_LEVEL_VERBOSE, "%s: OK found socket bound to ep:%i, cluster_id:%i, ip:%s, port=%u", __func__,psrcid->destination_endpoint, psrcid->cluster_id, ip, (unsigned int)s_reply.sin_port);
 			// send the message in callback to the destination registered application
 			if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, zmessage_size, phss->socket_fd, &s_reply))
 			{
-				dbg_print(PRINT_LEVEL_VERBOSE, "%s: message sent OK\n", __func__);
+				dbg_print(PRINT_LEVEL_VERBOSE, "%s: message sent OK", __func__);
 				my_log(LOG_INFO,"%s: reply sent OK", __func__);
 			}
 			else
 			{
-				dbg_print(PRINT_LEVEL_ERROR,"%s: error sending message\n", __func__);
+				dbg_print(PRINT_LEVEL_ERROR,"%s: error sending message", __func__);
 				my_log(LOG_ERR,"%s: unable to forward the message", __func__);
 				r = enum_check_outside_messages_from_ZigBee_retcode_unable_to_forward;
 			}

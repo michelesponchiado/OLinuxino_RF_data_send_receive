@@ -130,7 +130,7 @@ uint8_t afRegister(RegisterFormat_t *req)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated\n");
+		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated");
 		return 1;
 	}
 }
@@ -178,7 +178,7 @@ uint8_t afDataRequest(DataRequestFormat_t *req)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated\n");
+		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated");
 		return 1;
 	}
 }
@@ -227,7 +227,7 @@ uint8_t afDataRequestExt(DataRequestExtFormat_t *req)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated\n");
+		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated");
 		return 1;
 	}
 }
@@ -278,7 +278,7 @@ uint8_t afDataRequestSrcRtg(DataRequestSrcRtgFormat_t *req)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated\n");
+		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated");
 		return 1;
 	}
 }
@@ -314,7 +314,7 @@ uint8_t afInterPanCtl(InterPanCtlFormat_t *req)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated\n");
+		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated");
 		return 1;
 	}
 }
@@ -352,7 +352,7 @@ uint8_t afDataStore(DataStoreFormat_t *req)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated\n");
+		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated");
 		return 1;
 	}
 }
@@ -365,7 +365,7 @@ static void processDataConfirm(uint8_t *rpcBuff, uint8_t rpcLen)
 		DataConfirmFormat_t rsp;
 		if (rpcLen < 3)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			printf("MT_RPC_ERR_LENGTH");
 		}
 		//printf("rpcLen = %d\n", rpcLen);
 
@@ -385,7 +385,7 @@ static void processIncomingMsg(uint8_t *rpcBuff, uint8_t rpcLen)
 		IncomingMsgFormat_t rsp;
 		if (rpcLen < 17)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			printf("MT_RPC_ERR_LENGTH");
 		}
 		//printf("rpcLen = %d\n", rpcLen);
 
@@ -426,7 +426,7 @@ static void processIncomingMsgExt(uint8_t *rpcBuff, uint8_t rpcLen)
 		IncomingMsgExtFormat_t rsp;
 		if (rpcLen < 27)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			printf("MT_RPC_ERR_LENGTH");
 		}
 		//printf("rpcLen = %d\n", rpcLen);
 
@@ -497,7 +497,7 @@ uint8_t afDataRetrieve(DataRetrieveFormat_t *req)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated\n");
+		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated");
 		return 1;
 	}
 }
@@ -510,7 +510,7 @@ static void processDataRetrieveSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		DataRetrieveSrspFormat_t rsp;
 		if (rpcLen < 2)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			printf("MT_RPC_ERR_LENGTH");
 		}
 		//printf("rpcLen = %d\n", rpcLen);
 
@@ -533,7 +533,7 @@ static void processDataDeleteSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 	#define def_expected_length 1
 	if (rpcLen < def_expected_length)
 	{
-		dbg_print(PRINT_LEVEL_ERROR, "Wrong length of data delete reply: %u expected, %u received\n", (unsigned int)def_expected_length, (unsigned int)rpcLen);
+		dbg_print(PRINT_LEVEL_ERROR, "Wrong length of data delete reply: %u expected, %u received", (unsigned int)def_expected_length, (unsigned int)rpcLen);
 	}
 	else
 	{
@@ -575,7 +575,7 @@ uint8_t afApsfConfigSet(ApsfConfigSetFormat_t *req)
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated\n");
+		dbg_print(PRINT_LEVEL_WARNING, "Memory for cmd was not allocated");
 		return 1;
 	}
 }
@@ -588,7 +588,7 @@ static void processReflectError(uint8_t *rpcBuff, uint8_t rpcLen)
 		ReflectErrorFormat_t rsp;
 		if (rpcLen < 6)
 		{
-			printf("MT_RPC_ERR_LENGTH\n");
+			printf("MT_RPC_ERR_LENGTH");
 		}
 		//printf("rpcLen = %d\n", rpcLen);
 
@@ -628,7 +628,7 @@ void afRegisterCallbacks(mtAfCb_t cbs)
  *************************************************************************************************/
 void afProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 {
-	dbg_print(PRINT_LEVEL_VERBOSE, "afProcess: processing CMD0:%x, CMD1:%x\n",
+	dbg_print(PRINT_LEVEL_VERBOSE, "afProcess: processing CMD0:%x, CMD1:%x",
 	        rpcBuff[0], rpcBuff[1]);
 
 	//process the synchronous SRSP from SREQ
@@ -642,25 +642,25 @@ void afProcess(uint8_t *rpcBuff, uint8_t rpcLen)
 		switch (rpcBuff[1])
 		{
 		case MT_AF_DATA_CONFIRM:
-			dbg_print(PRINT_LEVEL_VERBOSE, "afProcess: MT_AF_DATA_CONFIRM\n");
+			dbg_print(PRINT_LEVEL_VERBOSE, "afProcess: MT_AF_DATA_CONFIRM");
 			processDataConfirm(rpcBuff, rpcLen);
 			break;
 		case MT_AF_INCOMING_MSG:
-			dbg_print(PRINT_LEVEL_VERBOSE, "afProcess: MT_AF_INCOMING_MSG\n");
+			dbg_print(PRINT_LEVEL_VERBOSE, "afProcess: MT_AF_INCOMING_MSG");
 			processIncomingMsg(rpcBuff, rpcLen);
 			break;
 		case MT_AF_INCOMING_MSG_EXT:
 			dbg_print(PRINT_LEVEL_VERBOSE,
-			        "afProcess: MT_AF_INCOMING_MSG_EXT\n");
+			        "afProcess: MT_AF_INCOMING_MSG_EXT");
 			processIncomingMsgExt(rpcBuff, rpcLen);
 			break;
 		case MT_AF_REFLECT_ERROR:
-			dbg_print(PRINT_LEVEL_VERBOSE, "afProcess: MT_AF_REFLECT_ERROR\n");
+			dbg_print(PRINT_LEVEL_VERBOSE, "afProcess: MT_AF_REFLECT_ERROR");
 			processReflectError(rpcBuff, rpcLen);
 			break;
 		default:
 			dbg_print(PRINT_LEVEL_WARNING,
-			        "processRpcAf: CMD0:%x, CMD1:%x, not handled\n", rpcBuff[0],
+			        "processRpcAf: CMD0:%x, CMD1:%x, not handled", rpcBuff[0],
 			        rpcBuff[1]);
 			break;
 		}
@@ -696,7 +696,7 @@ static void processSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		}
 		default:
 		{
-			dbg_print(PRINT_LEVEL_INFO, "processSrsp: unsupported message [%x:%x]\n", rpcBuff[0], rpcBuff[1]);
+			dbg_print(PRINT_LEVEL_VERBOSE, "processSrsp: unsupported message [%x:%x]", (unsigned int)rpcBuff[0], (unsigned int)rpcBuff[1]);
 			break;
 		}
 	}

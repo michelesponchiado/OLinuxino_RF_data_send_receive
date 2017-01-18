@@ -51,7 +51,7 @@
 /*********************************************************************
  * LOCAL VARIABLE
  */
-unsigned int PRINT_LEVEL = PRINT_LEVEL_WARNING;
+unsigned int PRINT_LEVEL = PRINT_LEVEL_INFO;
 //#define PRINT_LEVEL PRINT_LEVEL_INFO
 
 /*********************************************************************
@@ -184,8 +184,9 @@ void dbg_print(int print_level, const char *fmt, ...)
 		}
 
 #else
-	unsigned long get_system_time_ms(void);
-		printf("[%lu]%s %s", get_system_time_ms(), str_dbg_level(print_level), c_aux);
+		syslog(print_level,"%s", c_aux);
+//	unsigned long get_system_time_ms(void);
+//		printf("[%lu]%s %s", get_system_time_ms(), str_dbg_level(print_level), c_aux);
 #endif
 	}
 }

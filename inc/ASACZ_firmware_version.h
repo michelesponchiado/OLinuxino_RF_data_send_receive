@@ -5,8 +5,8 @@
  *      Author: michele
  */
 
-#ifndef ASACZ_FIRMWARE_VERSION_H_
-#define ASACZ_FIRMWARE_VERSION_H_
+#ifndef INC_ASACZ_FIRMWARE_VERSION_H_
+#define INC_ASACZ_FIRMWARE_VERSION_H_
 #include <inttypes.h>
 
 typedef struct _type_ASACZ_firmware_version
@@ -25,4 +25,4 @@ void init_ASACZ_firmware_version(void);
 void get_ASACZ_firmware_version_string(char *p_string, uint32_t max_char_to_copy);
 void get_ASACZ_firmware_version_whole_struct(type_ASACZ_firmware_version *p);
 
-#endif /* ASACZ_FIRMWARE_VERSION_H_ */
+#endif /* INC_ASACZ_FIRMWARE_VERSION_H_ */

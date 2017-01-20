@@ -5,6 +5,8 @@
  *      Author: michele
  */
 
+#include "../inc/ASACZ_message_history.h"
+
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -17,7 +19,6 @@
 #include <sys/time.h>   /* gettimeofday, timeval (for timestamp in microsecond) */
 
 
-#include "ASACZ_message_history.h"
 #define def_ASACZ_message_tx_history_numof 128
 static type_ASACZ_message_tx_history ASACZ_message_tx_history[def_ASACZ_message_tx_history_numof];
 typedef struct _type_ASACZ_message_tx_history_handle

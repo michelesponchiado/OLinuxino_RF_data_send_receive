@@ -1,4 +1,6 @@
 src/dataSendRcv.o: ../src/dataSendRcv.c \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/ASACZ_ZAP.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/inc/ASAC_ZigBee_network_commands.h \
  /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/rpc/rpc.h \
  /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt/Sys/mtSys.h \
  /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt/Sapi/mtSapi.h \
@@ -9,12 +11,31 @@ src/dataSendRcv.o: ../src/dataSendRcv.c \
  /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/platform/gnu/dbgPrint.h \
  /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/platform/gnu/hostConsole.h \
  /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/platform/gnu/dbgPrint.h \
- ../src/ts_util.h ../src/ZigBee_messages.h \
- ../src/ASAC_ZigBee_network_commands.h ../src/my_queues.h \
- ../src/ASACZ_app.h ../src/ASACZ_devices_list.h \
- ../src/ASACZ_message_history.h ../src/timeout_utils.h \
- ../src/dataSendRcv.h ../src/input_cluster_table.h \
- ../src/update_end_point_list.h
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/utils/ts_util.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/utils/timeout_utils.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/ASACZ_app.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/ASACZ_devices_list.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/ASACZ_message_history.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/dataSendRcv.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/input_cluster_table.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/../inc/dataSendRcv.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/../inc/update_end_point_list.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/my_queues.h \
+ /home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/ZigBee_messages.h \
+ ../src/../ASACZ_ZAP/ASACZ_ZAP_AF_callbacks.h \
+ ../src/../ASACZ_ZAP/ASACZ_ZAP_AF_register.h \
+ ../src/../ASACZ_ZAP/ASACZ_ZAP_end_points_update_list.h \
+ ../src/../ASACZ_ZAP/ASACZ_ZAP_IEEE_address.h \
+ ../src/../ASACZ_ZAP/ASACZ_ZAP_network.h \
+ ../src/../ASACZ_ZAP/ASACZ_ZAP_NV.h \
+ ../src/../ASACZ_ZAP/ASACZ_ZAP_Sapi_callbacks.h \
+ ../src/../ASACZ_ZAP/ASACZ_ZAP_Sys_callbacks.h \
+ ../src/../ASACZ_ZAP/ASACZ_ZAP_TX_power.h \
+ ../src/../ASACZ_ZAP/ASACZ_ZAP_Zdo_callbacks.h
+
+/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/ASACZ_ZAP.h:
+
+/home/michele/workspace/OLinuxino_RF_data_send_receive/inc/ASAC_ZigBee_network_commands.h:
 
 /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/rpc/rpc.h:
 
@@ -36,24 +57,44 @@ src/dataSendRcv.o: ../src/dataSendRcv.c \
 
 /home/michele/workspace/OLinuxino_RF_data_send_receive/framework/platform/gnu/dbgPrint.h:
 
-../src/ts_util.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/utils/ts_util.h:
 
-../src/ZigBee_messages.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/utils/timeout_utils.h:
 
-../src/ASAC_ZigBee_network_commands.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/ASACZ_app.h:
 
-../src/my_queues.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/ASACZ_devices_list.h:
 
-../src/ASACZ_app.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/ASACZ_message_history.h:
 
-../src/ASACZ_devices_list.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/dataSendRcv.h:
 
-../src/ASACZ_message_history.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/input_cluster_table.h:
 
-../src/timeout_utils.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/../inc/dataSendRcv.h:
 
-../src/dataSendRcv.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/../inc/update_end_point_list.h:
 
-../src/input_cluster_table.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/my_queues.h:
 
-../src/update_end_point_list.h:
+/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP/../inc/ZigBee_messages.h:
+
+../src/../ASACZ_ZAP/ASACZ_ZAP_AF_callbacks.h:
+
+../src/../ASACZ_ZAP/ASACZ_ZAP_AF_register.h:
+
+../src/../ASACZ_ZAP/ASACZ_ZAP_end_points_update_list.h:
+
+../src/../ASACZ_ZAP/ASACZ_ZAP_IEEE_address.h:
+
+../src/../ASACZ_ZAP/ASACZ_ZAP_network.h:
+
+../src/../ASACZ_ZAP/ASACZ_ZAP_NV.h:
+
+../src/../ASACZ_ZAP/ASACZ_ZAP_Sapi_callbacks.h:
+
+../src/../ASACZ_ZAP/ASACZ_ZAP_Sys_callbacks.h:
+
+../src/../ASACZ_ZAP/ASACZ_ZAP_TX_power.h:
+
+../src/../ASACZ_ZAP/ASACZ_ZAP_Zdo_callbacks.h:

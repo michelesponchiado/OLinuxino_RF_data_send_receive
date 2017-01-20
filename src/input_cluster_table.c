@@ -5,14 +5,16 @@
  *      Author: michele
  */
 
+#include "../inc/input_cluster_table.h"
+
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <syslog.h>
-#include "input_cluster_table.h"
-#include "dataSendRcv.h"
 #include "dbgPrint.h"
-#include "update_end_point_list.h"
+
+#include "../inc/dataSendRcv.h"
+#include "../inc/update_end_point_list.h"
 
 #define def_min_valid_endpoint 1
 // the last end point is reserved ASAC

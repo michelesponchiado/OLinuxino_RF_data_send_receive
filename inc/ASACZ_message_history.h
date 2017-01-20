@@ -5,8 +5,8 @@
  *      Author: michele
  */
 
-#ifndef ASACZ_MESSAGE_HISTORY_H_
-#define ASACZ_MESSAGE_HISTORY_H_
+#ifndef INC_ASACZ_MESSAGE_HISTORY_H_
+#define INC_ASACZ_MESSAGE_HISTORY_H_
 #include <stdint.h>
 
 
@@ -94,4 +94,4 @@ typedef enum
 enum_message_history_tx_set_trans_id_error_retcode message_history_tx_set_trans_id_error(uint8_t TransId, enum_message_history_error e);
 
 
-#endif /* ASACZ_MESSAGE_HISTORY_H_ */
+#endif /* INC_ASACZ_MESSAGE_HISTORY_H_ */

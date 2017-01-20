@@ -5,8 +5,8 @@
  *      Author: michele
  */
 
-#ifndef ASACZ_APP_H_
-#define ASACZ_APP_H_
+#ifndef INC_ASACZ_APP_H_
+#define INC_ASACZ_APP_H_
 
 typedef enum
 {
@@ -61,4 +61,4 @@ typedef struct _type_link_quality_body
 
 void get_app_last_link_quality(type_link_quality_body *p);
 
-#endif /* ASACZ_APP_H_ */
+#endif /* INC_ASACZ_APP_H_ */

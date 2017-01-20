@@ -5,8 +5,8 @@
  *      Author: michele
  */
 
-#ifndef SIMPLE_SERVER_COMMON_H_
-#define SIMPLE_SERVER_COMMON_H_
+#ifndef INC_SIMPLE_SERVER_COMMON_H_
+#define INC_SIMPLE_SERVER_COMMON_H_
 
 
 // use this to enable debug printouts
@@ -41,4 +41,4 @@
 #define def_max_ms_wait_server_shutdown_seconds 10
 
 
-#endif /* SIMPLE_SERVER_COMMON_H_ */
+#endif /* INC_SIMPLE_SERVER_COMMON_H_ */

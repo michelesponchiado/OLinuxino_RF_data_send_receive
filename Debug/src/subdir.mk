@@ -11,14 +11,11 @@ C_SRCS += \
 ../src/ASACZ_message_history.c \
 ../src/ZigBee_messages_Rx.c \
 ../src/ZigBee_messages_Tx.c \
-../src/crc32.c \
 ../src/dataSendRcv.c \
 ../src/input_cluster_table.c \
 ../src/main.c \
 ../src/my_queues.c \
 ../src/server_thread.c \
-../src/timeout_utils.c \
-../src/ts_util.c \
 ../src/update_end_point_list.c 
 
 OBJS += \
@@ -29,14 +26,11 @@ OBJS += \
 ./src/ASACZ_message_history.o \
 ./src/ZigBee_messages_Rx.o \
 ./src/ZigBee_messages_Tx.o \
-./src/crc32.o \
 ./src/dataSendRcv.o \
 ./src/input_cluster_table.o \
 ./src/main.o \
 ./src/my_queues.o \
 ./src/server_thread.o \
-./src/timeout_utils.o \
-./src/ts_util.o \
 ./src/update_end_point_list.o 
 
 C_DEPS += \
@@ -47,14 +41,11 @@ C_DEPS += \
 ./src/ASACZ_message_history.d \
 ./src/ZigBee_messages_Rx.d \
 ./src/ZigBee_messages_Tx.d \
-./src/crc32.d \
 ./src/dataSendRcv.d \
 ./src/input_cluster_table.d \
 ./src/main.d \
 ./src/my_queues.d \
 ./src/server_thread.d \
-./src/timeout_utils.d \
-./src/ts_util.d \
 ./src/update_end_point_list.d 
 
 
@@ -62,7 +53,7 @@ C_DEPS += \
 src/%.o: ../src/%.c
 	@echo 'Building file: $<'
 	@echo 'Invoking: Cross GCC Compiler'
-	gcc -DCC26xx -D_GNU_SOURCE -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/rpc" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt/Af" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt/Sapi" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt/Sys" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt/Zdo" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/platform/gnu" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
+	gcc -DCC26xx -D_GNU_SOURCE -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/rpc" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt/Af" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt/Sapi" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt/Sys" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt/Zdo" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/platform/gnu" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/framework/mt" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/ASACZ_ZAP" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/utils" -I"/home/michele/workspace/OLinuxino_RF_data_send_receive/inc" -O0 -g3 -Wall -c -fmessage-length=0 -MMD -MP -MF"$(@:%.o=%.d)" -MT"$(@)" -o "$@" "$<"
 	@echo 'Finished building: $<'
 	@echo ' '
 

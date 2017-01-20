@@ -5,8 +5,8 @@
  *      Author: michele
  */
 
-#ifndef ASACZ_DEVICES_LIST_H_
-#define ASACZ_DEVICES_LIST_H_
+#ifndef INC_ASACZ_DEVICES_LIST_H_
+#define INC_ASACZ_DEVICES_LIST_H_
 #include <stdint.h>
 /**
  * Z-stack monitor and test API
@@ -202,4 +202,12 @@ unsigned int is_OK_get_device_IEEE_list(uint32_t start_index, uint32_t sequence,
 
 uint32_t get_device_list_sequence_number(void);
 
-#endif /* ASACZ_DEVICES_LIST_H_ */
+typedef enum
+{
+	enum_remove_ASACZ_device_list_device_IEEE_OK = 0,
+	enum_remove_ASACZ_device_list_device_IEEE_not_found,
+	enum_remove_ASACZ_device_list_device_IEEE_numof
+}enum_remove_ASACZ_device_list_device_IEEE;
+enum_remove_ASACZ_device_list_device_IEEE remove_ASACZ_device_list_IEEE(uint64_t	IEEE_address);
+
+#endif /* INC_ASACZ_DEVICES_LIST_H_ */

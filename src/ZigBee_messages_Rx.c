@@ -5,13 +5,14 @@
  *      Author: michele
  */
 
+#include <ASAC_ZigBee_network_commands.h>
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <pthread.h>
-#include "my_queues.h"
-#include "ASACZ_message_history.h"
-#include "ASAC_ZigBee_network_commands.h"
+
+#include "../inc/ASACZ_message_history.h"
+#include "../inc/my_queues.h"
 
 typedef struct _type_handle_messages_Rx
 {

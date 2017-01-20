@@ -6,12 +6,13 @@
  */
 
 
+#include "../inc/ASACSOCKET_check.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <stdint.h>
-#include "ASACSOCKET_check.h"
 #include "crc32.h"
 
 type_struct_ASACSOCKET_check_stats ASACSOCKET_check_stats;

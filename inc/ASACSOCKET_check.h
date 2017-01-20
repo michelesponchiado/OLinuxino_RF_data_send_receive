@@ -5,7 +5,13 @@
  *      Author: michele
  */
 
-
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <syslog.h>
+#include <stdlib.h>
+#include <time.h>
+#include <inttypes.h>
 
 // TODO: find a better way for all of these defines for the messages size
 // 1<<12 = 4096

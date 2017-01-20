@@ -5,10 +5,10 @@
  *      Author: michele
  */
 
-#ifndef SERVER_THREAD_H_
-#define SERVER_THREAD_H_
+#ifndef INC_SERVER_THREAD_H_
+#define INC_SERVER_THREAD_H_
 
-#include "simple_server_common.h"
+#include "../inc/simple_server_common.h"
 
 typedef enum
 {
@@ -56,4 +56,4 @@ void * thread_start(void *arg);
 unsigned int is_ended_thread_info(type_thread_info * p);
 void unmark_as_started_thread_info(type_thread_info * p);
 
-#endif /* SERVER_THREAD_H_ */
+#endif /* INC_SERVER_THREAD_H_ */

@@ -8,6 +8,7 @@ RM := rm -rf
 
 # All of the sources participating in the build are defined here
 -include sources.mk
+-include utils/subdir.mk
 -include src/subdir.mk
 -include framework/rpc/subdir.mk
 -include framework/platform/gnu/subdir.mk
@@ -16,6 +17,7 @@ RM := rm -rf
 -include framework/mt/Sapi/subdir.mk
 -include framework/mt/Af/subdir.mk
 -include framework/mt/subdir.mk
+-include ASACZ_ZAP/subdir.mk
 -include subdir.mk
 -include objects.mk
 

@@ -13,6 +13,7 @@ EXECUTABLES :=
 
 # Every subdirectory with source files must be described here
 SUBDIRS := \
+ASACZ_ZAP \
 framework/mt/Af \
 framework/mt/Sapi \
 framework/mt/Sys \
@@ -21,4 +22,5 @@ framework/mt \
 framework/platform/gnu \
 framework/rpc \
 src \
+utils \
 

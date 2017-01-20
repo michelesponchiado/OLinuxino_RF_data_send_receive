@@ -5,8 +5,8 @@
  *      Author: michele
  */
 
-#ifndef ASAC_ZIGBEE_NETWORK_COMMANDS_H_
-#define ASAC_ZIGBEE_NETWORK_COMMANDS_H_
+#ifndef INC_ASAC_ZIGBEE_NETWORK_COMMANDS_H_
+#define INC_ASAC_ZIGBEE_NETWORK_COMMANDS_H_
 
 #include <stdint.h>
 
@@ -436,4 +436,4 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 //
 //
 
-#endif /* ASAC_ZIGBEE_NETWORK_COMMANDS_H_ */
+#endif /* INC_ASAC_ZIGBEE_NETWORK_COMMANDS_H_ */

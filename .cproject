@@ -38,6 +38,9 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt/Zdo}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/platform/gnu}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/ASACZ_ZAP}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/inc}&quot;"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1636104129" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="CC26xx"/>
@@ -66,8 +69,38 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
+					<folderInfo id="cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.95096977" name="/" resourcePath="utils">
+						<toolChain id="cdt.managedbuild.toolchain.gnu.cross.exe.debug.1008251021" name="Cross GCC" superClass="cdt.managedbuild.toolchain.gnu.cross.exe.debug" unusedChildren="">
+							<option id="cdt.managedbuild.option.gnu.cross.path.1270696297.833365651" name="Path" superClass="cdt.managedbuild.option.gnu.cross.path.1270696297"/>
+							<option id="cdt.managedbuild.option.gnu.cross.prefix.1353780212.953604242" name="Prefix" superClass="cdt.managedbuild.option.gnu.cross.prefix.1353780212"/>
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.ELF" id="cdt.managedbuild.targetPlatform.gnu.cross" isAbstract="false" osList="all" superClass="cdt.managedbuild.targetPlatform.gnu.cross"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.c.compiler.617510848" name="Cross GCC Compiler" superClass="cdt.managedbuild.tool.gnu.cross.c.compiler.757223752">
+								<option id="gnu.c.compiler.option.include.paths.419162958" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/rpc}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt/Af}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt/Sapi}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt/Sys}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt/Zdo}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/platform/gnu}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/ASACZ_ZAP}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/utils}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/inc}&quot;"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.294276022" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.compiler.1389156949" name="Cross G++ Compiler" superClass="cdt.managedbuild.tool.gnu.cross.cpp.compiler.603100582"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.c.linker.785895741" name="Cross GCC Linker" superClass="cdt.managedbuild.tool.gnu.cross.c.linker.1186258965"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.1020828096" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker.1233714610"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.archiver.329936806" name="Cross GCC Archiver" superClass="cdt.managedbuild.tool.gnu.cross.archiver.538720256"/>
+							<tool id="cdt.managedbuild.tool.gnu.cross.assembler.1503526724" name="Cross GCC Assembler" superClass="cdt.managedbuild.tool.gnu.cross.assembler.58780125">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.824599520" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
 					<sourceEntries>
-						<entry excluding="radio_asac_barebone.c|framework/mt/Zdo|src_libfds700|framework/platform/gnu|framework/mt/Sys|framework/mt|framework|framework/mt/Af|framework/mt/Sapi|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="utils|ASACZ_ZAP|radio_asac_barebone.c|framework/mt/Zdo|src_libfds700|framework/platform/gnu|framework/mt/Sys|framework/mt|framework|framework/mt/Af|framework/mt/Sapi|src" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="ASACZ_ZAP"/>
 						<entry excluding="Sapi|Sys|Zdo|Af" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="framework/mt"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="framework/mt/Af"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="framework/mt/Sapi"/>
@@ -76,6 +109,7 @@
 						<entry excluding="rpcTransportUart.c" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="framework/platform/gnu"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="framework/rpc"/>
 						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name="src"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="sourcePath" name="utils"/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

@@ -4,6 +4,8 @@
  *  Created on: Nov 4, 2016
  *      Author: michele
  */
+#include "../inc/ASACZ_devices_list.h"
+
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -13,7 +15,6 @@
 #include <sys/timeb.h>  /* ftime, timeb (for timestamp in millisecond) */
 #include <sys/time.h>   /* gettimeofday, timeval (for timestamp in microsecond) */
 #include "timeout_utils.h"
-#include "ASACZ_devices_list.h"
 
 static type_struct_ASACZ_device_list ASACZ_device_list;
 
@@ -151,6 +152,50 @@ void init_ASACZ_device_list(void)
 		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
 		pthread_mutex_init(&handle_ASACZ_device_list.mtx, &mutexattr);
 	}
+}
+
+enum_remove_ASACZ_device_list_device_IEEE remove_ASACZ_device_list_IEEE(uint64_t	IEEE_address)
+{
+	enum_remove_ASACZ_device_list_device_IEEE r = enum_remove_ASACZ_device_list_device_IEEE_OK;
+	pthread_mutex_lock(&handle_ASACZ_device_list.mtx);
+		if (r == enum_remove_ASACZ_device_list_device_IEEE_OK)
+		{
+			unsigned int is_device_found = 0;
+			unsigned int idx_device;
+			for (idx_device = 0; (idx_device < ASACZ_device_list.num_of_devices); idx_device++)
+			{
+				type_struct_ASACZ_device_list_element *p_curdevice = &ASACZ_device_list.list[idx_device];
+				type_struct_ASACZ_device_header * p_cur_header = &p_curdevice->device_header;
+				if (!is_device_found)
+				{
+					if (p_cur_header->IEEE_address == IEEE_address)
+					{
+						is_device_found = 1;
+					}
+				}
+				// if device found:
+				// * if I am not the last element, copy here the next device
+				// * if I am the last element, blank me
+				if (is_device_found)
+				{
+					if (idx_device + 1 < ASACZ_device_list.num_of_devices)
+					{
+						type_struct_ASACZ_device_list_element *p_nextdevice = &ASACZ_device_list.list[idx_device + 1];
+						*p_curdevice = *p_nextdevice;
+					}
+					else
+					{
+						memset(p_curdevice, 0, sizeof(*p_curdevice));
+					}
+				}
+			}
+			if (!is_device_found)
+			{
+				r = enum_remove_ASACZ_device_list_device_IEEE_not_found;
+			}
+		}
+	pthread_mutex_unlock(&handle_ASACZ_device_list.mtx);
+	return r;
 }
 
 enum_add_ASACZ_device_list_header_retcode add_ASACZ_device_list_header(type_struct_ASACZ_device_header *p_device_header)

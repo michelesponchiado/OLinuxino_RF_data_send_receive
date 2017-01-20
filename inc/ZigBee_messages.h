@@ -5,9 +5,9 @@
  *      Author: michele
  */
 
-#ifndef ZIGBEE_MESSAGES_H_
-#define ZIGBEE_MESSAGES_H_
-#include "ASAC_ZigBee_network_commands.h"
+#ifndef INC_ZIGBEE_MESSAGES_H_
+#define INC_ZIGBEE_MESSAGES_H_
+#include <ASAC_ZigBee_network_commands.h>
 
 #define def_too_big_message_is_an_error
 
@@ -21,4 +21,4 @@ unsigned int is_OK_pop_Rx_outside_message(type_ASAC_ZigBee_interface_command_rec
 
 unsigned int get_invalid_id(void);
 
-#endif /* ZIGBEE_MESSAGES_H_ */
+#endif /* INC_ZIGBEE_MESSAGES_H_ */

@@ -4,8 +4,9 @@
  *  Created on: May 16, 2016
  *      Author: michele
  */
+#include "../inc/my_queues.h"
+
 #include <syslog.h>
-#include "my_queues.h"
 
 
 void init_my_queue(type_my_queue *p)

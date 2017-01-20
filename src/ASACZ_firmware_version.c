@@ -5,10 +5,11 @@
  *      Author: michele
  */
 
+#include "../inc/ASACZ_firmware_version.h"
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include "ASACZ_firmware_version.h"
 
 // the version main numbers
 #define def_ASACZ_firmware_version_MAJOR_NUMBER 	0

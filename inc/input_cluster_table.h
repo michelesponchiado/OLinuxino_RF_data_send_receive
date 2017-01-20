@@ -5,8 +5,8 @@
  *      Author: michele
  */
 
-#ifndef INPUT_CLUSTER_TABLE_H_
-#define INPUT_CLUSTER_TABLE_H_
+#ifndef INC_INPUT_CLUSTER_TABLE_H_
+#define INC_INPUT_CLUSTER_TABLE_H_
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -19,9 +19,10 @@
 #include <pthread.h>
 #include <poll.h>
 #include <arpa/inet.h>
-#include "ASAC_ZigBee_network_commands.h"
-#include "dataSendRcv.h"
-#include "update_end_point_list.h"
+#include <ASAC_ZigBee_network_commands.h>
+
+#include "../inc/dataSendRcv.h"
+#include "../inc/update_end_point_list.h"
 
 typedef struct _type_input_cluster_table_elem
 {
@@ -79,4 +80,4 @@ enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uin
 type_update_end_point_list *get_ptr_to_update_end_point_list(void);
 unsigned int is_OK_fill_end_point_command_list(uint8_t end_point, type_Af_user *p);
 
-#endif /* INPUT_CLUSTER_TABLE_H_ */
+#endif /* INC_INPUT_CLUSTER_TABLE_H_ */

@@ -41,8 +41,6 @@
 #include <unistd.h>
 #include <syslog.h>
 #include "rpc.h"
-#include "dataSendRcv.h"
-
 #include "dbgPrint.h"
 
 #include <unistd.h>
@@ -57,12 +55,14 @@
 #include <pthread.h>
 #include <poll.h>
 #include "ts_util.h"
-#include "server_thread.h"
-#include "simple_server.h"
-#include "ASACZ_app.h"
-#include "ASACZ_devices_list.h"
-#include "ASACZ_firmware_version.h"
-#include "input_cluster_table.h"
+
+#include "../inc/ASACZ_app.h"
+#include "../inc/ASACZ_devices_list.h"
+#include "../inc/ASACZ_firmware_version.h"
+#include "../inc/dataSendRcv.h"
+#include "../inc/input_cluster_table.h"
+#include "../inc/server_thread.h"
+#include "../inc/simple_server.h"
 
 void *rpcTask(void *argument)
 {

@@ -5,8 +5,8 @@
  *      Author: michele
  */
 
-#ifndef MY_QUEUES_H_
-#define MY_QUEUES_H_
+#ifndef INC_MY_QUEUES_H_
+#define INC_MY_QUEUES_H_
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -75,4 +75,4 @@ typedef enum
 }enum_pop_my_queue_retcode;
 
 enum_pop_my_queue_retcode pop_my_queue(type_my_queue *p, uint8_t *p_element_to_pop, unsigned int *p_elem_popped_size, unsigned int max_size, uint32_t *p_id);
-#endif /* MY_QUEUES_H_ */
+#endif /* INC_MY_QUEUES_H_ */

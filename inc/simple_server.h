@@ -5,10 +5,10 @@
  *      Author: michele
  */
 
-#ifndef SIMPLE_SERVER_H_
-#define SIMPLE_SERVER_H_
+#ifndef INC_SIMPLE_SERVER_H_
+#define INC_SIMPLE_SERVER_H_
 
-#include "simple_server_common.h"
+#include "../inc/simple_server_common.h"
 
 
 typedef enum
@@ -69,4 +69,4 @@ void * ASACZ_UDP_server_thread(void *arg);
 unsigned int is_OK_shutdown_server(type_handle_server_socket *p);
 
 
-#endif /* SIMPLE_SERVER_H_ */
+#endif /* INC_SIMPLE_SERVER_H_ */

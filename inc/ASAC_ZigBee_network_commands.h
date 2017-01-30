@@ -10,8 +10,48 @@
 
 #include <stdint.h>
 
-#define def_ASACZ_ZIGBEE_NETWORK_COMMANDS_VERSION "18"
+// PLEASE change this only if a major change in the protocol is done, i.e. if the type_ASAC_Zigbee_interface_header structure changes
+#define def_ASACZ_ZIGBEE_NETWORK_COMMANDS_PROTOCOL_MAJOR_VERSION ((uint32_t) 0 )
+// change this if a minor change in the protocol is done, i.e.  commands are added/deleted/modified
+#define def_ASACZ_ZIGBEE_NETWORK_COMMANDS_PROTOCOL_MINOR_VERSION ((uint32_t) 1 )
+#define def_ASACZ_ZIGBEE_NETWORK_COMMANDS_PROTOCOL_BUILD_NUMBER ((uint32_t) 1 )
 
+// a reserved LinkId: not a valid reply
+#define defReservedLinkId_notAReply ((uint32_t)0x00000000)
+// the very first valid LinkId
+#define defFirstValidLinkId ((uint32_t)0x10000000)
+// the very last valid LinkId, the next one to be used is defFirstValidLinkId
+#define defLastValidLinkId  ((uint32_t)0x7fffffff)
+
+typedef struct _type_ASAC_Zigbee_interface_protocol_header
+{
+	uint32_t major_protocol_id; // the major protocol identifier: this must be changed ONLY if the structure of the header following the minor_protocol_id is changed
+								// e.g. let's suppose the code field becomes a uint64:t, or we put a field named key BEFORE the code field: then the major_protocol_id must be changed
+								// if a message comes with a major_protocol_id different from mine, I can't reply
+								// the very first major_protocol_id is 0
+	uint32_t minor_protocol_id; // the minor protocol identifier: this can be changed when command are added/deleted/modified
+}__attribute__((__packed__)) type_ASAC_Zigbee_interface_protocol_header;
+
+typedef struct _type_ASAC_Zigbee_interface_command_header
+{
+	uint32_t command_version; 	// the command version requested/replied; when a specific command structure is changed, the command_version must be changed
+								// the very first command_version is 0
+	uint32_t command_code; 		// the command code, MUST be one of enum_ASAC_ZigBee_interface_command
+	uint32_t command_link_id; 	// the link identifier, most of the times this is set by a request and copied back by a reply
+								// some values are reserved, e.g. 0x00000000 states the message isn't a reply to a previous request nor it expects a reply
+}__attribute__((__packed__)) type_ASAC_Zigbee_interface_command_header;
+
+typedef struct _type_ASAC_Zigbee_interface_reserved_header
+{
+	uint32_t reserved[4];		// reserved for future implementations
+}__attribute__((__packed__)) type_ASAC_Zigbee_interface_reserved_header;
+
+typedef struct _type_ASAC_Zigbee_interface_header
+{
+	type_ASAC_Zigbee_interface_protocol_header p;
+	type_ASAC_Zigbee_interface_command_header c;
+	type_ASAC_Zigbee_interface_reserved_header r;
+}__attribute__((__packed__)) type_ASAC_Zigbee_interface_header;
 
 typedef enum
 {
@@ -74,6 +114,7 @@ typedef struct _type_ASAC_ZigBee_src_id
 //
 //
 //
+#define def_input_cluster_register_req_command_version 0
 typedef struct _type_ASAC_ZigBee_interface_network_input_cluster_register_req
 {
 	uint8_t endpoint;			// the end-point to register
@@ -95,7 +136,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_input_cluster_register_reply
 	uint32_t retcode;	// the return code
 } __attribute__((__packed__)) type_ASAC_ZigBee_interface_network_input_cluster_register_reply ;
 
-
+#define def_input_cluster_unregister_req_command_version 0
 typedef struct _type_ASAC_ZigBee_interface_network_input_cluster_unregister_req
 {
 	uint8_t endpoint;			// the end-point to register
@@ -132,6 +173,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_input_cluster_unregister_repl
 //
 //
 //
+#define def_echo_req_command_version 0
 #define def_echo_message_max_bytes 32
 typedef struct _type_ASAC_ZigBee_interface_network_echo_req
 {
@@ -161,6 +203,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_echo_reply
 //
 //
 //
+#define def_device_list_req_command_version 0
 typedef struct _type_ASAC_ZigBee_interface_network_device_list_req
 {
 	uint32_t start_index; 	//!< 0 means from the very beginning
@@ -201,6 +244,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_device_list_reply
 //
 //
 //
+#define def_my_IEEE_req_command_version 0
 typedef struct _type_ASAC_ZigBee_interface_network_my_IEEE_req
 {
 	uint32_t unused; 	//!< not used
@@ -232,6 +276,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_my_IEEE_reply
 /**
  * the firmware version request
  */
+#define def_firmware_version_req_command_version 0
 typedef struct _type_ASAC_ZigBee_interface_network_firmware_version_req
 {
 	uint32_t as_yet_unused; 	//!< as the name says
@@ -270,7 +315,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_firmware_version_reply
 //
 //
 //
-
+#define def_signal_strength_req_command_version 0
 typedef struct _type_ASAC_ZigBee_interface_network_signal_strength_req
 {
 	uint32_t unused;
@@ -293,7 +338,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_signal_strength_reply
 //
 
 
-
+#define def_device_list_changed_signal_command_version 0
 typedef struct _type_ASAC_ZigBee_interface_network_device_list_changed_signal
 {
 	uint32_t sequence_number;
@@ -307,7 +352,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_device_list_changed_signal
 //
 //
 //
-
+#define def_outside_send_message_req_command_version 0
 // the maximum size for a message to send to / receive from the outside world
 #define def_ASAC_ZigBee_interface_max_size_outside_message 128
 
@@ -348,6 +393,7 @@ typedef struct _type_ASAC_ZigBee_interface_command_outside_send_message_reply
 
 
 // received message callback begins here
+#define def_outside_received_message_callback_command_version 0
 typedef struct _type_ASAC_ZigBee_interface_command_received_message_callback
 {
 	type_ASAC_ZigBee_src_id src_id;		// the source identifier
@@ -377,7 +423,7 @@ typedef struct _type_ASAC_ZigBee_interface_unknown_reply
 
 typedef struct _type_ASAC_Zigbee_interface_request
 {
-	uint32_t code; // the command code, MUST be one of enum_ASAC_ZigBee_interface_command
+	type_ASAC_Zigbee_interface_header h; // the common header, containing informations about the protocol and the command
 	// the union of all of the possibles requests from the clients
 	union
 	{
@@ -397,9 +443,10 @@ typedef struct _type_ASAC_Zigbee_interface_request
 }type_ASAC_Zigbee_interface_request;
 
 
+
 typedef struct _type_ASAC_Zigbee_interface_command_reply
 {
-	uint32_t code; // the command code, MUST be one of enum_ASAC_ZigBee_interface_command
+	type_ASAC_Zigbee_interface_header h; // the common header, containing informations about the protocol and the command
 	// the union of all of the possibles replies of the server to the clients requests
 	union
 	{
@@ -425,8 +472,8 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 
 #define def_size_ASAC_Zigbee_interface_code(p_the_struct) (sizeof(p_the_struct->code))
 
-#define def_size_ASAC_Zigbee_interface_req(p_the_struct,the_command_body) (sizeof((p_the_struct)->code) + sizeof((p_the_struct)->req.the_command_body))
-#define def_size_ASAC_Zigbee_interface_reply(p_the_struct,the_command_body) (sizeof((p_the_struct)->code) + sizeof((p_the_struct)->reply.the_command_body))
+#define def_size_ASAC_Zigbee_interface_req(p_the_struct,the_command_body) (sizeof((p_the_struct)->h) + sizeof((p_the_struct)->req.the_command_body))
+#define def_size_ASAC_Zigbee_interface_reply(p_the_struct,the_command_body) (sizeof((p_the_struct)->h) + sizeof((p_the_struct)->reply.the_command_body))
 
 //
 //

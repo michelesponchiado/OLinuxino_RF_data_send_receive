@@ -25,11 +25,11 @@
 #include <pthread.h>
 #include <poll.h>
 #include "ts_util.h"
-#include "../inc/server_thread.h"
-#include "../inc/simple_server.h"
-#include "../inc/ZigBee_messages.h"
+#include "server_thread.h"
+#include "simple_server.h"
+#include "ZigBee_messages.h"
 #include <ASAC_ZigBee_network_commands.h>
-#include "../inc/input_cluster_table.h"
+#include "input_cluster_table.h"
 
 
 

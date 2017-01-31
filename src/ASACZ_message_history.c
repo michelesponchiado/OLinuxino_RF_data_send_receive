@@ -5,7 +5,7 @@
  *      Author: michele
  */
 
-#include "../inc/ASACZ_message_history.h"
+#include "ASACZ_message_history.h"
 
 #include <string.h>
 #include <stdio.h>

@@ -6,7 +6,7 @@
  */
 
 
-#include "../inc/ASACSOCKET_check.h"
+#include "ASACSOCKET_check.h"
 
 #include <stdio.h>
 #include <stdlib.h>

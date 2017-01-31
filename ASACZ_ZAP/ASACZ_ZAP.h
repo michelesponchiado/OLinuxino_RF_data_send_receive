@@ -29,13 +29,13 @@
 #include "ts_util.h"
 #include "timeout_utils.h"
 
-#include "../inc/ASACZ_app.h"
-#include "../inc/ASACZ_devices_list.h"
-#include "../inc/ASACZ_message_history.h"
-#include "../inc/dataSendRcv.h"
-#include "../inc/input_cluster_table.h"
-#include "../inc/my_queues.h"
-#include "../inc/ZigBee_messages.h"
+#include "ASACZ_app.h"
+#include "ASACZ_devices_list.h"
+#include "ASACZ_message_history.h"
+#include "dataSendRcv.h"
+#include "input_cluster_table.h"
+#include "my_queues.h"
+#include "ZigBee_messages.h"
 
 
 typedef enum

@@ -21,8 +21,8 @@
 #include <arpa/inet.h>
 #include <ASAC_ZigBee_network_commands.h>
 
-#include "../inc/dataSendRcv.h"
-#include "../inc/update_end_point_list.h"
+#include "dataSendRcv.h"
+#include "update_end_point_list.h"
 
 typedef struct _type_input_cluster_table_elem
 {

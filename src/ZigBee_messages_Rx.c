@@ -11,8 +11,8 @@
 #include <unistd.h>
 #include <pthread.h>
 
-#include "../inc/ASACZ_message_history.h"
-#include "../inc/my_queues.h"
+#include "ASACZ_message_history.h"
+#include "my_queues.h"
 
 typedef struct _type_handle_messages_Rx
 {

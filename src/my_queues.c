@@ -4,7 +4,7 @@
  *  Created on: May 16, 2016
  *      Author: michele
  */
-#include "../inc/my_queues.h"
+#include "my_queues.h"
 
 #include <syslog.h>
 

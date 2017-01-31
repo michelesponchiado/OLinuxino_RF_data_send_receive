@@ -8,7 +8,7 @@
 #ifndef INC_SIMPLE_SERVER_H_
 #define INC_SIMPLE_SERVER_H_
 
-#include "../inc/simple_server_common.h"
+#include "simple_server_common.h"
 
 
 typedef enum

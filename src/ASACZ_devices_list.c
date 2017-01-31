@@ -4,7 +4,7 @@
  *  Created on: Nov 4, 2016
  *      Author: michele
  */
-#include "../inc/ASACZ_devices_list.h"
+#include "ASACZ_devices_list.h"
 
 #include <string.h>
 #include <stdio.h>

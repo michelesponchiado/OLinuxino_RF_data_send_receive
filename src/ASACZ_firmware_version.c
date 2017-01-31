@@ -5,7 +5,7 @@
  *      Author: michele
  */
 
-#include "../inc/ASACZ_firmware_version.h"
+#include "ASACZ_firmware_version.h"
 
 #include <stdlib.h>
 #include <stdio.h>

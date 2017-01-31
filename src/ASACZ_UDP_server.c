@@ -29,16 +29,16 @@
 
 #include "ts_util.h"
 #include "timeout_utils.h"
-#include "../inc/server_thread.h"
-#include "../inc/simple_server.h"
+#include "server_thread.h"
+#include "simple_server.h"
 #include "dbgPrint.h"
-#include "../inc/ASACSOCKET_check.h"
+#include "ASACSOCKET_check.h"
 #include <ASAC_ZigBee_network_commands.h>
-#include "../inc/input_cluster_table.h"
-#include "../inc/ZigBee_messages.h"
-#include "../inc/ASACZ_devices_list.h"
-#include "../inc/ASACZ_firmware_version.h"
-#include "../inc/ASACZ_app.h"
+#include "input_cluster_table.h"
+#include "ZigBee_messages.h"
+#include "ASACZ_devices_list.h"
+#include "ASACZ_firmware_version.h"
+#include "ASACZ_app.h"
 
 typedef struct _type_handle_socket_in
 {

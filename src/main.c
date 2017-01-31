@@ -246,6 +246,12 @@ static void init_sig_handlers(void)
 int main(int argc, char* argv[])
 {
 	init_sig_handlers();
+#if 0
+	{
+		void ASACZ_conf_module_test(void);
+		ASACZ_conf_module_test();
+	}
+#endif
 
 	type_handle_server_socket handle_server_socket;
 	memset(&handle_server_socket, 0, sizeof(handle_server_socket));

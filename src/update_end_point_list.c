@@ -18,10 +18,7 @@
 #include <netinet/in.h>
 #include <pthread.h>
 #include <poll.h>
-
-
 #include "dbgPrint.h"
-
 #include "dataSendRcv.h"
 #include "input_cluster_table.h"
 #include "update_end_point_list.h"

@@ -4,16 +4,24 @@
  *  Created on: Jan 16, 2017
  *      Author: michele
  */
-#include "../inc/update_end_point_list.h"
 
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <syslog.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <sys/time.h>
+#include <netinet/in.h>
+#include <pthread.h>
+#include <poll.h>
 #include "dbgPrint.h"
-
-#include "../inc/dataSendRcv.h"
-#include "../inc/input_cluster_table.h"
+#include "dataSendRcv.h"
+#include "input_cluster_table.h"
+#include "update_end_point_list.h"
 
 
 #if UPDATE_END_POINT_INDEX_NUMBIT > 8

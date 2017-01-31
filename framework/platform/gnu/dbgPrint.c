@@ -86,9 +86,6 @@ const char * str_dbg_level(int level)
 #include <fcntl.h>
 #include <libgen.h>
 
-<<<<<<< HEAD
-
-=======
 #define	 LOG_EMERG	0	/* system is unusable */
 #define	 LOG_ALERT	1	/* action must be taken immediately */
 #define	 LOG_CRIT	2	/* critical conditions */
@@ -97,18 +94,10 @@ const char * str_dbg_level(int level)
 #define	 LOG_NOTICE	5	/* normal but significant condition */
 #define	 LOG_INFO	6	/* informational */
 #define	 LOG_DEBUG	7	/* debug-level messages */
->>>>>>> 493585706d8a86440009ae5b66ee2da8d4ba2b56
+
 #include "private/android_filesystem_config.h"
 #include "cutils/log.h"
 
-#define	LOG_EMERG	0	/* system is unusable */
-#define	LOG_ALERT	1	/* action must be taken immediately */
-#define	LOG_CRIT	2	/* critical conditions */
-#define	LOG_ERR		3	/* error conditions */
-#define	LOG_WARNING	4	/* warning conditions */
-#define	LOG_NOTICE	5	/* normal but significant condition */
-#define	LOG_INFO	6	/* informational */
-#define	LOG_DEBUG	7	/* debug-level messages */
 #else
 #include <syslog.h>
 #endif

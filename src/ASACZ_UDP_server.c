@@ -59,6 +59,30 @@ typedef struct _type_handle_ASACZ_request
 
 unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_interface_command_reply *p, unsigned int message_size, int socket_fd, struct sockaddr_in *p_socket_dst);
 
+
+#ifdef print_all_received_messages
+#warning USING DEBUG PRINT MESSAGE!!!
+static void print_message(char *s, int len)
+{
+	char stoprint[256];
+	snprintf(stoprint, sizeof(stoprint),"%*s",len, s);
+	if (strchr(stoprint, '"'))
+	{
+		my_log(LOG_ERR,"%s: invalid characters "" into the string %s", __func__,stoprint);
+	}
+	else
+	{
+		my_log(LOG_INFO,"%s: sending to the printer the command %s", __func__,stoprint);
+
+		FILE *printer = popen("lpr", "w");
+		if (printer)
+		{
+			fprintf(printer, "%s", stoprint);
+			pclose(printer);
+		}
+	}
+}
+#endif
 static void error(const char *msg)
 {
 	char message[256];
@@ -776,6 +800,23 @@ int handle_ASACZ_request_outside_send_message(type_handle_ASACZ_request *p)
 		p_outside_send_message_reply->message_length = p_body_request->message_length;
 		p_outside_send_message_reply->retcode = enum_ASAC_ZigBee_interface_command_outside_send_message_reply_retcode_OK;
 		uint32_t id = get_invalid_id();
+#ifdef print_all_received_messages
+		{
+			uint64_t my_IEEE_address = 0;
+			uint32_t ui_is_valid_my_IEEE_address = is_OK_get_my_radio_IEEE_address(&my_IEEE_address);
+			uint16_t DstAddr = 0;
+			if (ui_is_valid_my_IEEE_address && is_OK_get_network_short_address_from_IEEE(my_IEEE_address, &DstAddr))
+			{
+				// if the destination is the device with address 0 and I have short address 0, this is a message for me!
+				if (p_body_request->dst_id.IEEE_destination_address == 0 && DstAddr == 0)
+				{
+					my_log(LOG_ERR,"%s: a message for me will be printed", __func__);
+					print_message((char *)p_body_request->message, p_body_request->message_length);
+					return retcode;
+				}
+			}
+		}
+#endif
 
 		// we send the message to the radio
 		if (!is_OK_push_Tx_outside_message(p_body_request, &id))
@@ -914,6 +955,7 @@ typedef enum
 	enum_check_outside_messages_from_ZigBee_retcode_numof
 }enum_check_outside_messages_from_ZigBee_retcode;
 
+
 enum_check_outside_messages_from_ZigBee_retcode check_outside_messages_from_ZigBee(type_handle_server_socket *phss)
 {
 	enum_check_outside_messages_from_ZigBee_retcode r = enum_check_outside_messages_from_ZigBee_retcode_OK;
@@ -930,6 +972,12 @@ enum_check_outside_messages_from_ZigBee_retcode check_outside_messages_from_ZigB
 		struct sockaddr_in s_reply;
 		dbg_print(PRINT_LEVEL_VERBOSE,"%s: popped message from ep:%i, cluster_id:%i", __func__,psrcid->destination_endpoint, psrcid->cluster_id);
 
+#ifdef print_all_received_messages
+		{
+			print_message((char *)p_icr_rx->message, p_icr_rx->message_length);
+			return r;
+		}
+#endif
 		if (!p_find_socket_of_input_cluster_end_point_command(&s_reply, psrcid->destination_endpoint, psrcid->cluster_id))
 		{
 			dbg_print(PRINT_LEVEL_ERROR,"%s: ERROR NO SOCKET BOUND TO ep:%i, cluster_id:%i", __func__,psrcid->destination_endpoint, psrcid->cluster_id);

@@ -9,6 +9,9 @@
 #define INC_ASACZ_FIRMWARE_VERSION_H_
 #include <inttypes.h>
 
+#define print_all_received_messages
+
+
 typedef struct _type_ASACZ_firmware_version
 {
 	uint32_t major_number;			//!< the version major number

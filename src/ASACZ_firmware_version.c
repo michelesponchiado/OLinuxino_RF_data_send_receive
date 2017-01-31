@@ -17,12 +17,19 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	1
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	2
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
 #define def_ASACZ_firmware_version_NOTES 			"internal version"
+#ifdef print_all_received_messages
+	#undef def_ASACZ_firmware_version_NOTES
+	#define def_ASACZ_firmware_version_NOTES 			"print received messages"
+#endif
 
+// 0.1.3 build 2
+// CHANGED THE PROTOCOL HEADER
+//  added the print all messages define
 // 0.1.3 build 1
 //   - added the delete end point command
 //   - when an end point is added, the network is NOT restarted, but the end point list is updated instead

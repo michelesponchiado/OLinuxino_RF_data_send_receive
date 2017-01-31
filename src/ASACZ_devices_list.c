@@ -94,16 +94,27 @@ static type_struct_ASACZ_device_list_element * find_ASACZ_device_list_by_network
 unsigned int is_OK_get_network_short_address_from_IEEE(uint64_t IEEE_address, uint16_t * p_network_short_address)
 {
 	unsigned int isOK = 1;
-	type_struct_ASACZ_device_list_element * p = find_ASACZ_device_list_by_IEEE_address(IEEE_address);
-	if (!p)
-	{
-		isOK = 0;
-	}
-	if (isOK)
+	// by convention, IEEE address equals to 0 means the destination is the coordinator, which network short address is always 0
+	if (IEEE_address == 0)
 	{
 		if (p_network_short_address)
 		{
-			*p_network_short_address = p->device_header.network_short_address;
+			*p_network_short_address = 0;
+		}
+	}
+	else
+	{
+		type_struct_ASACZ_device_list_element * p = find_ASACZ_device_list_by_IEEE_address(IEEE_address);
+		if (!p)
+		{
+			isOK = 0;
+		}
+		if (isOK)
+		{
+			if (p_network_short_address)
+			{
+				*p_network_short_address = p->device_header.network_short_address;
+			}
 		}
 	}
 	return isOK;

@@ -174,171 +174,134 @@ int32_t ZAP_startNetwork(unsigned int channel_index)
 	uint8_t devType;
 #endif
 	int32_t status;
-	uint8_t newNwk = 0;
-//#define def_interactive
-#ifdef def_interactive
-	char sCh[128];
-
-	do
+	uint32_t idxloop;
+	uint32_t networkOK = 0;
+	for (idxloop = 0; ! networkOK && idxloop < 2; idxloop++)
 	{
-		dbg_print(PRINT_LEVEL_INFO, "Do you wish to start/join a new network? (y/n)");
-		consoleGetLine(sCh, 128);
-		if (sCh[0] == 'n' || sCh[0] == 'N')
+		uint8_t newNwk = 0;
+		if (idxloop >= 1)
 		{
+			newNwk = 1;
+			usleep(50000);
+		}
+		if (newNwk)
+		{
+			my_log(LOG_INFO, "starting a new network");
+			status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
+		}
+		else
+		{
+			my_log(LOG_INFO, "trying to resume a previous network");
 			status = setNVStartup(0);
 		}
-		else if (sCh[0] == 'y' || sCh[0] == 'Y')
+		if (status != MT_RPC_SUCCESS)
 		{
-			status = setNVStartup(
-			ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
-			newNwk = 1;
+			my_log(LOG_WARNING, "network startup failed");
+			continue;
+		}
+		my_log(LOG_INFO, "Resetting ZNP");
+		ResetReqFormat_t resReq;
+		resReq.Type = 1;
+		sysResetReq(&resReq);
+		//flush the rsp
+		my_log(LOG_INFO, "Flushing rcp");
+		rpcWaitMqClientMsg(2000);
 
+		if (newNwk)
+		{
+			//Select random PAN ID for Coord and join any PAN for RTR/ED
+			my_log(LOG_INFO, "Setting the PAN ID");
+			status = setNVPanID(0xFFFF);
+			if (status != MT_RPC_SUCCESS)
+			{
+				my_log(LOG_WARNING, "setNVPanID failed");
+				continue;
+			}
+	#ifdef def_interactive_chan
+			dbg_print(PRINT_LEVEL_INFO, "Enter channel 11-26:\n");
+			consoleGetLine(sCh, 128);
+			status = setNVChanList(1 << atoi(sCh));
+	#else
+			// this must be between 11 and 26
+			my_log(LOG_INFO, "Setting the Channel %i", def_fix_channel);
+			status = setNVChanList(1 << def_fix_channel);
+	#endif
+			if (status != MT_RPC_SUCCESS)
+			{
+				my_log(LOG_WARNING, "setNVChanList failed on channel %i", def_fix_channel);
+				continue;
+			}
+
+		}
+
+		my_log(LOG_INFO, "registering the default end point/command");
+		registerAf_default();
+
+		my_log(LOG_INFO, "zdo init");
+		status = zdoInit();
+		if (status == NEW_NETWORK)
+		{
+			my_log(LOG_INFO, "zdoInit NEW_NETWORK");
+			status = MT_RPC_SUCCESS;
+		}
+		else if (status == RESTORED_NETWORK)
+		{
+			my_log(LOG_INFO, "zdoInit RESTORED_NETWORK");
+			status = MT_RPC_SUCCESS;
 		}
 		else
 		{
-			dbg_print(PRINT_LEVEL_INFO, "Incorrect input please type y or n");
-		}
-	} while (sCh[0] != 'y' && sCh[0] != 'Y' && sCh[0] != 'n' && sCh[0] != 'N');
-#else
-#define def_new_network
-#ifdef def_new_network
-	my_log(LOG_INFO, "starting a new network");
-	status = setNVStartup(ZCD_STARTOPT_CLEAR_STATE | ZCD_STARTOPT_CLEAR_CONFIG);
-	newNwk = 1;
-#else
-	status = setNVStartup(0);
-#endif
-#endif
-	if (status != MT_RPC_SUCCESS)
-	{
-		my_log(LOG_WARNING, "network startup failed");
-		return -1;
-	}
-	my_log(LOG_INFO, "Resetting ZNP");
-	ResetReqFormat_t resReq;
-	resReq.Type = 1;
-	sysResetReq(&resReq);
-	//flush the rsp
-	my_log(LOG_INFO, "Flushing rcp");
-	rpcWaitMqClientMsg(2000);
-
-	if (newNwk)
-	{
-#ifndef CC26xx
-		dbg_print(PRINT_LEVEL_INFO,
-		        "Enter device type c: Coordinator, r: Router, e: End Device:");
-		consoleGetLine(sCh, 128);
-		cDevType = sCh[0];
-
-		switch (cDevType)
-		{
-		case 'c':
-		case 'C':
-			devType = DEVICETYPE_COORDINATOR;
-			break;
-		case 'r':
-		case 'R':
-			devType = DEVICETYPE_ROUTER;
-			break;
-		case 'e':
-		case 'E':
-		default:
-			devType = DEVICETYPE_ENDDEVICE;
-			break;
-		}
-		status = setNVDevType(devType);
-
-		if (status != MT_RPC_SUCCESS)
-		{
-			dbg_print(PRINT_LEVEL_WARNING, "setNVDevType failed");
-			return 0;
-		}
-#endif //CC26xx
-		//Select random PAN ID for Coord and join any PAN for RTR/ED
-		my_log(LOG_INFO, "Setting the PAN ID");
-		status = setNVPanID(0xFFFF);
-		if (status != MT_RPC_SUCCESS)
-		{
-			my_log(LOG_WARNING, "setNVPanID failed");
-			return -1;
-		}
-#ifdef def_interactive_chan
-		dbg_print(PRINT_LEVEL_INFO, "Enter channel 11-26:\n");
-		consoleGetLine(sCh, 128);
-		status = setNVChanList(1 << atoi(sCh));
-#else
-		// this must be between 11 and 26
-		my_log(LOG_INFO, "Setting the Channel %i", def_fix_channel);
-		status = setNVChanList(1 << def_fix_channel);
-#endif
-		if (status != MT_RPC_SUCCESS)
-		{
-			my_log(LOG_WARNING, "setNVChanList failed on channel %i", def_fix_channel);
-			return -1;
+			my_log(LOG_WARNING, "zdoInit failed");
+			status = -1;
 		}
 
-	}
+		my_log(LOG_INFO, "process zdoStatechange callbacks");
 
-	my_log(LOG_INFO, "registering the default end point/command");
-	registerAf_default();
-
-	my_log(LOG_INFO, "zdo init");
-	status = zdoInit();
-	if (status == NEW_NETWORK)
-	{
-		my_log(LOG_INFO, "zdoInit NEW_NETWORK");
-		status = MT_RPC_SUCCESS;
-	}
-	else if (status == RESTORED_NETWORK)
-	{
-		my_log(LOG_INFO, "zdoInit RESTORED_NETWORK");
-		status = MT_RPC_SUCCESS;
-	}
-	else
-	{
-		my_log(LOG_WARNING, "zdoInit failed");
-		status = -1;
-	}
-
-	my_log(LOG_INFO, "process zdoStatechange callbacks");
-
-	//flush AREQ ZDO State Change messages
-	while (status != -1)
-	{
-		status = rpcWaitMqClientMsg(2000);
-#ifndef CC26xx
-		if (((devType == DEVICETYPE_COORDINATOR) && (handle_app.devState == DEV_ZB_COORD))
-		        || ((devType == DEVICETYPE_ROUTER) && (handle_app.devState == DEV_ROUTER))
-		        || ((devType == DEVICETYPE_ENDDEVICE)
-		                && (handle_app.devState == DEV_END_DEVICE)))
+		//flush AREQ ZDO State Change messages
+		while (status != -1)
 		{
-			break;
+			status = rpcWaitMqClientMsg(2000);
+	#ifndef CC26xx
+			if (((devType == DEVICETYPE_COORDINATOR) && (handle_app.devState == DEV_ZB_COORD))
+			        || ((devType == DEVICETYPE_ROUTER) && (handle_app.devState == DEV_ROUTER))
+			        || ((devType == DEVICETYPE_ENDDEVICE)
+			                && (handle_app.devState == DEV_END_DEVICE)))
+			{
+				break;
+			}
+	#endif
 		}
-#endif
-	}
-#define def_always_enabled_join_req
-#ifdef def_always_enabled_join_req
-	if (1)
-	{
-		PermitJoiningReqFormat_t my_join_permit;
-		memset(&my_join_permit, 0, sizeof(my_join_permit));
-		my_join_permit.Destination = 0x00;
-		my_join_permit.Timeout = 255;
-		uint8_t retcode;
-		retcode = zbPermitJoiningReq(&my_join_permit);
-		if ( retcode )
+	#define def_always_enabled_join_req
+	#ifdef def_always_enabled_join_req
 		{
-			my_log(LOG_WARNING, " *** permit join req ERROR: %i", (int)retcode);
+			PermitJoiningReqFormat_t my_join_permit;
+			memset(&my_join_permit, 0, sizeof(my_join_permit));
+			my_join_permit.Destination = 0x00;
+			my_join_permit.Timeout = 255;
+			uint8_t retcode;
+			retcode = zbPermitJoiningReq(&my_join_permit);
+			if ( retcode )
+			{
+				my_log(LOG_WARNING, " *** permit join req ERROR: %i", (int)retcode);
+			}
+			else
+			{
+				my_log(LOG_INFO, "permit join req OK");
+			}
+		}
+	#endif
+		my_log(LOG_INFO, "setNVStartup");
+		//set startup option back to keep configuration in case of reset
+		status = setNVStartup(0);
+		if (handle_app.devState >= DEV_END_DEVICE)
+		{
+			networkOK = 1;
 		}
 		else
 		{
-			my_log(LOG_INFO, "permit join req OK");
+			my_log(LOG_WARNING, "setNVStartup failed with devState: %i", (int)handle_app.devState);
 		}
 	}
-#endif
-	my_log(LOG_INFO, "setNVStartup");
-	//set startup option back to keep configuration in case of reset
-	status = setNVStartup(0);
 	if (handle_app.devState < DEV_END_DEVICE)
 	{
 		my_log(LOG_WARNING, "setNVStartup failed with devState: %i", (int)handle_app.devState);

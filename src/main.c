@@ -126,6 +126,11 @@ pthread_exit(0);
 
 static void do_shutdown(void)
 {
+#ifdef print_all_received_messages
+	void close_print_message(void);
+	close_print_message();
+#endif
+
 	{
 		dbg_print(PRINT_LEVEL_INFO, "%s: + network shutdown", __func__);
 		force_zigbee_shutdown();
@@ -289,6 +294,12 @@ int main(int argc, char* argv[])
     }
 	init_ASACZ_device_list();
 	init_input_cluster_table();
+
+#ifdef print_all_received_messages
+	void init_print_message(void);
+	init_print_message();
+#endif
+
 
 
 #ifndef def_test_without_Zigbee

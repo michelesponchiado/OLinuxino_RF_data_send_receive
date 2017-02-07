@@ -6,6 +6,7 @@
  */
 
 #include <ASACZ_ZAP.h>
+#include <ASACZ_firmware_version.h>
 #include "../ASACZ_ZAP/ASACZ_ZAP_AF_register.h"
 
 
@@ -22,6 +23,20 @@ static const RegisterFormat_t default_RegisterFormat_t =
 		.AppOutClusterList[0] = 0x0001,
 };
 
+#ifdef print_all_received_messages
+static const RegisterFormat_t user_RegisterFormat_t =
+{
+		.AppProfId = 0x0104,
+		.AppDeviceId = 0x0100,
+		.AppDevVer = 1,
+		.LatencyReq = 0,
+		.EndPoint = 0x1,
+		.AppNumInClusters = 1,
+		.AppInClusterList[0] = 0x0006,
+		.AppNumOutClusters = 1,
+		.AppOutClusterList[0] = 0x0006,
+};
+#endif
 
 int32_t registerAf_default(void)
 {
@@ -30,6 +45,11 @@ int32_t registerAf_default(void)
 	memcpy(&reg, &default_RegisterFormat_t, sizeof(reg));
 
 	status = afRegister(&reg);
+
+#ifdef print_all_received_messages
+	memcpy(&reg, &user_RegisterFormat_t, sizeof(reg));
+	status = afRegister(&reg);
+#endif
 	return status;
 }
 

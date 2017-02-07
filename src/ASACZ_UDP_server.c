@@ -59,27 +59,144 @@ typedef struct _type_handle_ASACZ_request
 
 unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_interface_command_reply *p, unsigned int message_size, int socket_fd, struct sockaddr_in *p_socket_dst);
 
-
 #ifdef print_all_received_messages
 #warning USING DEBUG PRINT MESSAGE!!!
+//#define laser_printer_at_home
+#define ethernet_printer_fair
+
+#ifdef ethernet_printer_fair
+	#undef laser_printer_at_home
+	typedef struct _type_ethernet_printer_socket
+	{
+		unsigned int is_initialized_OK;
+		int sockfd;
+		int printer_portno;
+		char * printer_ip_address_string;
+		struct sockaddr_in serv_addr;
+	}type_ethernet_printer_socket;
+	type_ethernet_printer_socket ethernet_printer_socket;
+
+	static void init_ethernet_printer_socket(void)
+	{
+		memset(&ethernet_printer_socket, 0, sizeof(ethernet_printer_socket));
+		ethernet_printer_socket.sockfd = -1;
+	}
+	static void close_ethernet_printer_socket(void)
+	{
+		if (ethernet_printer_socket.is_initialized_OK && ethernet_printer_socket.sockfd >= 0)
+		{
+			close(ethernet_printer_socket.sockfd);
+		}
+		init_ethernet_printer_socket();
+	}
+
+	static void open_ethernet_printer_socket(void)
+	{
+		close_ethernet_printer_socket();
+		ethernet_printer_socket.sockfd = socket(AF_INET, SOCK_STREAM, 0);
+		if (ethernet_printer_socket.sockfd < 0)
+		{
+			my_log(LOG_ERR,"%s: error opening socket", __func__);
+			init_ethernet_printer_socket();
+			return;
+		}
+
+#if 0
+		// mark the socket as NON blocking
+		{
+			int flags = fcntl(ethernet_printer_socket.sockfd, F_GETFL, 0);
+			fcntl(ethernet_printer_socket.sockfd, F_SETFL, flags | O_NONBLOCK);
+		}
+#endif
+
+
+		ethernet_printer_socket.printer_portno = 9100;
+		ethernet_printer_socket.printer_ip_address_string = "192.168.1.231";
+		bzero((char *) &ethernet_printer_socket.serv_addr, sizeof(ethernet_printer_socket.serv_addr));
+		ethernet_printer_socket.serv_addr.sin_family = AF_INET;
+		ethernet_printer_socket.serv_addr.sin_port = htons(ethernet_printer_socket.printer_portno);
+		ethernet_printer_socket.serv_addr.sin_addr.s_addr = inet_addr(ethernet_printer_socket.printer_ip_address_string);
+	    if (connect(ethernet_printer_socket.sockfd,(struct sockaddr *) &ethernet_printer_socket.serv_addr, sizeof(ethernet_printer_socket.serv_addr)) < 0)
+	    {
+			my_log(LOG_ERR,"%s: error connecting socket", __func__);
+			init_ethernet_printer_socket();
+			return;
+	    }
+		ethernet_printer_socket.is_initialized_OK = 1;
+		my_log(LOG_INFO,"%s: printer socket open OK", __func__);
+	}
+#endif
+
+	void init_print_message(void)
+	{
+	#ifdef ethernet_printer_fair
+		init_ethernet_printer_socket();
+	#endif
+	}
+	void close_print_message(void)
+	{
+	#ifdef ethernet_printer_fair
+		close_ethernet_printer_socket();
+	#endif
+	}
 static void print_message(char *s, int len)
 {
-	char stoprint[256];
-	snprintf(stoprint, sizeof(stoprint),"%*s",len, s);
-	if (strchr(stoprint, '"'))
+	char string_to_print[256];
+	snprintf(string_to_print, sizeof(string_to_print),"%*s",len, s);
+#ifdef laser_printer_at_home
+	if (strchr(string_to_print, '"'))
 	{
-		my_log(LOG_ERR,"%s: invalid characters "" into the string %s", __func__,stoprint);
+		my_log(LOG_ERR,"%s: invalid characters "" into the string %s", __func__,string_to_print);
 	}
 	else
+#else
+#endif
 	{
-		my_log(LOG_INFO,"%s: sending to the printer the command %s", __func__,stoprint);
-
+		my_log(LOG_INFO,"%s: sending to the printer the command %s", __func__,string_to_print);
+#ifdef laser_printer_at_home
 		FILE *printer = popen("lpr", "w");
 		if (printer)
 		{
-			fprintf(printer, "%s", stoprint);
+			fprintf(printer, "%s", string_to_print);
 			pclose(printer);
 		}
+#endif
+#ifdef ethernet_printer_fair
+		{
+			if (!ethernet_printer_socket.is_initialized_OK)
+			{
+				open_ethernet_printer_socket();
+			}
+			if (ethernet_printer_socket.is_initialized_OK)
+			{
+				{
+					char select_codepage[10];
+					select_codepage[0] = 0x1b;
+					select_codepage[1] = 0x74;
+					select_codepage[2] = 16;
+				    int n = write(ethernet_printer_socket.sockfd, select_codepage, 3);
+				    if (n < 0)
+				    {
+						my_log(LOG_ERR,"%s: error sending the codepage", __func__);
+					}
+				}
+
+			    int n = write(ethernet_printer_socket.sockfd, string_to_print, len);
+			    if (n < 0)
+			    {
+					my_log(LOG_ERR,"%s: error sending the command", __func__);
+				}
+				else
+				{
+					my_log(LOG_INFO,"%s: command sent OK", __func__);
+				}
+			}
+			else
+			{
+				my_log(LOG_ERR,"%s: socket is not initialized", __func__);
+			}
+		}
+#endif
 	}
 }
 #endif
@@ -1053,6 +1170,7 @@ void * ASACZ_UDP_server_thread(void *arg)
 		exit(EXIT_FAILURE);
 	}
 	my_log(LOG_INFO, "%s: Socket created OK", __func__);
+
 
 	// mark the socket as NON blocking
 	{

@@ -1013,6 +1013,7 @@ int handle_ASACZ_request_restart_network_from_scratch(type_handle_ASACZ_request 
 	int retcode = 0;
 	p->send_reply = 1;
 	p->send_unknown = 0;
+	my_log(LOG_INFO,"%s: restart from scratch received", __func__);
 
 	uint32_t reply_max_command_version = def_restart_network_from_scratch_req_command_version;
 	init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
@@ -1021,11 +1022,13 @@ int handle_ASACZ_request_restart_network_from_scratch(type_handle_ASACZ_request 
 	{
 		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),restart_network_from_scratch_reply);
 		type_ASAC_ZigBee_interface_restart_network_from_scratch_reply * p_reply = &p->pzmessage_tx->reply.restart_network_from_scratch_reply;
+		my_log(LOG_INFO,"%s: requesting restart from scratch", __func__);
 		ZAP_require_network_restart_from_scratch();
 		p_reply->restart_required_OK = 1;
 	}
 	else
 	{
+		my_log(LOG_ERR,"%s: error in the format", __func__);
 		p->send_reply = 0;
 		p->send_unknown = 1;
 		retcode = -1;

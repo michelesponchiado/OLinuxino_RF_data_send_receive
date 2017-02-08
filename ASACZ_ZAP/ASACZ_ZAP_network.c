@@ -27,6 +27,7 @@ unsigned int ZAP_is_required_network_restart_from_scratch(void)
 	unsigned int is_required =0;
 	if (handle_app.network_restart_from_scratch_req != handle_app.network_restart_from_scratch_ack)
 	{
+		my_log(LOG_INFO,"%s: restart from scratch has been requested", __func__);
 		handle_app.network_restart_from_scratch_ack = handle_app.network_restart_from_scratch_req;
 		is_required = 1;
 	}

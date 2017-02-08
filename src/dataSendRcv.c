@@ -764,6 +764,7 @@ void* appProcess(void *argument)
 			}
 			if (ZAP_is_required_network_restart_from_scratch())
 			{
+				my_log(LOG_INFO,"%s: restart the network from scratch", __func__);
 				// leave the network
 				leave_network();
 				// restart the network from scratch

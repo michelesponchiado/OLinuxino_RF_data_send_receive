@@ -455,6 +455,38 @@ static void check_send_message(void)
 			else
 			{
 				dbg_print(PRINT_LEVEL_INFO, "%s: sending DST @ IEEE Address 0x%" PRIx64 "", __func__, m.dst_id.IEEE_destination_address);
+				dbg_print(PRINT_LEVEL_INFO, "%s: msg length: %u", __func__, (unsigned int)m.message_length);
+				{
+					char the_bytes[256];
+					memset(&the_bytes[0], 0, sizeof(the_bytes));
+					int residual_bytes = 255;
+					int nbytes = m.message_length;
+					if (nbytes > 20)
+					{
+						nbytes = 20;
+					}
+					char *pc = the_bytes;
+					int ns = snprintf(pc, residual_bytes, "%s msg bytes: ", __func__);
+					if (ns > 0)
+					{
+						residual_bytes -= ns;
+						pc += ns;
+						int idx_byte;
+						idx_byte = 0;
+						while(residual_bytes > 0 && idx_byte < nbytes)
+						{
+							ns = snprintf(pc, residual_bytes, "%02X ", (unsigned int)m.message[idx_byte]);
+							idx_byte ++;
+							if (ns < 0)
+							{
+								break;
+							}
+							residual_bytes -= ns;
+							pc += ns;
+						}
+						dbg_print(PRINT_LEVEL_INFO, the_bytes);
+					}
+				}
 				// store the message length
 				pdr->Len         = m.message_length;
 				// store the message body

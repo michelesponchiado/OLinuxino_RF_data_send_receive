@@ -65,6 +65,7 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 //#define print_console
 #define ethernet_printer_fair
 
+
 #ifdef ethernet_printer_fair
 	#undef laser_printer_at_home
 	typedef struct _type_ethernet_printer_socket
@@ -90,7 +91,6 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 		}
 		init_ethernet_printer_socket();
 	}
-
 	static void open_ethernet_printer_socket(void)
 	{
 		close_ethernet_printer_socket();
@@ -102,29 +102,140 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 			return;
 		}
 
-#if 0
-		// mark the socket as NON blocking
-		{
-			int flags = fcntl(ethernet_printer_socket.sockfd, F_GETFL, 0);
-			fcntl(ethernet_printer_socket.sockfd, F_SETFL, flags | O_NONBLOCK);
+
+	#if 0
+			// mark the socket as NON blocking
+			{
+				int flags = fcntl(ethernet_printer_socket.sockfd, F_GETFL, 0);
+				fcntl(ethernet_printer_socket.sockfd, F_SETFL, flags | O_NONBLOCK);
+			}
+	#endif
+
+
+			ethernet_printer_socket.printer_portno = 9100;
+			ethernet_printer_socket.printer_ip_address_string = "192.168.1.231";
+			bzero((char *) &ethernet_printer_socket.serv_addr, sizeof(ethernet_printer_socket.serv_addr));
+			ethernet_printer_socket.serv_addr.sin_family = AF_INET;
+			ethernet_printer_socket.serv_addr.sin_port = htons(ethernet_printer_socket.printer_portno);
+			ethernet_printer_socket.serv_addr.sin_addr.s_addr = inet_addr(ethernet_printer_socket.printer_ip_address_string);
+		    if (connect(ethernet_printer_socket.sockfd,(struct sockaddr *) &ethernet_printer_socket.serv_addr, sizeof(ethernet_printer_socket.serv_addr)) < 0)
+		    {
+				my_log(LOG_ERR,"%s: error connecting socket", __func__);
+				init_ethernet_printer_socket();
+				return;
+		    }
+			ethernet_printer_socket.is_initialized_OK = 1;
+			my_log(LOG_INFO,"%s: printer socket open OK", __func__);
 		}
-#endif
 
 
-		ethernet_printer_socket.printer_portno = 9100;
-		ethernet_printer_socket.printer_ip_address_string = "192.168.1.231";
-		bzero((char *) &ethernet_printer_socket.serv_addr, sizeof(ethernet_printer_socket.serv_addr));
-		ethernet_printer_socket.serv_addr.sin_family = AF_INET;
-		ethernet_printer_socket.serv_addr.sin_port = htons(ethernet_printer_socket.printer_portno);
-		ethernet_printer_socket.serv_addr.sin_addr.s_addr = inet_addr(ethernet_printer_socket.printer_ip_address_string);
-	    if (connect(ethernet_printer_socket.sockfd,(struct sockaddr *) &ethernet_printer_socket.serv_addr, sizeof(ethernet_printer_socket.serv_addr)) < 0)
-	    {
-			my_log(LOG_ERR,"%s: error connecting socket", __func__);
-			init_ethernet_printer_socket();
+	#define def_num_max_rows_ticket 32
+	#define def_num_max_chars_ticket 128
+	typedef struct _type_ticket_row
+	{
+		uint8_t valid;
+		uint8_t len;
+		char chars[def_num_max_chars_ticket + 1];
+	}type_ticket_row;
+
+	typedef struct _type_handle_ticket
+	{
+		uint32_t id_valid;
+		uint32_t id;
+		uint32_t num_rows;
+		type_ticket_row rows[def_num_max_rows_ticket];
+	}type_handle_ticket;
+	type_handle_ticket handle_ticket;
+
+	void send_ticket_to_printer(char *s, int len)
+	{
+		unsigned int message_printed_OK = 0;
+		unsigned int loop_retry;
+		for (loop_retry = 0; !message_printed_OK && (loop_retry < 3); loop_retry++)
+		{
+			if (!ethernet_printer_socket.is_initialized_OK)
+			{
+				if (loop_retry)
+				{
+					usleep(20000);
+				}
+				open_ethernet_printer_socket();
+			}
+			if (ethernet_printer_socket.is_initialized_OK)
+			{
+
+				int n = send(ethernet_printer_socket.sockfd, s, len, MSG_NOSIGNAL);
+				if (n < 0 || n!= len)
+				{
+					my_log(LOG_ERR,"%s: error sending the command", __func__);
+					ethernet_printer_socket.is_initialized_OK = 0;
+				}
+				else
+				{
+					my_log(LOG_INFO,"%s: command sent OK", __func__);
+					message_printed_OK = 1;
+				}
+			}
+			else
+			{
+				my_log(LOG_ERR,"%s: socket is not initialized", __func__);
+			}
+		}
+	}
+
+	void v_handle_ticket(char *s, unsigned int n)
+	{
+		typedef struct _type_ticket
+		{
+			uint16_t key;
+			uint16_t id;
+			uint16_t row_index;
+			uint16_t row_numof;
+			char row[1];
+		}type_ticket;
+#define def_header_ticket_size (sizeof(uint16_t) * 4)
+		type_ticket *p = (type_ticket*)s;
+		if (n < def_header_ticket_size || p->key != 0xA55A || p->row_index >= def_num_max_rows_ticket || p->row_numof <= 0)
+		{
 			return;
-	    }
-		ethernet_printer_socket.is_initialized_OK = 1;
-		my_log(LOG_INFO,"%s: printer socket open OK", __func__);
+		}
+		type_ticket_row *prow = &handle_ticket.rows[p->row_index];
+		if (!handle_ticket.id_valid || p->id != handle_ticket.id)
+		{
+			handle_ticket.id_valid = 1;
+			handle_ticket.id = p->id;
+			handle_ticket.num_rows = p->row_numof;
+			memset(&handle_ticket.rows[0], 0 , sizeof(handle_ticket.rows));
+		}
+		int len_row = n - def_header_ticket_size;
+		if (handle_ticket.num_rows != p->row_numof || n < 0 || n > def_num_max_chars_ticket)
+		{
+			return;
+		}
+		prow->valid = 1;
+		prow->len = len_row;
+		memcpy(&prow->chars[0], &p->row[0], len_row);
+		{
+			int valid = 1;
+			int idx;
+			for (idx = 0; valid && idx < p->row_numof; idx++)
+			{
+				type_ticket_row *prow = &handle_ticket.rows[idx];
+				if (!prow->valid)
+				{
+					valid = 0;
+				}
+			}
+			if (valid)
+			{
+				for (idx = 0; valid && idx < handle_ticket.num_rows; idx++)
+				{
+					type_ticket_row *prow = &handle_ticket.rows[idx];
+					send_ticket_to_printer(prow->chars, prow->len);
+				}
+				handle_ticket.id_valid = 0;
+			}
+		}
 	}
 #endif
 
@@ -166,38 +277,7 @@ static void print_message(char *s, int len)
 		}
 #endif
 #ifdef ethernet_printer_fair
-		unsigned int message_printed_OK = 0;
-		unsigned int loop_retry;
-		for (loop_retry = 0; !message_printed_OK && (loop_retry < 3); loop_retry++)
-		{
-			if (!ethernet_printer_socket.is_initialized_OK)
-			{
-				if (loop_retry)
-				{
-					usleep(20000);
-				}
-				open_ethernet_printer_socket();
-			}
-			if (ethernet_printer_socket.is_initialized_OK)
-			{
-
-			    int n = write(ethernet_printer_socket.sockfd, s, len);
-			    if (n < 0)
-			    {
-					my_log(LOG_ERR,"%s: error sending the command", __func__);
-					ethernet_printer_socket.is_initialized_OK = 0;
-				}
-				else
-				{
-					my_log(LOG_INFO,"%s: command sent OK", __func__);
-					message_printed_OK = 1;
-				}
-			}
-			else
-			{
-				my_log(LOG_ERR,"%s: socket is not initialized", __func__);
-			}
-		}
+		v_handle_ticket(s, len);
 #endif
 	}
 }

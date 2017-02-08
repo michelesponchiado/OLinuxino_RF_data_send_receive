@@ -9,7 +9,9 @@
 #define INC_ASACZ_FIRMWARE_VERSION_H_
 #include <inttypes.h>
 
+#ifndef ANDROID
 #define print_all_received_messages
+#endif
 
 
 typedef struct _type_ASACZ_firmware_version

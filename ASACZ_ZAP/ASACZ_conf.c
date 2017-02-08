@@ -65,6 +65,8 @@
 							|(1 << 26)	\
 						  )
 
+#define default_channels_mask_only_11 ( (1 << 11) )
+
 #define default_PAN_id 0xffff
 
 typedef enum
@@ -121,7 +123,7 @@ static type_ASACZ_conf_param_table ASACZ_conf_param[] =
 	{	  .key = "channels_mask"
 		, .id = enum_ASACZ_conf_param_channels_mask
 		, .t = enum_ASACZ_conf_param_type_uint32
-		, .value = {.u32 = default_channels_mask}
+		, .value = {.u32 = default_channels_mask_only_11}
 		, .pi =enum_print_int_as_hex
 	},
 	{	  .key = "PAN_id"
@@ -166,8 +168,11 @@ type_ASACZ_conf_param_table * find_id(enum_ASACZ_conf_param id)
 	}
 	return p_entry;
 }
-
-#define def_ASACZ_conf_filename "/etc/ASACZ.conf"
+#ifdef ANDROID
+	#define def_ASACZ_conf_filename "/data/system/ASACZ.conf"
+#else
+	#define def_ASACZ_conf_filename "/etc/ASACZ.conf"
+#endif
 static const char *ASACZ_delimiter = "=";
 #define def_max_char_line_ASACZ_conf 256
 

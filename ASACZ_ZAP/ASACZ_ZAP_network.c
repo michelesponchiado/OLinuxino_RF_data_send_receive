@@ -50,10 +50,10 @@ int32_t ZAP_startNetwork(enum_start_network_type start_network_type)
 			ASACZ_reset_conf_param_restart_from_scratch();
 		}
 	}
-	for (idxloop = 0; ! networkOK && idxloop < 2; idxloop++)
+	for (idxloop = 0; ! networkOK && idxloop < 3; idxloop++)
 	{
 		uint8_t newNwk = 0;
-		if (idxloop >= 1 || (start_network_type == enum_start_network_type_from_scratch))
+		if (start_network_type == enum_start_network_type_from_scratch)
 		{
 			newNwk = 1;
 			usleep(50000);

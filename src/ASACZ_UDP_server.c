@@ -50,7 +50,7 @@ typedef struct _type_handle_ASACZ_request
 {
 	type_ASAC_Zigbee_interface_request *pzmessage_rx;
 	type_ASAC_Zigbee_interface_command_reply *pzmessage_tx;
-	uint32_t zmessage_size;
+	uint32_t zmessage_tx_size;
 	type_handle_socket_in *phs_in;
 	type_handle_server_socket *phss;
 	uint32_t send_reply;
@@ -62,6 +62,7 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 #ifdef print_all_received_messages
 #warning USING DEBUG PRINT MESSAGE!!!
 //#define laser_printer_at_home
+//#define print_console
 #define ethernet_printer_fair
 
 #ifdef ethernet_printer_fair
@@ -141,18 +142,21 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 	}
 static void print_message(char *s, int len)
 {
+#ifdef laser_printer_at_home
 	char string_to_print[256];
 	snprintf(string_to_print, sizeof(string_to_print),"%*s",len, s);
-#ifdef laser_printer_at_home
 	if (strchr(string_to_print, '"'))
 	{
 		my_log(LOG_ERR,"%s: invalid characters "" into the string %s", __func__,string_to_print);
 	}
 	else
 #else
+#ifdef print_console
+		printf(LOG_INFO, "%s", __func__);
+#endif
 #endif
 	{
-		my_log(LOG_INFO,"%s: sending to the printer the command %s", __func__,string_to_print);
+		my_log(LOG_INFO,"%s: sending to the printer the command %3.3s...", __func__,s);
 #ifdef laser_printer_at_home
 		FILE *printer = popen("lpr", "w");
 		if (printer)
@@ -162,33 +166,31 @@ static void print_message(char *s, int len)
 		}
 #endif
 #ifdef ethernet_printer_fair
+		unsigned int message_printed_OK = 0;
+		unsigned int loop_retry;
+		for (loop_retry = 0; !message_printed_OK && (loop_retry < 3); loop_retry++)
 		{
 			if (!ethernet_printer_socket.is_initialized_OK)
 			{
+				if (loop_retry)
+				{
+					usleep(20000);
+				}
 				open_ethernet_printer_socket();
 			}
 			if (ethernet_printer_socket.is_initialized_OK)
 			{
-				{
-					char select_codepage[10];
-					select_codepage[0] = 0x1b;
-					select_codepage[1] = 0x74;
-					select_codepage[2] = 16;
-				    int n = write(ethernet_printer_socket.sockfd, select_codepage, 3);
-				    if (n < 0)
-				    {
-						my_log(LOG_ERR,"%s: error sending the codepage", __func__);
-					}
-				}
 
-			    int n = write(ethernet_printer_socket.sockfd, string_to_print, len);
+			    int n = write(ethernet_printer_socket.sockfd, s, len);
 			    if (n < 0)
 			    {
 					my_log(LOG_ERR,"%s: error sending the command", __func__);
+					ethernet_printer_socket.is_initialized_OK = 0;
 				}
 				else
 				{
 					my_log(LOG_INFO,"%s: command sent OK", __func__);
+					message_printed_OK = 1;
 				}
 			}
 			else
@@ -544,7 +546,7 @@ int handle_ASACZ_request_input_cluster_register_req(type_handle_ASACZ_request *p
 		uint32_t reply_max_command_version = def_input_cluster_register_req_command_version;
 		init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
 
-		p->zmessage_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),input_cluster_register);
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),input_cluster_register);
 		if (p->pzmessage_tx->h.c.command_version == reply_max_command_version)
 		{
 			type_ASAC_ZigBee_interface_network_input_cluster_register_reply * p_icr_reply = &p->pzmessage_tx->reply.input_cluster_register;
@@ -691,7 +693,7 @@ int handle_ASACZ_request_input_cluster_unregister_req(type_handle_ASACZ_request 
 		init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
 
 
-		p->zmessage_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),input_cluster_unregister);
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),input_cluster_unregister);
 		type_ASAC_ZigBee_interface_network_input_cluster_unregister_reply * p_icu_reply = &p->pzmessage_tx->reply.input_cluster_unregister;
 
 		if (p->pzmessage_tx->h.c.command_version == reply_max_command_version)
@@ -723,7 +725,7 @@ int handle_ASACZ_request_echo_req(type_handle_ASACZ_request *p)
 	uint32_t reply_max_command_version = def_echo_req_command_version;
 	init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
 
-	p->zmessage_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),echo);
+	p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),echo);
 	if (p->pzmessage_tx->h.c.command_version == reply_max_command_version)
 	{
 		type_ASAC_ZigBee_interface_network_echo_reply * p_echo_reply = &p->pzmessage_tx->reply.echo;
@@ -751,7 +753,7 @@ int handle_ASACZ_request_device_list_req(type_handle_ASACZ_request *p)
 
 	if (p->pzmessage_tx->h.c.command_version == reply_max_command_version)
 	{
-		p->zmessage_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx), device_list);
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx), device_list);
 		type_ASAC_ZigBee_interface_network_device_list_req * p_device_list_req = &p->pzmessage_rx->req.device_list;
 		type_ASAC_ZigBee_interface_network_device_list_reply * p_device_list_reply = &p->pzmessage_tx->reply.device_list;
 		p_device_list_reply->start_index 	= p_device_list_req->start_index;
@@ -809,7 +811,7 @@ int handle_ASACZ_request_firmware_version_req(type_handle_ASACZ_request *p)
 
 	if (p->pzmessage_tx->h.c.command_version == reply_max_command_version)
 	{
-		p->zmessage_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx), firmware_version);
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx), firmware_version);
 		type_ASAC_ZigBee_interface_network_firmware_version_reply * p_firmware_version_reply = &p->pzmessage_tx->reply.firmware_version;
 
 		type_ASACZ_firmware_version firmware_version;
@@ -844,7 +846,7 @@ int handle_ASACZ_request_my_IEEE_req(type_handle_ASACZ_request *p)
 
 	if (p->pzmessage_tx->h.c.command_version == reply_max_command_version)
 	{
-		p->zmessage_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),my_IEEE);
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),my_IEEE);
 		type_ASAC_ZigBee_interface_network_my_IEEE_reply * p_reply = &p->pzmessage_tx->reply.my_IEEE;
 		if (is_OK_get_my_radio_IEEE_address(&p_reply->IEEE_address))
 		{
@@ -873,7 +875,7 @@ int handle_ASACZ_request_signal_strength_req(type_handle_ASACZ_request *p)
 
 	if (p->pzmessage_tx->h.c.command_version == reply_max_command_version)
 	{
-		p->zmessage_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),signal_strength);
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),signal_strength);
 		type_ASAC_ZigBee_interface_network_signal_strength_reply * p_reply = &p->pzmessage_tx->reply.signal_strength;
 		type_link_quality_body lqb;
 		get_app_last_link_quality(&lqb);
@@ -897,6 +899,31 @@ int handle_ASACZ_request_signal_strength_req(type_handle_ASACZ_request *p)
 	return retcode;
 }
 
+int handle_ASACZ_request_restart_network_from_scratch(type_handle_ASACZ_request *p)
+{
+	int retcode = 0;
+	p->send_reply = 1;
+	p->send_unknown = 0;
+
+	uint32_t reply_max_command_version = def_restart_network_from_scratch_req_command_version;
+	init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
+
+	if (p->pzmessage_tx->h.c.command_version == reply_max_command_version)
+	{
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),restart_network_from_scratch_reply);
+		type_ASAC_ZigBee_interface_restart_network_from_scratch_reply * p_reply = &p->pzmessage_tx->reply.restart_network_from_scratch_reply;
+		ZAP_require_network_restart_from_scratch();
+		p_reply->restart_required_OK = 1;
+	}
+	else
+	{
+		p->send_reply = 0;
+		p->send_unknown = 1;
+		retcode = -1;
+	}
+	return retcode;
+}
+
 int handle_ASACZ_request_outside_send_message(type_handle_ASACZ_request *p)
 {
 	int retcode = 0;
@@ -909,7 +936,7 @@ int handle_ASACZ_request_outside_send_message(type_handle_ASACZ_request *p)
 
 	if (p->pzmessage_tx->h.c.command_version == reply_max_command_version)
 	{
-		p->zmessage_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),outside_send_message);
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),outside_send_message);
 		type_ASAC_ZigBee_interface_command_outside_send_message_req * p_body_request = &p->pzmessage_rx->req.outside_send_message;
 		type_ASAC_ZigBee_interface_command_outside_send_message_reply * p_outside_send_message_reply = &p->pzmessage_tx->reply.outside_send_message;
 
@@ -1035,6 +1062,12 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 				break;
 			}
 
+			case enum_ASAC_ZigBee_interface_command_administrator_restart_network_from_scratch:
+			{
+				retcode = handle_ASACZ_request_restart_network_from_scratch(&handle_ASACZ_request);
+				break;
+			}
+
 			default:
 			{
 				handle_ASACZ_request.send_unknown = 1;
@@ -1044,7 +1077,7 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 
 		if (handle_ASACZ_request.send_reply)
 		{
-			if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, handle_ASACZ_request.zmessage_size, phss->socket_fd, &phs_in->si_other))
+			if (is_OK_send_ASACSOCKET_formatted_message_ZigBee(&zmessage_tx, handle_ASACZ_request.zmessage_tx_size, phss->socket_fd, &phs_in->si_other))
 			{
 				//my_log(LOG_INFO,"%s: reply sent OK", __func__);
 			}

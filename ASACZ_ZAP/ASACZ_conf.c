@@ -67,12 +67,19 @@
 
 #define default_PAN_id 0xffff
 
+typedef enum
+{
+	enum_print_int_as_decimal = 0,
+	enum_print_int_as_hex,
+}enum_print_int;
+
 typedef struct _type_ASACZ_conf_param_table
 {
 	const char * key;
 	enum_ASACZ_conf_param id;
 	enum_ASACZ_conf_param_type t;
 	type_ASACZ_conf_parameter_value value;
+	enum_print_int pi;
 }type_ASACZ_conf_param_table;
 
 
@@ -115,11 +122,19 @@ static type_ASACZ_conf_param_table ASACZ_conf_param[] =
 		, .id = enum_ASACZ_conf_param_channels_mask
 		, .t = enum_ASACZ_conf_param_type_uint32
 		, .value = {.u32 = default_channels_mask}
+		, .pi =enum_print_int_as_hex
 	},
 	{	  .key = "PAN_id"
 		, .id = enum_ASACZ_conf_param_PAN_id
 		, .t = enum_ASACZ_conf_param_type_uint32
 		, .value = {.u32 = default_PAN_id}
+		, .pi =enum_print_int_as_hex
+	},
+	{	  .key = "restart_from_scratch"
+		, .id = enum_ASACZ_conf_param_restart_network_from_scratch
+		, .t = enum_ASACZ_conf_param_type_uint32
+		, .value = {.u32 = 0}
+		, .pi =enum_print_int_as_decimal
 	},
 #endif
 };
@@ -180,6 +195,39 @@ unsigned int is_OK_ASACZ_get_conf_param(enum_ASACZ_conf_param id, type_ASACZ_con
 	return 1;
 }
 
+uint32_t ASACZ_get_conf_param_channel_mask(void)
+{
+	type_ASACZ_conf_param dst;
+	memset(&dst, 0, sizeof(dst));
+	if (is_OK_ASACZ_get_conf_param(enum_ASACZ_conf_param_channels_mask, &dst))
+	{
+		return dst.value.u32;
+	}
+	return default_channels_mask;
+}
+
+uint32_t ASACZ_get_conf_param_PAN_id(void)
+{
+	type_ASACZ_conf_param dst;
+	memset(&dst, 0, sizeof(dst));
+	if (is_OK_ASACZ_get_conf_param(enum_ASACZ_conf_param_PAN_id, &dst))
+	{
+		return dst.value.u32;
+	}
+	return default_PAN_id;
+}
+
+uint32_t ASACZ_get_conf_param_restart_from_scratch(void)
+{
+	type_ASACZ_conf_param dst;
+	memset(&dst, 0, sizeof(dst));
+	if (is_OK_ASACZ_get_conf_param(enum_ASACZ_conf_param_restart_network_from_scratch, &dst))
+	{
+		return dst.value.u32;
+	}
+	return default_PAN_id;
+}
+
 unsigned int is_OK_ASACZ_set_conf_param(enum_ASACZ_conf_param id, const type_ASACZ_conf_param *src)
 {
 	type_ASACZ_conf_param_table * p = find_id(id);
@@ -191,6 +239,23 @@ unsigned int is_OK_ASACZ_set_conf_param(enum_ASACZ_conf_param id, const type_ASA
 	p->value = src->value;
 	return 1;
 }
+
+void ASACZ_reset_conf_param_restart_from_scratch(void)
+{
+	type_ASACZ_conf_param dst;
+	memset(&dst, 0, sizeof(dst));
+	if (is_OK_ASACZ_get_conf_param(enum_ASACZ_conf_param_restart_network_from_scratch, &dst))
+	{
+		if (dst.value.u32 > 0)
+		{
+			dst.value.u32 = 0;
+			is_OK_ASACZ_set_conf_param(enum_ASACZ_conf_param_restart_network_from_scratch, &dst);
+			ASACZ_save_conf();
+		}
+
+	}
+}
+
 
 enum_load_conf_retcode ASACZ_load_conf(void)
 {
@@ -364,7 +429,14 @@ enum_save_conf_retcode ASACZ_save_conf(void)
 			{
 				case enum_ASACZ_conf_param_type_uint32:
 				{
-					nchar = snprintf(pc, nchar_residual, "%"PRIu32, p_entry->value.u32);
+					if (p_entry->pi == enum_print_int_as_hex)
+					{
+						nchar = snprintf(pc, nchar_residual, "0x%"PRIX32, p_entry->value.u32);
+					}
+					else
+					{
+						nchar = snprintf(pc, nchar_residual, "%"PRIu32, p_entry->value.u32);
+					}
 					break;
 				}
 				case enum_ASACZ_conf_param_type_int32:
@@ -374,7 +446,14 @@ enum_save_conf_retcode ASACZ_save_conf(void)
 				}
 				case enum_ASACZ_conf_param_type_uint64:
 				{
-					nchar = snprintf(pc, nchar_residual, "%"PRIu64, p_entry->value.u64);
+					if (p_entry->pi == enum_print_int_as_hex)
+					{
+						nchar = snprintf(pc, nchar_residual, "0x%"PRIX64, p_entry->value.u64);
+					}
+					else
+					{
+						nchar = snprintf(pc, nchar_residual, "%"PRIu64, p_entry->value.u64);
+					}
 					break;
 				}
 				case enum_ASACZ_conf_param_type_int64:

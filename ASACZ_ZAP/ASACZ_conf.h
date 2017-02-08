@@ -21,6 +21,7 @@ typedef enum
 #else
 	enum_ASACZ_conf_param_channels_mask = 0,
 	enum_ASACZ_conf_param_PAN_id,
+	enum_ASACZ_conf_param_restart_network_from_scratch,
 #endif
 	enum_ASACZ_conf_param_numof
 }enum_ASACZ_conf_param;
@@ -101,6 +102,10 @@ typedef struct _type_ASACZ_conf_param
 
 unsigned int is_OK_ASACZ_get_conf_param(enum_ASACZ_conf_param id, type_ASACZ_conf_param *dst);
 unsigned int is_OK_ASACZ_set_conf_param(enum_ASACZ_conf_param id, const type_ASACZ_conf_param *src);
+uint32_t ASACZ_get_conf_param_PAN_id(void);
+uint32_t ASACZ_get_conf_param_channel_mask(void);
+uint32_t ASACZ_get_conf_param_restart_from_scratch(void);
+void ASACZ_reset_conf_param_restart_from_scratch(void);
 
 #ifdef def_ASACZ_conf_module_test
 	void ASACZ_conf_module_test(void);

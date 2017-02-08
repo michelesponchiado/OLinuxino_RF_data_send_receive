@@ -1,5 +1,5 @@
 /**************************************************************************************************
- * Filename:       dataSendRcv.c
+f * Filename:       dataSendRcv.c
  * Description:    This file contains dataSendRcv application.
  *
  *
@@ -146,7 +146,7 @@ static unsigned int is_required_shutdown(void)
 	return handle_app.force_shutdown;
 }
 
-static void do_shutdown(void)
+static void leave_network(void)
 {
 	MgmtLeaveReqFormat_t leave_req;
 	memset(&leave_req, 0, sizeof(leave_req));
@@ -213,7 +213,6 @@ void init_handle_app(void)
 {
 	memset(&handle_app, 0, sizeof(handle_app));
 	handle_app.devState = DEV_HOLD;
-	handle_app.channel_index = 11;
 	pthread_mutex_init(&handle_app.mtx_id, NULL);
 	{
 		pthread_mutexattr_t mutexattr;
@@ -520,9 +519,9 @@ void* appProcess(void *argument)
 		// if in error, only a restart can change status
 		case enum_app_status_error:
 		{
-			if (ZAP_is_required_network_restart())
+			if (ZAP_is_required_network_restart_from_scratch())
 			{
-				handle_app.status = enum_app_status_restart_network;
+				handle_app.status = enum_app_status_restart_network_from_scratch;
 				break;
 			}
 			break;
@@ -564,11 +563,11 @@ void* appProcess(void *argument)
 			}
 			break;
 		}
-		case enum_app_status_restart_network:
+		case enum_app_status_restart_network_from_scratch:
 		{
 			handle_app.devState = DEV_HOLD;
 
-			int32_t status = ZAP_restartNetwork();
+			int32_t status = ZAP_startNetwork(enum_start_network_type_from_scratch);
 			if (status != -1)
 			{
 				my_log(LOG_INFO, "Network up");
@@ -585,7 +584,7 @@ void* appProcess(void *argument)
 		{
 			handle_app.devState = DEV_HOLD;
 
-			int32_t status = ZAP_startNetwork(handle_app.channel_index);
+			int32_t status = ZAP_startNetwork(enum_start_network_type_resume);
 			if (status != -1)
 			{
 				my_log(LOG_INFO, "Network up");
@@ -726,13 +725,17 @@ void* appProcess(void *argument)
 		{
 			if (is_required_shutdown())
 			{
-				do_shutdown();
+				// leave the network, then shutdown
+				leave_network();
 				handle_app.status = enum_app_status_shutdown;
 				break;
 			}
-			if (ZAP_is_required_network_restart())
+			if (ZAP_is_required_network_restart_from_scratch())
 			{
-				handle_app.status = enum_app_status_restart_network;
+				// leave the network
+				leave_network();
+				// restart the network from scratch
+				handle_app.status = enum_app_status_restart_network_from_scratch;
 				break;
 			}
 			if (is_needed_end_point_update_list(&handle_app.handle_end_point_update))

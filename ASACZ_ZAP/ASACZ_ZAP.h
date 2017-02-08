@@ -143,8 +143,8 @@ typedef struct _type_handle_app
 	type_handle_app_Tx_power Tx_power;
 	type_my_timeout my_timeout;
 	unsigned int channel_index; // channel index, between 11 and 26
-	unsigned int network_restart_req;
-	unsigned int network_restart_ack;
+	unsigned int network_restart_from_scratch_req;
+	unsigned int network_restart_from_scratch_ack;
 	type_link_quality link_quality;
 	type_handle_end_point_update handle_end_point_update;
 	type_leave leave;

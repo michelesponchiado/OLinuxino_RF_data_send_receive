@@ -84,6 +84,7 @@ typedef enum
 // the commands used by the administrator
 	enum_ASAC_ZigBee_interface_command_administrator_first = 0x30000000,
 	enum_ASAC_ZigBee_interface_command_administrator_firmware_update = enum_ASAC_ZigBee_interface_command_administrator_first,
+	enum_ASAC_ZigBee_interface_command_administrator_restart_network_from_scratch,
 // the command used to reply to unknown commands
 	enum_ASAC_ZigBee_interface_command_unknown = 0xFFFFFFFF,
 
@@ -338,6 +339,33 @@ typedef struct _type_ASAC_ZigBee_interface_network_signal_strength_reply
 //
 
 
+//
+//
+//
+// network restart from scratch request begins here
+//
+//
+//
+#define def_restart_network_from_scratch_req_command_version 0
+typedef struct _type_ASAC_ZigBee_interface_restart_network_from_scratch_req
+{
+	uint32_t unused;
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_restart_network_from_scratch_req;
+
+typedef struct _type_ASAC_ZigBee_interface_restart_network_from_scratch_reply
+{
+	uint32_t restart_required_OK; 	// 0 = error, else OK
+}__attribute__((__packed__)) type_ASAC_ZigBee_interface_restart_network_from_scratch_reply ;
+
+//
+//
+//
+// signal strength ends here
+//
+//
+//
+
+
 #define def_device_list_changed_signal_command_version 0
 typedef struct _type_ASAC_ZigBee_interface_network_device_list_changed_signal
 {
@@ -438,6 +466,7 @@ typedef struct _type_ASAC_Zigbee_interface_request
 		type_ASAC_ZigBee_interface_network_firmware_version_req firmware_version;
 		type_ASAC_ZigBee_interface_network_my_IEEE_req my_IEEE;
 		type_ASAC_ZigBee_interface_network_signal_strength_req signal_strength;
+		type_ASAC_ZigBee_interface_restart_network_from_scratch_req restart_network_from_scratch_req;
 
 	}req;
 }type_ASAC_Zigbee_interface_request;
@@ -464,6 +493,7 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 		type_ASAC_ZigBee_interface_network_device_list_changed_signal device_list_changed;
 		type_ASAC_ZigBee_interface_network_my_IEEE_reply my_IEEE;
 		type_ASAC_ZigBee_interface_network_signal_strength_reply signal_strength;
+		type_ASAC_ZigBee_interface_restart_network_from_scratch_reply restart_network_from_scratch_reply;
 
 		// reply to an unknown command
 		type_ASAC_ZigBee_interface_unknown_reply unknown;

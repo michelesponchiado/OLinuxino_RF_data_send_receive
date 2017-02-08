@@ -59,6 +59,7 @@
 #include "ASACZ_app.h"
 #include "ASACZ_devices_list.h"
 #include "ASACZ_firmware_version.h"
+#include "ASACZ_conf.h"
 #include "dataSendRcv.h"
 #include "input_cluster_table.h"
 #include "server_thread.h"
@@ -299,6 +300,26 @@ int main(int argc, char* argv[])
 	void init_print_message(void);
 	init_print_message();
 #endif
+	{
+		enum_load_conf_retcode rload = ASACZ_load_conf();
+		if (rload != enum_load_conf_retcode_OK)
+		{
+			my_log(LOG_ERR,"%s: unable to load the ASACZ conf", __func__);
+			enum_save_conf_retcode rsave = ASACZ_save_conf();
+			if (rsave != enum_save_conf_retcode_OK)
+			{
+				my_log(LOG_ERR,"%s: unable to save the ASACZ conf", __func__);
+			}
+			else
+			{
+				my_log(LOG_INFO,"%s: default ASACZ conf saved OK", __func__);
+			}
+		}
+		else
+		{
+			my_log(LOG_INFO,"%s: ASACZ conf loaded OK", __func__);
+		}
+	}
 
 
 

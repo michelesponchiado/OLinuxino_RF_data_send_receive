@@ -17,16 +17,19 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	3
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	4
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
 #define def_ASACZ_firmware_version_NOTES 			"internal version"
 #ifdef print_all_received_messages
 	#undef def_ASACZ_firmware_version_NOTES
-	#define def_ASACZ_firmware_version_NOTES 			"print received messages"
+	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 4
+// added the restart network from scratch administration command
+//
 // 0.1.3 build 3
 // added the ASACZ conf module
 //

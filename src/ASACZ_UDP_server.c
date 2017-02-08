@@ -107,7 +107,11 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 			// mark the socket as NON blocking
 			{
 				int flags = fcntl(ethernet_printer_socket.sockfd, F_GETFL, 0);
-				fcntl(ethernet_printer_socket.sockfd, F_SETFL, flags | O_NONBLOCK);
+				int status_fcntl = fcntl(ethernet_printer_socket.sockfd, F_SETFL, flags | O_NONBLOCK);
+				if (status_fcntl < 0)
+				{
+					my_log(LOG_ERR,"%s: error setting socket flag O_NONBLOCK", __func__);
+				}
 			}
 	#endif
 
@@ -161,6 +165,29 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 				}
 				open_ethernet_printer_socket();
 			}
+#if 0 //this does not work under OLinuxino... if  shut down the printer I have no way to check if it ha sbeen rebooted...
+			{
+				char c;
+			    ssize_t x = recv(ethernet_printer_socket.sockfd, &c, 1, MSG_PEEK | MSG_DONTWAIT);
+			    if (x > 0) {
+			        /* ...have data, leave it in socket buffer until B connects */
+			    } else if (x == 0) {
+			        // connection has been closed
+			    	ethernet_printer_socket.is_initialized_OK = 0;
+			    } else {
+			    	int the_error= errno;
+			    	if (the_error == EAGAIN || the_error== EWOULDBLOCK)
+			    	{
+			    		// no data available
+			    	}
+			    	else
+			    	{
+			    		// error reading from the socket
+				    	ethernet_printer_socket.is_initialized_OK = 0;
+			    	}
+			    }
+			}
+#endif
 			if (ethernet_printer_socket.is_initialized_OK)
 			{
 
@@ -228,12 +255,14 @@ unsigned int is_OK_send_ASACSOCKET_formatted_message_ZigBee(type_ASAC_Zigbee_int
 			}
 			if (valid)
 			{
+				close_ethernet_printer_socket();
 				for (idx = 0; valid && idx < handle_ticket.num_rows; idx++)
 				{
 					type_ticket_row *prow = &handle_ticket.rows[idx];
 					send_ticket_to_printer(prow->chars, prow->len);
 				}
 				handle_ticket.id_valid = 0;
+				close_ethernet_printer_socket();
 			}
 		}
 	}

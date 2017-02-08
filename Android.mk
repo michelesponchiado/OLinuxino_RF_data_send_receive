@@ -45,6 +45,7 @@ LOCAL_SRC_FILES := \
 		ASACZ_ZAP/ASACZ_ZAP_Sapi_callbacks.c	\
 		ASACZ_ZAP/ASACZ_ZAP_TX_power.c		\
 		ASACZ_ZAP/ASACZ_ZAP_Zdo_callbacks.c	\
+		ASACZ_ZAP/ASACZ_conf.c	\
 		ASACZ_ZAP/ASACZ_ZAP_IEEE_address.c	
 
 

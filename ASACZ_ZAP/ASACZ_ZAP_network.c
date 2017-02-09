@@ -34,7 +34,7 @@ unsigned int ZAP_is_required_network_restart_from_scratch(void)
 	return is_required;
 }
 
-int32_t ZAP_startNetwork(enum_start_network_type start_network_type)
+int32_t ZAP_startNetwork(unsigned int register_user_endpoints, enum_start_network_type start_network_type)
 {
 #ifndef CC26xx
 	char cDevType;
@@ -57,7 +57,18 @@ int32_t ZAP_startNetwork(enum_start_network_type start_network_type)
 		if (start_network_type == enum_start_network_type_from_scratch)
 		{
 			newNwk = 1;
+#ifdef ANDROID
+			{
+				extern int radio_asac_barebone_on();
+				extern int radio_asac_barebone_off();
+				radio_asac_barebone_off();
+				usleep(50000);
+				radio_asac_barebone_on();
+				usleep(200000);
+			}
+#else
 			usleep(50000);
+#endif
 		}
 		if (newNwk)
 		{
@@ -124,6 +135,16 @@ int32_t ZAP_startNetwork(enum_start_network_type start_network_type)
 
 		my_log(LOG_INFO, "registering the default end point/command");
 		registerAf_default();
+
+		if (register_user_endpoints)
+		{
+			my_log(LOG_INFO, "registering the user end points");
+			register_user_end_points();
+		}
+		else
+		{
+			my_log(LOG_INFO, "no user end points register needed");
+		}
 
 		my_log(LOG_INFO, "zdo init");
 		status = zdoInit();

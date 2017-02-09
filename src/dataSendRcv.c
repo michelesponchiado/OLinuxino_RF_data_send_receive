@@ -599,7 +599,7 @@ void* appProcess(void *argument)
 		{
 			handle_app.devState = DEV_HOLD;
 
-			int32_t status = ZAP_startNetwork(enum_start_network_type_from_scratch);
+			int32_t status = ZAP_startNetwork(1, enum_start_network_type_from_scratch);
 			if (status != -1)
 			{
 				my_log(LOG_INFO, "Network up");
@@ -615,8 +615,11 @@ void* appProcess(void *argument)
 		case enum_app_status_start_network:
 		{
 			handle_app.devState = DEV_HOLD;
-
-			int32_t status = ZAP_startNetwork(enum_start_network_type_resume);
+#ifdef OLINUXINO
+			int32_t status = ZAP_startNetwork(0, enum_start_network_type_from_scratch);
+#else
+			int32_t status = ZAP_startNetwork(0, enum_start_network_type_resume);
+#endif
 			if (status != -1)
 			{
 				my_log(LOG_INFO, "Network up");

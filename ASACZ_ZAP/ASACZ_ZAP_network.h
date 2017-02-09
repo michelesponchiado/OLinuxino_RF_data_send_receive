@@ -23,7 +23,7 @@ typedef enum
 	enum_start_network_type_numof
 }enum_start_network_type;
 
-int32_t ZAP_startNetwork(enum_start_network_type start_network_type);
+int32_t ZAP_startNetwork(unsigned int register_user_end_point, enum_start_network_type start_network_type);
 
 unsigned int ZAP_is_required_network_restart_from_scratch(void);
 void ZAP_require_network_restart_from_scratch(void);

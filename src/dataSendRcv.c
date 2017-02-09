@@ -615,7 +615,8 @@ void* appProcess(void *argument)
 		case enum_app_status_start_network:
 		{
 			handle_app.devState = DEV_HOLD;
-#ifdef OLINUXINO
+// starts always from scratch at powerup			
+#if 1
 			int32_t status = ZAP_startNetwork(0, enum_start_network_type_from_scratch);
 #else
 			int32_t status = ZAP_startNetwork(0, enum_start_network_type_resume);

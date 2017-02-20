@@ -60,6 +60,7 @@
 #include "ASACZ_devices_list.h"
 #include "ASACZ_firmware_version.h"
 #include "ASACZ_conf.h"
+#include <ASACZ_boot_check.h>
 #include "dataSendRcv.h"
 #include "input_cluster_table.h"
 #include "server_thread.h"
@@ -276,6 +277,21 @@ int main(int argc, char* argv[])
 	open_syslog();
 	syslog(LOG_INFO, "The application starts");
 	memset(&threads_cancel_info, 0, sizeof(threads_cancel_info));
+
+	{
+
+        my_log(LOG_INFO, "%s +checking boot", __func__);
+		enum_boot_check_retcode r = boot_check();
+		if (r == enum_boot_check_retcode_OK)
+		{
+	        my_log(LOG_INFO, "%s boot check is OK", __func__);
+		}
+		else
+		{
+	        my_log(LOG_ERR, "%s boot check returns ERROR", __func__);
+		}
+        my_log(LOG_INFO, "%s -checking boot", __func__);
+	}
 	//atexit(my_at_exit);
 
 	handle_server_socket.port_number = def_port_number;

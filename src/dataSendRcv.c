@@ -531,6 +531,10 @@ void* appMsgProcess(void *argument)
 	{
 		rpcWaitMqClientMsg(10);
 	}
+	else
+	{
+		usleep(10000);
+	}
 	return NULL;
 }
 

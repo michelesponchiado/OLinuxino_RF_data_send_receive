@@ -5,7 +5,6 @@
  *      Author: michele
  */
 #include <ASACZ_ZAP.h>
-#include <ASACZ_ZAP.h>
 #include "../ASACZ_ZAP/ASACZ_ZAP_network.h"
 
 #include "ASACZ_ZAP_AF_register.h"

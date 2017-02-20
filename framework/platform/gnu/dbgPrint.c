@@ -103,47 +103,38 @@ const char * str_dbg_level(int level)
 #endif
 void my_log(int print_level, const char *fmt, ...)
 {
-#ifdef OLINUXINO
 	va_list argp;
 	va_start(argp, fmt);
 	char c_aux[256];
 	vsnprintf(c_aux,sizeof(c_aux),fmt, argp);
 	va_end(argp);
-	printf("%s:%s\n",str_dbg_level(print_level), c_aux);
-#else
-		va_list argp;
-		va_start(argp, fmt);
-		char c_aux[256];
-		vsnprintf(c_aux,sizeof(c_aux),fmt, argp);
-		va_end(argp);
-	#ifdef ANDROID
-		switch(print_level)
+#ifdef ANDROID
+	switch(print_level)
+	{
+		case LOG_ERR:
 		{
-			case LOG_ERR:
-			{
-				ALOGE("%s", c_aux);
-				break;
-			}
-			case LOG_WARNING:
-			{
-				ALOGW("%s", c_aux);
-				break;
-			}
-			case LOG_INFO:
-			{
-				ALOGI("%s", c_aux);
-				break;
-			}
-			default:
-			{
-				ALOGV("%s", c_aux);
-				break;
-			}
+			ALOGE("%s", c_aux);
+			break;
 		}
+		case LOG_WARNING:
+		{
+			ALOGW("%s", c_aux);
+			break;
+		}
+		case LOG_INFO:
+		{
+			ALOGI("%s", c_aux);
+			break;
+		}
+		default:
+		{
+			ALOGV("%s", c_aux);
+			break;
+		}
+	}
 
-	#else
-		syslog(print_level,"%s", c_aux);
-	#endif
+#else
+	syslog(print_level,"%s", c_aux);
 #endif
 }
 /**************************************************************************************************

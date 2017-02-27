@@ -57,6 +57,7 @@
 #include "ts_util.h"
 
 #include "ASACZ_app.h"
+#include "ASACZ_ZAP.h"
 #include "ASACZ_devices_list.h"
 #include "ASACZ_firmware_version.h"
 #include "ASACZ_conf.h"
@@ -65,16 +66,7 @@
 #include "input_cluster_table.h"
 #include "server_thread.h"
 #include "simple_server.h"
-
-void *rpcTask(void *argument)
-{
-	while (1)
-	{
-		rpcProcess();
-	}
-
-	dbg_print(PRINT_LEVEL_WARNING, "rpcTask exited!\n");
-}
+#include <CC2650_fw_update.h>
 
 void *appTask(void *argument)
 {
@@ -84,14 +76,7 @@ void *appTask(void *argument)
 	}
 }
 
-void *appInMessageTask(void *argument)
-{
-	while (1)
-	{
-		//usleep(1000);
-		appMsgProcess(NULL);
-	}
-}
+
 static void open_syslog(void)
 {
 // this goes straight to /var/log/syslog file
@@ -249,6 +234,119 @@ static void init_sig_handlers(void)
    signal(SIGABRT, signal_shutdown_callback_handler);
 }
 
+#ifdef OLINUXINO
+int is_OK_do_CC2650_reset(unsigned int enable_boot_mode)
+{
+	int is_OK = 1;
+#define gpio_base_path "/sys/class/gpio"
+#define gpio_export_path gpio_base_path"/export"
+#define gpio_value_path gpio_base_path"/value"
+
+	syslog(LOG_INFO, "+%s\n", __func__);
+	int fd_reset_low = -1;
+	int fd_boot_enable_high = -1;
+	char fname_reset[128];
+	char fname_boot_enable[128];
+	if (snprintf(fname_boot_enable, sizeof(fname_boot_enable), "%s/gpio0/value", gpio_base_path) < 0)
+	{
+		syslog(LOG_ERR, "ERROR doing snprintf %s\n", fname_boot_enable);
+		is_OK = 0;
+	}
+	else if (snprintf(fname_reset, sizeof(fname_reset), "%s/gpio12/value", gpio_base_path) < 0)
+	{
+		syslog(LOG_ERR, "ERROR doing snprintf reset %s\n", fname_reset);
+		is_OK = 0;
+	}
+	else
+	{
+		fd_reset_low = open((char *)fname_reset, O_WRONLY);
+		fd_boot_enable_high = open((char *)fname_boot_enable, O_WRONLY);
+		if (fd_reset_low < 0)
+		{
+			syslog(LOG_ERR, "ERROR doing open reset gpio %s", fname_reset);
+			is_OK = 0;
+		}
+		else if (fd_boot_enable_high < 0)
+		{
+			syslog(LOG_ERR, "ERROR doing open boot enable gpio %s", fname_boot_enable);
+			is_OK = 0;
+		}
+		else
+		{
+			typedef struct _type_cycle_op
+			{
+				unsigned int gpio_reset12_boot_0;
+				unsigned int value;
+				unsigned int delay_ms;
+			}type_cycle_op;
+			type_cycle_op cycle_op[3];
+
+			// reset low (Active) then wait 100ms
+			cycle_op[0].gpio_reset12_boot_0 = 12;
+			cycle_op[0].value = 0;
+			cycle_op[0].delay_ms = 100;
+
+			// boot enable high (Active)/ low (NOT active) then wait 200ms
+			cycle_op[1].gpio_reset12_boot_0 = 0;
+			cycle_op[1].value = enable_boot_mode ? 1 : 0;
+			cycle_op[1].delay_ms = 200;
+
+			// reset high (NOT Active) then wait 10ms
+			cycle_op[2].gpio_reset12_boot_0 = 12;
+			cycle_op[2].value = 1;
+			cycle_op[2].delay_ms = 10;
+#if 0
+			// boot enable low (NOT Active) then wait 10ms
+			cycle_op[3].gpio_reset12_boot_0 = 0;
+			cycle_op[3].value = 0;
+			cycle_op[3].delay_ms = 10;
+#endif
+			unsigned int idx_loop;
+			for (idx_loop = 0; is_OK && idx_loop < sizeof(cycle_op)/ sizeof(cycle_op[0]); idx_loop++)
+			{
+				type_cycle_op * p_cyc = &cycle_op[idx_loop];
+				char val[256];
+				int n= snprintf(val, sizeof(val), "%u", p_cyc->value);
+				if (n > 0)
+				{
+					int val_len = strlen(val);
+					int fd = p_cyc->gpio_reset12_boot_0 == 0 ? fd_boot_enable_high : fd_reset_low;
+					int n = write(fd, val, val_len);
+					if (n != val_len)
+					{
+						is_OK = 0;
+						syslog(LOG_ERR, "ERROR doing write value %u gpio %u OK", p_cyc->value, p_cyc->gpio_reset12_boot_0);
+					}
+					else
+					{
+						syslog(LOG_INFO, "set value %u gpio %u OK", p_cyc->value, p_cyc->gpio_reset12_boot_0);
+					}
+				}
+				else
+				{
+					is_OK = 0;
+					syslog(LOG_ERR, "ERR doing snprintf value %u gpio %u OK", p_cyc->value, p_cyc->gpio_reset12_boot_0);
+				}
+			}
+		}
+	}
+
+	if (fd_reset_low >= 0)
+	{
+		close(fd_reset_low);
+	}
+	if (fd_boot_enable_high >= 0)
+	{
+		close(fd_boot_enable_high);
+	}
+
+	syslog(LOG_INFO, "-%s returns is_OK = %u\n", __func__, is_OK);
+	return	is_OK;
+}
+#endif
+
+//#define def_test_fw_upd
+#undef def_test_fw_upd
 
 int main(int argc, char* argv[])
 {
@@ -278,6 +376,18 @@ int main(int argc, char* argv[])
 	syslog(LOG_INFO, "The application starts");
 	memset(&threads_cancel_info, 0, sizeof(threads_cancel_info));
 
+#ifdef def_test_fw_upd
+	volatile unsigned int do_fw_u = 0;
+	if (do_fw_u)
+	{
+		do_CC2650_fw_update("/usr/ASACZ_CC2650fw_COORDINATOR.2_6_5");
+	}
+#endif
+
+#ifdef OLINUXINO
+	// reset chip and disables boot mode
+	is_OK_do_CC2650_reset(0);
+
 	{
 
         my_log(LOG_INFO, "%s +checking boot", __func__);
@@ -292,6 +402,7 @@ int main(int argc, char* argv[])
 		}
         my_log(LOG_INFO, "%s -checking boot", __func__);
 	}
+#endif
 	//atexit(my_at_exit);
 
 	handle_server_socket.port_number = def_port_number;
@@ -341,30 +452,19 @@ int main(int argc, char* argv[])
 
 #ifndef def_test_without_Zigbee
 	char * selected_serial_port;
-#ifdef ANDROID
-	selected_serial_port = "/dev/ttymxc2";
-#endif
 
 	dbg_print(PRINT_LEVEL_INFO, "%s -- %s %s\n", argv[0], __DATE__, __TIME__);
 
+	selected_serial_port = def_selected_serial_port;
 	// accept only 1
 	if (argc < 3)
 	{
+		//printf("Opening serial port %s\n", selected_serial_port);
 #ifdef ANDROID
 	{
 		extern int radio_asac_barebone_on();
 		radio_asac_barebone_on();
 	}
-	selected_serial_port = "/dev/ttymxc2";
-	printf("Opening serial port %s\n", selected_serial_port);
-#else
-	#ifdef OLINUXINO
-			dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/ttyS1\n");
-			selected_serial_port = "/dev/ttyS1";
-	#else
-			dbg_print(PRINT_LEVEL_INFO, "attempting to use /dev/USB1\n");
-			selected_serial_port = "/dev/ttyUSB1";
-	#endif
 #endif
 	}
 	else if ((argc >= 3) && (strncasecmp(argv[2],"serialport=",11)==0))

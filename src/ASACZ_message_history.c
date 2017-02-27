@@ -153,7 +153,7 @@ static void set_error(type_ASACZ_message_tx_history * p, enum_message_history_er
 
 enum_message_history_tx_set_error_retcode message_history_tx_set_error(uint32_t message_id, enum_message_history_error e)
 {
-	enum_message_history_tx_set_id_status_retcode r = enum_message_history_tx_set_id_status_retcode_OK;
+	enum_message_history_tx_set_error_retcode r = enum_message_history_tx_set_error_retcode_OK;
 	pthread_mutex_lock(&ASACZ_message_tx_history_handle.mtx);
 		type_ASACZ_message_tx_history * p_found = message_history_tx_find_id(message_id);
 		if (!p_found)
@@ -170,7 +170,7 @@ enum_message_history_tx_set_error_retcode message_history_tx_set_error(uint32_t 
 
 enum_message_history_tx_set_trans_id_retcode message_history_tx_set_trans_id(uint32_t message_id, uint8_t trans_id)
 {
-	enum_message_history_tx_set_error_retcode r = enum_message_history_tx_set_trans_id_retcode_OK;
+	enum_message_history_tx_set_trans_id_retcode r = enum_message_history_tx_set_trans_id_retcode_OK;
 	pthread_mutex_lock(&ASACZ_message_tx_history_handle.mtx);
 		type_ASACZ_message_tx_history * p_found = NULL;
 		unsigned int i;
@@ -285,7 +285,7 @@ enum_message_history_tx_set_trans_id_error_retcode message_history_tx_set_trans_
 		}
 		if (!p_found)
 		{
-			r = enum_message_history_tx_set_trans_id_status_retcode_transid_not_found;
+			r = enum_message_history_tx_set_trans_id_error_retcode_transid_not_found;
 		}
 	pthread_mutex_unlock(&ASACZ_message_tx_history_handle.mtx);
 	return r;

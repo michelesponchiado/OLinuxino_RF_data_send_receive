@@ -17,6 +17,19 @@
 #warning always using fixed channel
 #endif
 
+static void request_firmware_version(void)
+{
+	uint8_t status = sysVersion();
+	if (status != SUCCESS)
+	{
+		my_log(LOG_ERR,"%s: error requesting radio chip firmware version", __func__);
+	}
+	else
+	{
+		my_log(LOG_INFO,"%s: requesting radio chip firmware version", __func__);
+	}
+}
+
 void ZAP_require_network_restart_from_scratch(void)
 {
 	handle_app.network_restart_from_scratch_req++;
@@ -52,6 +65,7 @@ int32_t ZAP_startNetwork(unsigned int register_user_endpoints, enum_start_networ
 	}
 	for (idxloop = 0; ! networkOK && idxloop < 3; idxloop++)
 	{
+		handle_app.devState = DEV_HOLD;
 		uint8_t newNwk = 0;
 		if (start_network_type == enum_start_network_type_from_scratch)
 		{
@@ -166,9 +180,49 @@ int32_t ZAP_startNetwork(unsigned int register_user_endpoints, enum_start_networ
 		my_log(LOG_INFO, "process zdoStatechange callbacks");
 
 		//flush AREQ ZDO State Change messages
-		while (status != -1)
+		type_my_timeout timeout_wait_zdo_settled;
+		initialize_my_timeout(&timeout_wait_zdo_settled);
+#define def_timeout_wait_zdo_settled_ms 30000
+#define def_timeout_msg_rx_discovery_ms 10000
+		int is_timeout_global = 0;
+		int is_timeout_msg_rx = 0;
+		int is_configured_OK = 0;
+		type_my_timeout timeout_no_msgs_rx;
+		initialize_my_timeout(&timeout_no_msgs_rx);
+		while (!is_configured_OK && !is_timeout_global &&!is_timeout_msg_rx)
 		{
-			status = rpcWaitMqClientMsg(2000);
+			status = rpcWaitMqClientMsg(5000);
+			if (status < 0)
+			{
+				if (is_my_timeout_elapsed_ms(&timeout_no_msgs_rx, def_timeout_msg_rx_discovery_ms))
+				{
+					is_timeout_msg_rx = 1;
+				}
+			}
+			else
+			{
+				initialize_my_timeout(&timeout_no_msgs_rx);
+			}
+			if (is_my_timeout_elapsed_ms(&timeout_wait_zdo_settled, def_timeout_wait_zdo_settled_ms))
+			{
+				is_timeout_global = 1;
+			}
+			switch(handle_app.devState)
+			{
+				case DEV_END_DEVICE: // Started as device after authentication
+				case DEV_ROUTER: // Device joined, authenticated and is a router
+				case DEV_COORD_STARTING: // Started as Zigbee Coordinator
+				case DEV_ZB_COORD: // Started as Zigbee Coordinator
+				{
+					is_configured_OK = 1;
+					break;
+				}
+				default:
+				{
+					break;
+				}
+			}
+
 	#ifndef CC26xx
 			if (((devType == DEVICETYPE_COORDINATOR) && (handle_app.devState == DEV_ZB_COORD))
 			        || ((devType == DEVICETYPE_ROUTER) && (handle_app.devState == DEV_ROUTER))
@@ -208,6 +262,13 @@ int32_t ZAP_startNetwork(unsigned int register_user_endpoints, enum_start_networ
 		else
 		{
 			my_log(LOG_WARNING, "setNVStartup failed with devState: %i", (int)handle_app.devState);
+		}
+		// request all of the device infos...
+		{
+			request_all_device_info();
+		}
+		{
+			request_firmware_version();
 		}
 	}
 	if (handle_app.devState < DEV_END_DEVICE)

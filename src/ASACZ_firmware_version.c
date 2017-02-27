@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	4
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	6
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,31 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 6
+// * adding the firmware update procedure, experimenting, but it seems to work OK
+// 0.1.3 build 5
+// * now the channel mask parameter works OK;
+//   - when the coordinator starts, it sets the channel to 0; the first device entering the network sets the channel
+// * added the get_device_info API, when the network is formed, all of the device informations are printed in the log, e.g.:
+//		Feb 22 16:45:38 localhost ASAC_Zlog[32600]: getDeviceInfoSrspCb: dev state: DEV_END_DEVICE
+//		Feb 22 16:45:38 localhost ASAC_Zlog[32600]: getDeviceInfoSrspCb: IEEE address: 0x124B0006E30188
+//		Feb 22 16:45:38 localhost ASAC_Zlog[32600]: getDeviceInfoSrspCb: short address: 0xD5BB
+//		Feb 22 16:45:38 localhost ASAC_Zlog[32600]: getDeviceInfoSrspCb: parent short address: 0x0
+//		Feb 22 16:45:38 localhost ASAC_Zlog[32600]: getDeviceInfoSrspCb: parent IEEE address: 0x124b0007ae7981
+//		Feb 22 16:45:38 localhost ASAC_Zlog[32600]: getDeviceInfoSrspCb: channel: 11
+//		Feb 22 16:45:38 localhost ASAC_Zlog[32600]: getDeviceInfoSrspCb: PANID: 0x11C2
+//		Feb 22 16:45:38 localhost ASAC_Zlog[32600]: getDeviceInfoSrspCb: EXT PANID: 0x124b0007ae7981
+//
+// WORKS OK SETTING A PANID DIFFERENT FROM 0XFFFF TOO
+//		Feb 22 17:11:10 localhost ASAC_Zlog[1074]: getDeviceInfoSrspCb: dev state: DEV_END_DEVICE
+//		Feb 22 17:11:10 localhost ASAC_Zlog[1074]: getDeviceInfoSrspCb: IEEE address: 0x124B0006E30188
+//		Feb 22 17:11:10 localhost ASAC_Zlog[1074]: getDeviceInfoSrspCb: short address: 0xD5BB
+//		Feb 22 17:11:10 localhost ASAC_Zlog[1074]: getDeviceInfoSrspCb: parent short address: 0x0
+//		Feb 22 17:11:10 localhost ASAC_Zlog[1074]: getDeviceInfoSrspCb: parent IEEE address: 0x124b0007ae7981
+//		Feb 22 17:11:10 localhost ASAC_Zlog[1074]: getDeviceInfoSrspCb: channel: 11
+//		Feb 22 17:11:10 localhost ASAC_Zlog[1074]: getDeviceInfoSrspCb: PANID: 0x1330
+//		Feb 22 17:11:10 localhost ASAC_Zlog[1074]: getDeviceInfoSrspCb: EXT PANID: 0x124b0007ae7981
+//
 // 0.1.3 build 4
 // added the restart network from scratch administration command
 //
@@ -50,7 +75,7 @@
 // 0.1.2 build 23
 //   adding Android log
 // 0.1.2 build 22
-//   checking BUG: when entering the network, the devices not always communicate
+//   checking BUG: when entering the network, the devices not always communow the channel mask parameter works OK;nicate
 // 0.1.2 build 21
 //   corrects BUG: on some reply structures the packed attribute was missing, so the reply wass ent in the incorrect format
 // 0.1.2 build 20

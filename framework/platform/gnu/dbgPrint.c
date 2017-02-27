@@ -155,7 +155,7 @@ void my_log(int print_level, const char *fmt, ...)
  */
 void dbg_print(int print_level, const char *fmt, ...)
 {
-	if (print_level > (int)PRINT_LEVEL)
+	if (print_level >= (int)PRINT_LEVEL)
 	{
 		return;
 	}

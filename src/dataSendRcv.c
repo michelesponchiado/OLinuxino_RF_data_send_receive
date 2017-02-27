@@ -51,7 +51,7 @@ f * Filename:       dataSendRcv.c
 #include "../ASACZ_ZAP/ASACZ_ZAP_Sys_callbacks.h"
 #include "../ASACZ_ZAP/ASACZ_ZAP_TX_power.h"
 #include "../ASACZ_ZAP/ASACZ_ZAP_Zdo_callbacks.h"
-
+#include <CC2650_fw_update.h>
 /*********************************************************************
  * MACROS
  */
@@ -66,7 +66,7 @@ f * Filename:       dataSendRcv.c
 
 static char * get_link_quality_string(enum_link_quality_level level)
 {
-	char *pc = "unknown";
+	const char *pc = "unknown";
 	switch(level)
 	{
 		case enum_link_quality_level_unknown:
@@ -95,7 +95,7 @@ static char * get_link_quality_string(enum_link_quality_level level)
 			break;
 		}
 	}
-	return pc;
+	return (char*)pc;
 }
 
 void init_link_quality(type_link_quality *p)
@@ -130,8 +130,6 @@ void get_app_last_link_quality(type_link_quality_body *p_dst)
 		*p_dst = p->b;
 	pthread_mutex_unlock(&p->mtx_id);
 }
-
-
 type_handle_app handle_app;
 
 
@@ -305,7 +303,7 @@ static void displayDevices(void)
 	{
 		Node_t * pnode_t = &handle_app.handle_node_list.nodeList[i];
 		char *devtype =
-		        (pnode_t->Type == DEVICETYPE_ROUTER ? "ROUTER" : "COORDINATOR");
+		        (pnode_t->Type == DEVICETYPE_ROUTER ? (char*)"ROUTER" : (char*)"COORDINATOR");
 		// asks info about the node, if coordinator, so we can add it to the device list
 		//if (nodeList[i].Type == DEVICETYPE_COORDINATOR)
 		{
@@ -448,7 +446,7 @@ static void check_send_message(void)
 			uint16_t DstAddr = 0;
 			if (!is_OK_get_network_short_address_from_IEEE(m.dst_id.IEEE_destination_address, &DstAddr))
 			{
-				dbg_print(PRINT_LEVEL_INFO, "%s: ERROR UNKNOWN DST @ IEEE Address 0x%" PRIx64 "", __func__, m.dst_id.IEEE_destination_address);
+				dbg_print(PRINT_LEVEL_INFO, "%s: ERROR UNKNOWN DST @ IEEE Address 0x%"PRIx64, __func__, m.dst_id.IEEE_destination_address);
 				message_history_tx_set_error(handle_app.message_id, enum_message_history_error_unknown_IEEE_address);
 				my_log(LOG_ERR, "Unable to find device with IEEE address: %" PRIx64 "", m.dst_id.IEEE_destination_address);
 			}
@@ -620,7 +618,7 @@ void* appProcess(void *argument)
 		{
 			handle_app.devState = DEV_HOLD;
 // starts always from scratch at powerup			
-#if 1
+#ifdef OLINUXINO
 			int32_t status = ZAP_startNetwork(0, enum_start_network_type_from_scratch);
 #else
 			int32_t status = ZAP_startNetwork(0, enum_start_network_type_resume);
@@ -757,6 +755,60 @@ void* appProcess(void *argument)
 			handle_app.status = enum_app_status_tx_msgs;
 			break;
 		}
+		case enum_app_status_firmware_update_init:
+		{
+			handle_app.suspend_rx_tasks = ++handle_app.suspend_rx_tasks_idx;
+			handle_app.status = enum_app_status_firmware_update_init_wait;
+			initialize_my_timeout(&handle_app.timeout_init_fw_update);
+
+			break;
+		}
+		case enum_app_status_firmware_update_init_wait:
+		{
+			if (handle_app.InMessageTaskSuspended == handle_app.suspend_rx_tasks)
+			{
+				handle_app.status = enum_app_status_firmware_update_do;
+				my_log(LOG_INFO,"%s: closing the serial port", __func__);
+				// closes the serial port
+				rpcTransportClose();
+			}
+			else if (is_my_timeout_elapsed_ms(&handle_app.timeout_init_fw_update, 100000))
+			{
+				handle_app.status = enum_app_status_firmware_update_ends;
+				my_log(LOG_ERR,"%s: timeout waiting firmware update start", __func__);
+			}
+			break;
+		}
+		case enum_app_status_firmware_update_do:
+		{
+			handle_app.status = enum_app_status_firmware_update_ends;
+			uint32_t fw_upd_return_code = do_CC2650_fw_update("/usr/ASACZ_CC2650fw_COORDINATOR.2_6_5");
+			if (fw_upd_return_code == enum_do_CC2650_fw_update_retcode_OK)
+			{
+				my_log(LOG_INFO,"%s: firmware update finished OK", __func__);
+			}
+			else
+			{
+				my_log(LOG_ERR,"%s: firmware update finished with error %u", __func__, fw_upd_return_code);
+			}
+			break;
+		}
+		case enum_app_status_firmware_update_ends:
+		{
+			my_log(LOG_INFO,"%s: reopening the serial port", __func__);
+			int fd = rpcOpen(NULL, 0);
+			if (fd == -1)
+			{
+				dbg_print(PRINT_LEVEL_ERROR, "could not reopen serial port\n");
+				exit(-1);
+			}
+			handle_app.suspend_rx_tasks = 0;
+			my_log(LOG_INFO,"%s: starting again the network", __func__);
+			handle_app.status = enum_app_status_restart_network_from_scratch;
+
+			break;
+		}
+
 		case enum_app_status_shutdown:
 		{
 			break;
@@ -793,3 +845,46 @@ void* appProcess(void *argument)
 	return NULL;
 }
 
+
+unsigned int is_suspended_rx_task(void)
+{
+	return handle_app.suspend_rx_tasks;
+}
+
+void *rpcTask(void *argument)
+{
+	while (1)
+	{
+		if (!handle_app.suspend_rx_tasks)
+		{
+			handle_app.rpcTaskSuspended = 0;
+			if (rpcProcess() < 0)
+			{
+				usleep(1000);
+			}
+		}
+		else
+		{
+			handle_app.rpcTaskSuspended = handle_app.suspend_rx_tasks;
+		}
+		usleep(1000);
+	}
+
+	dbg_print(PRINT_LEVEL_WARNING, "rpcTask exited!\n");
+}
+void *appInMessageTask(void *argument)
+{
+	while (1)
+	{
+		usleep(1000);
+		if (!handle_app.suspend_rx_tasks)
+		{
+			handle_app.InMessageTaskSuspended = 0;
+			appMsgProcess(NULL);
+		}
+		else
+		{
+			handle_app.InMessageTaskSuspended = handle_app.suspend_rx_tasks;
+		}
+	}
+}

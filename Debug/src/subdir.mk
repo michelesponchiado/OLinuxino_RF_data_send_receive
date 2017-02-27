@@ -6,6 +6,7 @@
 C_SRCS += \
 ../src/ASACSOCKET_check.c \
 ../src/ASACZ_UDP_server.c \
+../src/ASACZ_boot_check.c \
 ../src/ASACZ_devices_list.c \
 ../src/ASACZ_firmware_version.c \
 ../src/ASACZ_message_history.c \
@@ -21,6 +22,7 @@ C_SRCS += \
 OBJS += \
 ./src/ASACSOCKET_check.o \
 ./src/ASACZ_UDP_server.o \
+./src/ASACZ_boot_check.o \
 ./src/ASACZ_devices_list.o \
 ./src/ASACZ_firmware_version.o \
 ./src/ASACZ_message_history.o \
@@ -36,6 +38,7 @@ OBJS += \
 C_DEPS += \
 ./src/ASACSOCKET_check.d \
 ./src/ASACZ_UDP_server.d \
+./src/ASACZ_boot_check.d \
 ./src/ASACZ_devices_list.d \
 ./src/ASACZ_firmware_version.d \
 ./src/ASACZ_message_history.d \

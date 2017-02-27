@@ -13,7 +13,7 @@
 uint8_t mtSysGetExtAddrSrsp(GetExtAddrSrspFormat_t *msg)
 {
 	set_IEEE_address(&handle_app.IEEE_address, msg->ExtAddr);
-	my_log(LOG_INFO, "IEEE address: 0x%lX", (long int)get_IEEE_address(&handle_app.IEEE_address));
+	my_log(LOG_INFO, "IEEE address: 0x%" PRIx64, get_IEEE_address(&handle_app.IEEE_address));
 	return 0;
 }
 
@@ -31,6 +31,18 @@ uint8_t mtSysResetIndCb(ResetIndFormat_t *msg)
 	return 0;
 }
 
+uint8_t mtSysVersionSrsp(VersionSrspFormat_t *msg)
+{
+	my_log(LOG_INFO, "RADIO CHIP FIRMWARE VERSION %u.%u.%u ; product is %u, transport version is %u",
+		   	  (uint32_t)msg->MajorRel
+			, (uint32_t)msg->MinorRel
+			, (uint32_t)msg->MaintRel
+			, (uint32_t)msg->Product
+			, (uint32_t)msg->TransportRev
+			);
+	return SUCCESS;
+}
+
 
 // SYS callbacks
 static mtSysCb_t mtSysCb =
@@ -38,7 +50,7 @@ static mtSysCb_t mtSysCb =
 			.pfnSysGetExtAddrSrsp 	= mtSysGetExtAddrSrsp,
 			.pfnSysRamReadSrsp 		= NULL,
 			.pfnSysResetInd 		= mtSysResetIndCb,
-			.pfnSysVersionSrsp 		= NULL,
+			.pfnSysVersionSrsp 		= mtSysVersionSrsp,
 			.pfnSysOsalNvReadSrsp 	= NULL,
 			.pfnSysOsalNvLengthSrsp = NULL,
 			.pfnSysOsalTimerExpired = NULL,

@@ -79,7 +79,7 @@ uint8_t uartDebugPrintsEnabled = 0;
 /*********************************************************************
  * LOCAL VARIABLES
  */
-int serialPortFd;
+int serialPortFd = -1;
 
 /*********************************************************************
  * API FUNCTIONS
@@ -132,8 +132,8 @@ int32_t rpcTransportOpen(char *_devicePath, uint32_t port)
 	/* c-iflags
 	 B115200 : set board rate to 115200
 	 CRTSCTS : HW flow control
-	 CS8     : 8n1 (8bit,no parity,1 stopbit)
-	 CLOCAL  : local connection, no modem contol
+	 CS8     : 8n1 (8bit,no parity,1 stop bit)
+	 CLOCAL  : local connection, no modem control
 	 CREAD   : enable receiving characters*/
 	tio.c_cflag = B115200 | CS8 | CLOCAL | CREAD;
 // Michele: no RTS CTS on CC26xx
@@ -169,8 +169,12 @@ int32_t rpcTransportOpen(char *_devicePath, uint32_t port)
  */
 void rpcTransportClose(void)
 {
-	tcflush(serialPortFd, TCOFLUSH);
-	close(serialPortFd);
+	if (serialPortFd >= 0)
+	{
+		tcflush(serialPortFd, TCOFLUSH);
+		close(serialPortFd);
+		serialPortFd = -1;
+	}
 
 	return;
 }
@@ -223,7 +227,17 @@ void rpcTransportWrite(uint8_t* buf, uint8_t len)
  */
 uint8_t rpcTransportRead(uint8_t* buf, uint8_t len)
 {
-	uint8_t ret = read(serialPortFd, buf, len);
+	unsigned int is_suspended_rx_task(void);
+	uint8_t ret = 0;
+	if (is_suspended_rx_task())
+	{
+		return 0;
+	}
+	ret = read(serialPortFd, buf, len);
+	if (is_suspended_rx_task())
+	{
+		return 0;
+	}
 	if (ret > 0)
 	{
 		dbg_print(PRINT_LEVEL_VERBOSE, "rpcTransportRead: read %d bytes\n",

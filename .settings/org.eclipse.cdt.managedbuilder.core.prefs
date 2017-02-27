@@ -1,6 +1,8 @@
 eclipse.preferences.version=1
 environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095/CPATH/delimiter=\:
 environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095/CPATH/operation=remove
+environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095/CPLUS_INCLUDE_PATH/delimiter=\:
+environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095/CPLUS_INCLUDE_PATH/operation=remove
 environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095/C_INCLUDE_PATH/delimiter=\:
 environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095/C_INCLUDE_PATH/operation=remove
 environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095/append=true

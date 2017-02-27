@@ -27,6 +27,10 @@ typedef enum
 	enum_app_status_rx_msgs,
 	enum_app_status_tx_msgs,
 	enum_app_status_update_end_points,
+	enum_app_status_firmware_update_init,
+	enum_app_status_firmware_update_init_wait,
+	enum_app_status_firmware_update_do,
+	enum_app_status_firmware_update_ends,
 	enum_app_status_shutdown,
 	enum_app_status_error,
 	enum_app_status_numof
@@ -60,5 +64,16 @@ typedef struct _type_link_quality_body
 }type_link_quality_body;
 
 void get_app_last_link_quality(type_link_quality_body *p);
+
+#ifdef ANDROID
+	#define def_selected_serial_port "/dev/ttymxc2"
+#else
+	#ifdef OLINUXINO
+			#define def_selected_serial_port "/dev/ttyS1"
+	#else
+			#define def_selected_serial_port "/dev/ttyUSB1"
+	#endif
+#endif
+
 
 #endif /* INC_ASACZ_APP_H_ */

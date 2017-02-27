@@ -626,7 +626,7 @@ int handle_ASACZ_request_input_cluster_register_req(type_handle_ASACZ_request *p
 
 			default:
 			{
-				r = enum_add_input_cluster_table_retcode_ERR_unknwon;
+				r = enum_input_cluster_register_reply_retcode_ERR_unknown;
 				my_log(LOG_ERR,"%s: unknown return code %u adding end-point %u, cluster %u", __func__, (unsigned int)retcode_input_cluster, (unsigned int )p_body_request->endpoint, (unsigned int )p_body_request->input_cluster_id);
 				break;
 			}

@@ -230,7 +230,7 @@ uint32_t ASACZ_get_conf_param_restart_from_scratch(void)
 	{
 		return dst.value.u32;
 	}
-	return default_PAN_id;
+	return 0;
 }
 
 unsigned int is_OK_ASACZ_set_conf_param(enum_ASACZ_conf_param id, const type_ASACZ_conf_param *src)

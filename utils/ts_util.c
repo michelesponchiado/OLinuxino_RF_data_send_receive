@@ -50,7 +50,9 @@ Procedures:
 #    include  <timers.h>		/* POSIX timer definitions. */
 #endif
 #include  "ts_util.h"			/* "timespec" manipulation functions. */
-
+
+//#define PROTOTYPES 1
+
 /*!*****************************************************************************
 
 Procedure:

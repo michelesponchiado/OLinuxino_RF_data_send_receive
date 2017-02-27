@@ -127,6 +127,7 @@ typedef enum
 	enum_input_cluster_register_reply_retcode_OK = 0,
 	enum_input_cluster_register_reply_retcode_ERR_no_room,
 	enum_input_cluster_register_reply_retcode_ERR_invalid_endpoint,
+	enum_input_cluster_register_reply_retcode_ERR_unknown,
 	enum_input_cluster_register_reply_retcode_numof
 }enum_input_cluster_register_reply_retcode;
 
@@ -155,7 +156,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_input_cluster_unregister_repl
 {
 	uint8_t endpoint;			// the end-point to register
 	uint16_t input_cluster_id;	// the input cluster (command) to register
-	enum_input_cluster_register_reply_retcode retcode;	// the return code
+	enum_input_cluster_unregister_reply_retcode retcode;	// the return code
 } __attribute__((__packed__)) type_ASAC_ZigBee_interface_network_input_cluster_unregister_reply ;
 
 //

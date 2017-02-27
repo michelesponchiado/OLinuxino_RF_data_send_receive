@@ -432,8 +432,7 @@ uint8_t sysVersion()
 {
 	uint8_t status;
 
-	status = rpcSendFrame((MT_RPC_CMD_SREQ | MT_RPC_SYS_SYS),
-	MT_SYS_VERSION, NULL, 0);
+	status = rpcSendFrame((MT_RPC_CMD_SREQ | MT_RPC_SYS_SYS), MT_SYS_VERSION, NULL, 0);
 
 	if (status == MT_RPC_SUCCESS)
 	{

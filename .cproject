@@ -188,19 +188,21 @@
 								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.option.optimization.level.42632544" name="Optimization Level" superClass="gnu.c.compiler.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.debugging.level.1579689212" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.max" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.include.paths.1537281948" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/CC2650_fw_update}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/platform/gnu}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/OLinuxino_include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt/Af}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/inc_libfds700}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt/Sapi}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt/Sys}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/mt/Zdo}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/platform/gnu}&quot;"/>
 									<listOptionValue builtIn="false" value="/home/michele/Downloads/ASAC/OLinuXino/openwrt/staging_dir/toolchain-mipsel_24kec+dsp_gcc-4.8-linaro_uClibc-0.9.33.2/include"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/framework/rpc}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/RF_data_send_receive/framework/mt}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/utils}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/ASACZ_ZAP}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/inc}&quot;"/>
+									<listOptionValue builtIn="false" value="/home/michele/workspace/CC2650_fw_update/lib_inc"/>
 								</option>
 								<option id="gnu.c.compiler.option.preprocessor.def.symbols.336370714" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="CC26xx"/>
@@ -215,12 +217,15 @@
 							</tool>
 							<tool command="gcc" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="cdt.managedbuild.tool.gnu.cross.c.linker.987791546" name="Cross GCC Linker" superClass="cdt.managedbuild.tool.gnu.cross.c.linker">
 								<option id="gnu.c.link.option.libs.293918944" name="Libraries (-l)" superClass="gnu.c.link.option.libs" valueType="libs">
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="CC2650_fw_update_Olinuxino"/>
 									<listOptionValue builtIn="false" value="pthread"/>
 									<listOptionValue builtIn="false" value="uci"/>
 									<listOptionValue builtIn="false" value="rt"/>
 									<listOptionValue builtIn="false" value="ubox"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="stdc++"/>
 								</option>
 								<option id="gnu.c.link.option.paths.595431721" name="Library search path (-L)" superClass="gnu.c.link.option.paths" valueType="libPaths">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/CC2650_fw_update/OLinuxino library}&quot;"/>
 									<listOptionValue builtIn="false" value="/home/michele/Downloads/ASAC/OLinuXino/openwrt/build_dir/target-mipsel_24kec+dsp_uClibc-0.9.33.2/root-ramips/lib"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.linker.input.1245902911" superClass="cdt.managedbuild.tool.gnu.c.linker.input">
@@ -231,6 +236,9 @@
 							<tool id="cdt.managedbuild.tool.gnu.cross.cpp.linker.1215426797" name="Cross G++ Linker" superClass="cdt.managedbuild.tool.gnu.cross.cpp.linker"/>
 							<tool id="cdt.managedbuild.tool.gnu.cross.archiver.168544779" name="Cross GCC Archiver" superClass="cdt.managedbuild.tool.gnu.cross.archiver"/>
 							<tool command="as" commandLinePattern="${COMMAND} ${FLAGS} ${OUTPUT_FLAG} ${OUTPUT_PREFIX}${OUTPUT} ${INPUTS}" errorParsers="org.eclipse.cdt.core.GASErrorParser" id="cdt.managedbuild.tool.gnu.cross.assembler.312380892" name="Cross GCC Assembler" superClass="cdt.managedbuild.tool.gnu.cross.assembler">
+								<option id="gnu.both.asm.option.include.paths.1215831322" superClass="gnu.both.asm.option.include.paths" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/CC2650_fw_update}&quot;"/>
+								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.602655472" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
 						</toolChain>
@@ -250,7 +258,15 @@
 					</sourceEntries>
 				</configuration>
 			</storageModule>
-			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings">
+				<externalSettings containerId="CC2650_fw_update;cdt.managedbuild.config.gnu.exe.debug.2030900468.1986933432.531855592" factoryId="org.eclipse.cdt.core.cfg.export.settings.sipplier">
+					<externalSetting>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="includePath" name="/CC2650_fw_update"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="/CC2650_fw_update/OLinuxino library"/>
+						<entry flags="RESOLVED" kind="libraryFile" name="CC2650_fw_update_Olinuxino" srcPrefixMapping="" srcRootPath=""/>
+					</externalSetting>
+				</externalSettings>
+			</storageModule>
 		</cconfiguration>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
@@ -270,6 +286,9 @@
 	<storageModule moduleId="scannerConfiguration">
 		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.cross.exe.release.75375994;cdt.managedbuild.config.gnu.cross.exe.release.75375994.;cdt.managedbuild.tool.gnu.cross.c.compiler.1580883069;cdt.managedbuild.tool.gnu.c.compiler.input.2125707534">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095;cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095.;cdt.managedbuild.tool.gnu.cross.cpp.compiler.1427691738;cdt.managedbuild.tool.gnu.cpp.compiler.input.229508860">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095;cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095.;cdt.managedbuild.tool.gnu.cross.c.compiler.518249407;cdt.managedbuild.tool.gnu.c.compiler.input.1869747111">

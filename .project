@@ -3,6 +3,7 @@
 	<name>OLinuxino_RF_data_send_receive</name>
 	<comment></comment>
 	<projects>
+		<project>CC2650_fw_update</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

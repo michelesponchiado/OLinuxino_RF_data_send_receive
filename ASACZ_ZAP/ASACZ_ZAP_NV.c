@@ -23,8 +23,7 @@ uint8_t setNVStartup(uint8_t startupOption)
 	status = sysOsalNvWrite(&nvWrite);
 
 
-	dbg_print(PRINT_LEVEL_INFO, "NV Write Startup Option cmd sent[%d]...",
-	        status);
+	dbg_print(PRINT_LEVEL_INFO, "NV Write Startup Option cmd sent[%d]...", status);
 
 	return status;
 }
@@ -85,8 +84,7 @@ uint8_t setNVChanList(uint32_t chanList)
 	nvWrite.Value[3] = BREAK_UINT32(chanList, 3);
 	status = sysOsalNvWrite(&nvWrite);
 
-	dbg_print(PRINT_LEVEL_INFO, "NV Write Channel List cmd sent...[%d]",
-	        status);
+	dbg_print(PRINT_LEVEL_INFO, "NV Write Channel List cmd sent...[%d]", status);
 
 	return status;
 }

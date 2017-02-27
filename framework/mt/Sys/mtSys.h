@@ -484,7 +484,7 @@ uint8_t sysGetExtAddr(void);
 uint8_t sysRamRead(RamReadFormat_t *req);
 uint8_t sysRamWrite(RamWriteFormat_t *req);
 uint8_t sysResetReq(ResetReqFormat_t *req);
-uint8_t sysVersion(void);
+uint8_t sysVersion(uint32_t wait_reply_ms);
 uint8_t sysOsalNvRead(OsalNvReadFormat_t *req);
 uint8_t sysOsalNvWrite(OsalNvWriteFormat_t *req);
 uint8_t sysOsalNvItemInit(OsalNvItemInitFormat_t *req);

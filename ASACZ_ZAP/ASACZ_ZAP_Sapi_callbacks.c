@@ -32,6 +32,10 @@ static type_sapi_handle sapi_handle;
 
 uint8_t request_device_info(enum_ZB_INFO e, uint32_t wait_reply_ms, type_sapi_device_info_struct *p_dst)
 {
+	if (e == enum_ZB_INFO_UNKNOWN || e >= enum_ZB_INFO_numof)
+	{
+		return FAILURE;
+	}
 	type_sapi_ackreq *p_ackreq = &sapi_handle.ack_req[enum_api_sapi_request_device_info];
 	uint32_t num_ack = p_ackreq->num_ack;
 	p_ackreq->num_req++;
@@ -68,13 +72,17 @@ uint8_t request_device_info(enum_ZB_INFO e, uint32_t wait_reply_ms, type_sapi_de
 }
 
 
-uint8_t request_all_device_info(void)
+uint8_t request_all_device_info(type_all_sapi_device_info_struct *p_all_sapi_device_info_struct)
 {
+	if(p_all_sapi_device_info_struct)
+	{
+		memset(p_all_sapi_device_info_struct, 0, sizeof(*p_all_sapi_device_info_struct));
+	}
 	uint8_t status = 0;
 	enum_ZB_INFO e;
-	for (e = (enum_ZB_INFO)0; e < enum_ZB_INFO_numof; e++)
+	for (e = enum_ZB_INFO_THE_VERY_FIRST; e < enum_ZB_INFO_numof; e++)
 	{
-		if (request_device_info(e, 1000, NULL) < 0)
+		if (request_device_info(e, 2000, &p_all_sapi_device_info_struct->i[e]) < 0)
 		{
 			status = -1;
 		}
@@ -113,7 +121,7 @@ static uint8_t getDeviceInfoSrspCb (GetDeviceInfoSrspFormat_t *msg)
 	uint8_t ret = SUCCESS;
 	pthread_mutex_lock(&sapi_handle.mtx_struct);
 		type_sapi_device_info_struct *ps = &sapi_handle.s;
-		if (msg->Param >= enum_ZB_INFO_DEV_STATE && msg->Param < enum_ZB_INFO_UNKNOWN)
+		if (msg->Param >= enum_ZB_INFO_THE_VERY_FIRST && msg->Param < enum_ZB_INFO_numof)
 		{
 			ps->e = msg->Param;
 			memcpy(&ps->u, msg->Value, sizeof(ps->u));

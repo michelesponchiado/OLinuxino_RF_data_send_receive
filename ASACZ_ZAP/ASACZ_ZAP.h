@@ -40,6 +40,44 @@
 
 typedef enum
 {
+	// Device Info Constants
+	enum_ZB_INFO_UNKNOWN 					=0,
+	enum_ZB_INFO_THE_VERY_FIRST				,
+	enum_ZB_INFO_DEV_STATE  = enum_ZB_INFO_THE_VERY_FIRST               ,
+	enum_ZB_INFO_IEEE_ADDR                 ,
+	enum_ZB_INFO_SHORT_ADDR                ,
+	enum_ZB_INFO_PARENT_SHORT_ADDR         ,
+	enum_ZB_INFO_PARENT_IEEE_ADDR          ,
+	enum_ZB_INFO_CHANNEL                   ,
+	enum_ZB_INFO_PAN_ID                    ,
+	enum_ZB_INFO_EXT_PAN_ID                ,
+	enum_ZB_INFO_numof						,
+}enum_ZB_INFO;
+
+typedef struct _type_device_info_struct
+{
+	enum_ZB_INFO e;
+	union
+	{
+		uint8_t dev_state;
+		uint64_t IEEEaddress;
+		uint16_t shortAddress;
+		uint16_t parent_shortAddress;
+		uint64_t parent_IEEEaddress;
+		uint8_t channel;
+		uint16_t PANID;
+		uint64_t extPANID;
+	}u;
+}type_sapi_device_info_struct;
+
+typedef struct _type_all_sapi_device_info_struct
+{
+	type_sapi_device_info_struct i[enum_ZB_INFO_numof];
+}type_all_sapi_device_info_struct;
+
+
+typedef enum
+{
 	enum_app_error_code_none,
 	enum_app_error_code_too_many_messages_flushed,
 	enum_app_error_code_unable_to_start_network,
@@ -156,42 +194,15 @@ typedef struct _type_handle_app
 	uint32_t InMessageTaskSuspended;
 	uint32_t rpcTaskSuspended;
 	type_my_timeout timeout_init_fw_update;
+	type_all_sapi_device_info_struct all_sapi_device_info_struct;
+	VersionSrspFormat_t CC2650_version;
 }type_handle_app;
 
 extern type_handle_app handle_app;
 
 
-typedef enum
-{
-	// Device Info Constants
-	enum_ZB_INFO_DEV_STATE                 =0,
-	enum_ZB_INFO_IEEE_ADDR                 ,
-	enum_ZB_INFO_SHORT_ADDR                ,
-	enum_ZB_INFO_PARENT_SHORT_ADDR         ,
-	enum_ZB_INFO_PARENT_IEEE_ADDR          ,
-	enum_ZB_INFO_CHANNEL                   ,
-	enum_ZB_INFO_PAN_ID                    ,
-	enum_ZB_INFO_EXT_PAN_ID                ,
-	enum_ZB_INFO_UNKNOWN,
-	enum_ZB_INFO_numof = enum_ZB_INFO_UNKNOWN,
-}enum_ZB_INFO;
 
-typedef struct _type_device_info_struct
-{
-	enum_ZB_INFO e;
-	union
-	{
-		uint8_t dev_state;
-		uint64_t IEEEaddress;
-		uint16_t shortAddress;
-		uint16_t parent_shortAddress;
-		uint64_t parent_IEEEaddress;
-		uint8_t channel;
-		uint16_t PANID;
-		uint64_t extPANID;
-	}u;
-}type_sapi_device_info_struct;
-uint8_t request_all_device_info(void);
+uint8_t request_all_device_info(type_all_sapi_device_info_struct *p_all_sapi_device_info_struct);
 uint8_t request_device_info(enum_ZB_INFO e, uint32_t wait_reply_ms, type_sapi_device_info_struct *p_dst);
 const char *get_dev_state_string(devStates_t e);
 

@@ -443,6 +443,31 @@ typedef struct _type_ASAC_ZigBee_interface_unknown_reply
 
 
 //
+// firmware update begins here
+//
+
+// the destination of the firmware update
+typedef enum
+{
+	enum_ASAC_ZigBee_fwupd_destination_CC2650 = 0,
+	enum_ASAC_ZigBee_fwupd_destination_numof
+}enum_ASAC_ZigBee_fwupd_destination;
+
+// the CC2650 radio chip firmware operations available
+typedef enum
+{
+	enum_ASAC_ZigBee_fwupd_CC2650_read_version = 0,		// read the radio chip firmware version
+	enum_ASAC_ZigBee_fwupd_CC2650_start_update,			// update the radio chip firmware
+	enum_ASAC_ZigBee_fwupd_CC2650_query_update_status,	// query the status of the radio chip firmware update procedure
+
+	enum_ASAC_ZigBee_fwupd_CC2650_numof
+}enum_ASAC_ZigBee_fwupd_CC2650;
+//
+// firmware update ends here
+//
+
+
+//
 //
 //
 // The ZigBee interface command structure begins here

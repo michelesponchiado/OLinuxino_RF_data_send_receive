@@ -17,9 +17,10 @@
 #warning always using fixed channel
 #endif
 
-static void request_firmware_version(void)
+static void request_firmware_version()
 {
-	uint8_t status = sysVersion();
+#define def_timeout_wait_fw_version_ms 5000
+	uint8_t status = sysVersion(def_timeout_wait_fw_version_ms);
 	if (status != SUCCESS)
 	{
 		my_log(LOG_ERR,"%s: error requesting radio chip firmware version", __func__);
@@ -265,7 +266,7 @@ int32_t ZAP_startNetwork(unsigned int register_user_endpoints, enum_start_networ
 		}
 		// request all of the device infos...
 		{
-			request_all_device_info();
+			request_all_device_info(&handle_app.all_sapi_device_info_struct);
 		}
 		{
 			request_firmware_version();

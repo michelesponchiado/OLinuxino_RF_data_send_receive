@@ -40,6 +40,7 @@ uint8_t mtSysVersionSrsp(VersionSrspFormat_t *msg)
 			, (uint32_t)msg->Product
 			, (uint32_t)msg->TransportRev
 			);
+	memcpy(&handle_app.CC2650_version, msg, sizeof(handle_app.CC2650_version));
 	return SUCCESS;
 }
 

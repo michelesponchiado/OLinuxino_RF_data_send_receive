@@ -47,6 +47,7 @@
 #include "mtParser.h"
 #include "rpc.h"
 #include "dbgPrint.h"
+#include <timeout_utils.h>
 
 /*********************************************************************
  * MACROS
@@ -66,6 +67,78 @@ extern uint8_t srspRpcBuff[RPC_MAX_LEN];
  */
 static void processSrsp(uint8_t *rpcBuff, uint8_t rpcLen);
 static void processResetInd(uint8_t *rpcBuff, uint8_t rpcLen);
+
+
+typedef struct _type_sys_ackreq
+{
+	volatile uint32_t num_req;
+	volatile uint32_t last_num_ack;
+	volatile uint32_t num_ack;
+}type_sys_ackreq;
+
+typedef enum
+{
+	enum_sys_ackreq_version = 0,
+	enum_sys_ackreq_numof
+}enum_sys_ackreq;
+type_sys_ackreq sys_ackreq[enum_sys_ackreq_numof];
+
+static void do_sys_ackreq_NEW_REQUEST(enum_sys_ackreq e)
+{
+	if (e >= enum_sys_ackreq_numof)
+	{
+		return;
+	}
+	type_sys_ackreq *p = &sys_ackreq[e];
+	p->last_num_ack = p->num_ack;
+	p->num_req++;
+}
+
+static void do_sys_ackreq_ACK_LAST_REQUEST(enum_sys_ackreq e)
+{
+	if (e >= enum_sys_ackreq_numof)
+	{
+		return;
+	}
+	type_sys_ackreq *p = &sys_ackreq[e];
+	p->num_ack = p->num_req;
+}
+
+static uint32_t is_OK_wait_reply(enum_sys_ackreq e, uint32_t wait_reply_ms)
+{
+	if (e >= enum_sys_ackreq_numof)
+	{
+		return 1;
+	}
+	if (!wait_reply_ms)
+	{
+		return 1;
+	}
+
+	uint32_t ret = 1;
+	type_sys_ackreq *p = &sys_ackreq[e];
+	if (wait_reply_ms > 30000)
+	{
+		wait_reply_ms = 30000;
+	}
+	type_my_timeout timeout_wait;
+	initialize_my_timeout(&timeout_wait);
+	while(1)
+	{
+		if (is_my_timeout_elapsed_ms(&timeout_wait, wait_reply_ms))
+		{
+			ret = 0;
+			break;
+		}
+		if (p->num_ack != p->last_num_ack)
+		{
+			break;
+		}
+	}
+
+	return ret;
+}
+
 
 /*********************************************************************
  * @fn      sysPing
@@ -428,15 +501,18 @@ static void processResetInd(uint8_t *rpcBuff, uint8_t rpcLen)
  *
  * @return   status, either Success (0) or Failure (1).
  */
-uint8_t sysVersion()
+uint8_t sysVersion(uint32_t wait_reply_ms)
 {
 	uint8_t status;
+	enum_sys_ackreq e = enum_sys_ackreq_version;
+
+	do_sys_ackreq_NEW_REQUEST(e);
 
 	status = rpcSendFrame((MT_RPC_CMD_SREQ | MT_RPC_SYS_SYS), MT_SYS_VERSION, NULL, 0);
 
 	if (status == MT_RPC_SUCCESS)
 	{
-		rpcWaitMqClientMsg(50);
+		status = is_OK_wait_reply(e, wait_reply_ms) ? MT_RPC_SUCCESS : MT_RPC_ERR_SUBSYSTEM;
 	}
 
 	return status;
@@ -473,6 +549,7 @@ static void processVersionSrsp(uint8_t *rpcBuff, uint8_t rpcLen)
 		rsp.MaintRel = rpcBuff[msgIdx++];
 
 		mtSysCbs.pfnSysVersionSrsp(&rsp);
+		do_sys_ackreq_ACK_LAST_REQUEST(enum_sys_ackreq_version);
 	}
 }
 

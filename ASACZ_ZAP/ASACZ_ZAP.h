@@ -32,6 +32,7 @@
 #include "ASACZ_app.h"
 #include "ASACZ_devices_list.h"
 #include "ASACZ_message_history.h"
+#include "ASACZ_fw_update.h"
 #include "dataSendRcv.h"
 #include "input_cluster_table.h"
 #include "my_queues.h"
@@ -162,6 +163,12 @@ typedef struct _type_ZAP_stats
 	type_device_list_stats device_list;
 }type_ZAP_stats;
 
+typedef struct _type_CC2650_version
+{
+	uint32_t is_valid;
+	VersionSrspFormat_t version;
+}type_CC2650_version;
+
 typedef struct _type_handle_app
 {
 	enum_app_status status;
@@ -195,7 +202,8 @@ typedef struct _type_handle_app
 	uint32_t rpcTaskSuspended;
 	type_my_timeout timeout_init_fw_update;
 	type_all_sapi_device_info_struct all_sapi_device_info_struct;
-	VersionSrspFormat_t CC2650_version;
+	type_CC2650_version CC2650_version;
+	type_CC2650_fw_update_handle CC2650_fw_update_handle;
 }type_handle_app;
 
 extern type_handle_app handle_app;
@@ -209,4 +217,6 @@ const char *get_dev_state_string(devStates_t e);
 
 void *rpcTask(void *argument);
 void *appInMessageTask(void *argument);
+
+
 #endif /* ASACZ_ZAP_H_ */

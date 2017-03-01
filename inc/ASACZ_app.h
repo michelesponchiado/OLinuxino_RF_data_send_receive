@@ -8,6 +8,8 @@
 #ifndef INC_ASACZ_APP_H_
 #define INC_ASACZ_APP_H_
 
+#include "ASAC_ZigBee_network_commands.h"
+
 typedef enum
 {
 	enum_app_status_idle = 0,
@@ -75,5 +77,17 @@ void get_app_last_link_quality(type_link_quality_body *p);
 	#endif
 #endif
 
+void get_CC2650_firmware_version(type_fwupd_CC2650_read_version_reply_body *p_dst);
 
+typedef enum
+{
+	enum_request_CC2650_firmware_update_retcode_OK = 0,
+	enum_request_CC2650_firmware_update_retcode_ERR_already_running,
+	enum_request_CC2650_firmware_update_retcode_ERR_too_long_filename,
+
+	enum_request_CC2650_firmware_update_retcode_numof
+}enum_request_CC2650_firmware_update_retcode;
+
+enum_request_CC2650_firmware_update_retcode request_CC2650_firmware_update(char *firmware_file_path, type_fwupd_CC2650_start_update_reply_body *p_dst);
+void get_CC2650_firmware_update_status(type_fwupd_CC2650_query_update_status_reply_body *p);
 #endif /* INC_ASACZ_APP_H_ */

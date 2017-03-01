@@ -206,6 +206,77 @@ static void leave_network(void)
 }
 
 
+unsigned int is_required_CC2650_firmware_update(void)
+{
+	unsigned int is_required = 0;
+	type_CC2650_fw_update_handle *p_CC2650fwupd = &handle_app.CC2650_fw_update_handle;
+	if (p_CC2650fwupd->num_req != p_CC2650fwupd->num_ack)
+	{
+		pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+			if (p_CC2650fwupd->num_req != p_CC2650fwupd->num_ack && p_CC2650fwupd->key_a55a0336 == 0xa55a0336)
+			{
+				p_CC2650fwupd->key_a55a0336 = 0;
+				p_CC2650fwupd->num_ack = p_CC2650fwupd->num_req;
+				is_required = 1;
+			}
+		pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
+	}
+	return is_required;
+}
+
+void get_CC2650_firmware_update_status(type_fwupd_CC2650_query_update_status_reply_body *p)
+{
+	type_CC2650_fw_update_handle *p_CC2650fwupd = &handle_app.CC2650_fw_update_handle;
+	pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+		p->ends_ERR = p_CC2650fwupd->ends_ERR;
+		p->ends_OK = p_CC2650fwupd->ends_OK;
+		p->num_ack = p_CC2650fwupd->num_ack;
+		p->num_req = p_CC2650fwupd->num_req;
+		p->fw_update_result_code = p_CC2650fwupd->CC2650_fw_update_retcode;
+		p->fw_update_result_code_is_valid = p_CC2650fwupd->CC2650_fw_update_retcode_is_valid;
+		snprintf((char*)p->fw_update_result_string, sizeof(p->fw_update_result_string), "%s", p_CC2650fwupd->result);
+		p->status = p_CC2650fwupd->status;
+	pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
+}
+
+
+enum_request_CC2650_firmware_update_retcode request_CC2650_firmware_update(char *firmware_file_path, type_fwupd_CC2650_start_update_reply_body *p_dst)
+{
+	enum_request_CC2650_firmware_update_retcode r = enum_request_CC2650_firmware_update_retcode_OK;
+	type_CC2650_fw_update_handle *p_CC2650fwupd = &handle_app.CC2650_fw_update_handle;
+	pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+		int needed = snprintf((char*)p_CC2650fwupd->CC2650_fw_signed_filename, sizeof(p_CC2650fwupd->CC2650_fw_signed_filename), "%s", firmware_file_path);
+		if (p_CC2650fwupd->is_running)
+		{
+			snprintf((char*)p_dst->result_message, sizeof(p_dst->result_message), "ERR already running");
+			r = enum_request_CC2650_firmware_update_retcode_ERR_already_running;
+		}
+		else if (needed >= sizeof(p_CC2650fwupd->CC2650_fw_signed_filename))
+		{
+			snprintf((char*)p_dst->result_message, sizeof(p_dst->result_message), "ERR too long filename");
+			r = enum_request_CC2650_firmware_update_retcode_ERR_too_long_filename;
+		}
+		else
+		{
+			p_CC2650fwupd->key_a55a0336 = 0xa55a0336;
+			p_CC2650fwupd->num_req++;
+			if (p_dst)
+			{
+				snprintf((char*)p_dst->result_message, sizeof(p_dst->result_message), "OK");
+				p_dst->num_request = p_CC2650fwupd->num_req;
+			}
+		}
+	pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
+	if (p_dst)
+	{
+		p_dst->result_code = r;
+		p_dst->is_OK = (r == enum_request_CC2650_firmware_update_retcode_OK);
+	}
+
+	return r;
+}
+
+
 
 void init_handle_app(void)
 {
@@ -218,6 +289,14 @@ void init_handle_app(void)
 		pthread_mutexattr_init(&mutexattr);
 		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
 		pthread_mutex_init(&handle_app.mtx_id, &mutexattr);
+	}
+	pthread_mutex_init(&handle_app.CC2650_fw_update_handle.mtx_id, NULL);
+	{
+		pthread_mutexattr_t mutexattr;
+
+		pthread_mutexattr_init(&mutexattr);
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&handle_app.CC2650_fw_update_handle.mtx_id, &mutexattr);
 	}
 	init_link_quality(&handle_app.link_quality);
 }
@@ -757,6 +836,18 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_firmware_update_init:
 		{
+			my_log(LOG_INFO,"%s: firmware update init", __func__);
+			type_CC2650_fw_update_handle *p_CC2650fwupd = &handle_app.CC2650_fw_update_handle;
+
+			pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+				p_CC2650fwupd->status = enum_CC2650_fw_update_status_init;
+				p_CC2650fwupd->CC2650_fw_update_retcode_is_valid = 0;
+				p_CC2650fwupd->CC2650_fw_update_retcode = 0;
+				p_CC2650fwupd->ends_ERR = 0;
+				p_CC2650fwupd->ends_OK = 0;
+				p_CC2650fwupd->is_running = 1;
+			pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
+
 			handle_app.suspend_rx_tasks = ++handle_app.suspend_rx_tasks_idx;
 			handle_app.status = enum_app_status_firmware_update_init_wait;
 			initialize_my_timeout(&handle_app.timeout_init_fw_update);
@@ -765,6 +856,12 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_firmware_update_init_wait:
 		{
+			type_CC2650_fw_update_handle *p_CC2650fwupd = &handle_app.CC2650_fw_update_handle;
+			pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+				p_CC2650fwupd->status = enum_CC2650_fw_update_status_init_wait;
+				p_CC2650fwupd->CC2650_fw_update_retcode_is_valid = 0;
+				p_CC2650fwupd->CC2650_fw_update_retcode= 0;
+			pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
 			if (handle_app.InMessageTaskSuspended == handle_app.suspend_rx_tasks)
 			{
 				handle_app.status = enum_app_status_firmware_update_do;
@@ -776,25 +873,79 @@ void* appProcess(void *argument)
 			{
 				handle_app.status = enum_app_status_firmware_update_ends;
 				my_log(LOG_ERR,"%s: timeout waiting firmware update start", __func__);
+				pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+					p_CC2650fwupd->status = enum_CC2650_fw_update_status_ends;
+					p_CC2650fwupd->ends_ERR= 1;
+					snprintf((char*)p_CC2650fwupd->result, sizeof(p_CC2650fwupd->result), "TIMEOUT STOPPING RX THREAD");
+				pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
 			}
 			break;
 		}
 		case enum_app_status_firmware_update_do:
 		{
+			my_log(LOG_INFO,"%s: firmware update do", __func__);
 			handle_app.status = enum_app_status_firmware_update_ends;
-			uint32_t fw_upd_return_code = do_CC2650_fw_update("/usr/ASACZ_CC2650fw_COORDINATOR.2_6_5");
+			type_CC2650_fw_update_handle *p_CC2650fwupd = &handle_app.CC2650_fw_update_handle;
+			char fw_file_path[sizeof(p_CC2650fwupd->CC2650_fw_signed_filename)];
+			pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+				p_CC2650fwupd->status = enum_CC2650_fw_update_status_do;
+			pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
+			int n_needed = snprintf(fw_file_path, sizeof(fw_file_path), "%s", p_CC2650fwupd->CC2650_fw_signed_filename);
+			{
+				if (n_needed >= sizeof(fw_file_path))
+				{
+					pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+						p_CC2650fwupd->status = enum_CC2650_fw_update_status_ends;
+						p_CC2650fwupd->ends_ERR = 1;
+						p_CC2650fwupd->ends_OK = 0;
+						snprintf((char*)p_CC2650fwupd->result, sizeof(p_CC2650fwupd->result), "TOO LONG INPUT FILENAME");
+					pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
+					my_log(LOG_ERR,"%s: too long filename %i bytes needed, %u bytes available: %s", __func__, n_needed, sizeof(fw_file_path) - 1, p_CC2650fwupd->CC2650_fw_signed_filename);
+					break;
+				}
+			}
+			//uint32_t fw_upd_return_code = do_CC2650_fw_update("/usr/ASACZ_CC2650fw_COORDINATOR.2_6_5");
+			my_log(LOG_INFO,"%s: firmware update starts with filename = %s", __func__, fw_file_path);
+
+			// here the magic is done!
+			uint32_t fw_upd_return_code = do_CC2650_fw_update(fw_file_path);
+
+			pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+				p_CC2650fwupd->CC2650_fw_update_retcode = fw_upd_return_code;
+				p_CC2650fwupd->status = enum_CC2650_fw_update_status_ends;
+				const char *p_msg = get_msg_from_CC2650_fw_update_retcode(fw_upd_return_code);
+				snprintf((char*)p_CC2650fwupd->result, sizeof(p_CC2650fwupd->result), "%s", p_msg);
+				if (fw_upd_return_code == enum_do_CC2650_fw_update_retcode_OK)
+				{
+					p_CC2650fwupd->num_upd_OK++;
+					p_CC2650fwupd->ends_ERR = 0;
+					p_CC2650fwupd->ends_OK = 1;
+				}
+				else
+				{
+					p_CC2650fwupd->num_upd_ERR++;
+					p_CC2650fwupd->ends_OK = 0;
+					p_CC2650fwupd->ends_ERR = 1;
+				}
+				p_CC2650fwupd->CC2650_fw_update_retcode_is_valid = 1;
+			pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
 			if (fw_upd_return_code == enum_do_CC2650_fw_update_retcode_OK)
 			{
 				my_log(LOG_INFO,"%s: firmware update finished OK", __func__);
 			}
 			else
 			{
-				my_log(LOG_ERR,"%s: firmware update finished with error %u", __func__, fw_upd_return_code);
+				my_log(LOG_INFO,"%s: firmware update ends with error %u (%s)", __func__, fw_upd_return_code, p_msg);
 			}
 			break;
 		}
 		case enum_app_status_firmware_update_ends:
 		{
+			type_CC2650_fw_update_handle *p_CC2650fwupd = &handle_app.CC2650_fw_update_handle;
+			pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+				p_CC2650fwupd->status = enum_CC2650_fw_update_status_ends;
+				p_CC2650fwupd->is_running = 0;
+			pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
 			my_log(LOG_INFO,"%s: reopening the serial port", __func__);
 			int fd = rpcOpen(NULL, 0);
 			if (fd == -1)
@@ -815,6 +966,11 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_tx_msgs:
 		{
+			if (is_required_CC2650_firmware_update())
+			{
+				handle_app.status = enum_app_status_firmware_update_init;
+				break;
+			}
 			if (is_required_shutdown())
 			{
 				// leave the network, then shutdown

@@ -1036,6 +1036,80 @@ int handle_ASACZ_request_restart_network_from_scratch(type_handle_ASACZ_request 
 	return retcode;
 }
 
+int handle_ASACZ_request_administrator_firmware_update(type_handle_ASACZ_request *p)
+{
+	int retcode = 0;
+	p->send_reply = 1;
+	p->send_unknown = 0;
+	my_log(LOG_INFO,"%s: administrator_firmware_update received", __func__);
+
+	uint32_t reply_max_command_version = def_ASAC_ZigBee_fwupd_req_command_version;
+	init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
+
+	uint32_t is_format_OK = 1;
+	if (is_format_OK)
+	{
+		if (p->pzmessage_tx->h.c.command_version != reply_max_command_version)
+		{
+			is_format_OK = 0;
+		}
+	}
+	if (is_format_OK)
+	{
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),fwupd_reply);
+		type_ASAC_ZigBee_interface_command_fwupd_req * p_req = &p->pzmessage_rx->req.fwupd_req;
+		type_ASAC_ZigBee_interface_command_fwupd_reply * p_reply = &p->pzmessage_tx->reply.fwupd_reply;
+		my_log(LOG_INFO,"%s: handling firmware update", __func__);
+		switch(p_req->dst.enum_dst)
+		{
+			case enum_ASAC_ZigBee_fwupd_destination_CC2650:
+			{
+				switch(p_req->ops.CC2650)
+				{
+					case enum_ASAC_ZigBee_fwupd_CC2650_op_read_version:
+					{
+						type_fwupd_CC2650_read_version_reply_body * p_reply_body = &p_reply->body.CC2650_read_firmware_version;
+						get_CC2650_firmware_version(p_reply_body);
+						break;
+					}
+					case enum_ASAC_ZigBee_fwupd_CC2650_op_start_update:
+					{
+						type_fwupd_CC2650_start_update_reply_body * p_reply_body = &p_reply->body.CC2650_start_firmware_update;
+						request_CC2650_firmware_update((char*)&p_req->body.CC2650_start_firmware_update.CC2650_fw_signed_filename[0], p_reply_body);
+						break;
+					}
+					case enum_ASAC_ZigBee_fwupd_CC2650_op_query_update_status:
+					{
+						type_fwupd_CC2650_query_update_status_reply_body * p_reply_body = &p_reply->body.CC2650_query_firmware_update_status;
+						get_CC2650_firmware_update_status(p_reply_body);
+						break;
+					}
+					default:
+					{
+						is_format_OK = 0;
+						break;
+					}
+				}
+				break;
+			}
+			default:
+			{
+				is_format_OK = 0;
+				break;
+			}
+		}
+	}
+	if (!is_format_OK)
+	{
+		my_log(LOG_ERR,"%s: error in the format", __func__);
+		p->send_reply = 0;
+		p->send_unknown = 1;
+		retcode = -1;
+	}
+	return retcode;
+}
+
+
 int handle_ASACZ_request_outside_send_message(type_handle_ASACZ_request *p)
 {
 	int retcode = 0;
@@ -1177,6 +1251,12 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 			case enum_ASAC_ZigBee_interface_command_administrator_restart_network_from_scratch:
 			{
 				retcode = handle_ASACZ_request_restart_network_from_scratch(&handle_ASACZ_request);
+				break;
+			}
+
+			case enum_ASAC_ZigBee_interface_command_administrator_firmware_update:
+			{
+				retcode = handle_ASACZ_request_administrator_firmware_update(&handle_ASACZ_request);
 				break;
 			}
 

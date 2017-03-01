@@ -19,6 +19,7 @@
 
 static void request_firmware_version()
 {
+	handle_app.CC2650_version.is_valid = 0;
 #define def_timeout_wait_fw_version_ms 5000
 	uint8_t status = sysVersion(def_timeout_wait_fw_version_ms);
 	if (status != SUCCESS)

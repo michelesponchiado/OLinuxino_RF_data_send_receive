@@ -1,9 +1,11 @@
 /*
- * ASACSOKET_check.c
+ * ASACSOKET_check.h
  *
  *  Created on: Jun 8, 2016
  *      Author: michele
  */
+#ifndef ASACSOCKET_check_included
+#define ASACSOCKET_check_included
 
 #include <string.h>
 #include <stdio.h>
@@ -95,3 +97,4 @@ enum_build_ASACSOCKET_formatted_message build_ASACSOCKET_formatted_message(type_
 
 // returns a string describing the error code
 const char * string_of_check_ASACSOCKET_return_code(enum_check_ASACSOCKET_formatted_message e);
+#endif // #ifndef ASACSOCKET_check_included

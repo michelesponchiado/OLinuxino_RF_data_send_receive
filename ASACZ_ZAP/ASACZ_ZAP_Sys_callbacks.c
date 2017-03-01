@@ -6,8 +6,8 @@
  */
 
 #include <ASACZ_ZAP.h>
-#include "../ASACZ_ZAP/ASACZ_ZAP_IEEE_address.h"
-#include "../ASACZ_ZAP/ASACZ_ZAP_TX_power.h"
+#include "ASACZ_ZAP_IEEE_address.h"
+#include "ASACZ_ZAP_TX_power.h"
 
 // callback from MT_SYS_GET_EXTADDR
 uint8_t mtSysGetExtAddrSrsp(GetExtAddrSrspFormat_t *msg)
@@ -40,8 +40,21 @@ uint8_t mtSysVersionSrsp(VersionSrspFormat_t *msg)
 			, (uint32_t)msg->Product
 			, (uint32_t)msg->TransportRev
 			);
-	memcpy(&handle_app.CC2650_version, msg, sizeof(handle_app.CC2650_version));
+	VersionSrspFormat_t *p_dst = &handle_app.CC2650_version.version;
+	memcpy(p_dst, msg, sizeof(*p_dst));
+	handle_app.CC2650_version.is_valid = 1;
 	return SUCCESS;
+}
+
+void get_CC2650_firmware_version(type_fwupd_CC2650_read_version_reply_body *p_dst)
+{
+	VersionSrspFormat_t *p_src = &handle_app.CC2650_version.version;
+	p_dst->is_valid = handle_app.CC2650_version.is_valid;
+	p_dst->major 	= p_src->MajorRel;
+	p_dst->middle 	= p_src->MinorRel;
+	p_dst->minor 	= p_src->MaintRel;
+	p_dst->product 	= p_src->Product;
+	p_dst->transport= p_src->TransportRev;
 }
 
 

@@ -10,7 +10,7 @@
 #include <inttypes.h>
 
 #ifndef ANDROID
-#define print_all_received_messages
+//#define print_all_received_messages
 #endif
 
 

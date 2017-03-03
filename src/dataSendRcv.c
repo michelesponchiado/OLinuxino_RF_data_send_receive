@@ -224,6 +224,46 @@ unsigned int is_required_CC2650_firmware_update(void)
 	return is_required;
 }
 
+enum_do_CC2650_fw_update_retcode sem_CC2650_fw_operation(enum_CC2650_fw_operation op, const char *path_binary_file, type_ASACZ_CC2650_fw_update_header *p_dst_header)
+{
+	pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_update);
+		enum_do_CC2650_fw_update_retcode r = do_CC2650_fw_operation(op, path_binary_file, p_dst_header);
+	pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_update);
+	return r;
+}
+
+
+void CC2650_query_firmware_file(char* CC2650_fw_query_filename , type_fwupd_CC2650_query_firmware_file_reply *p_reply_body)
+{
+	if (p_reply_body)
+	{
+		memset(p_reply_body, 0, sizeof(*p_reply_body));
+	}
+	type_ASACZ_CC2650_fw_update_header hw_header;
+	// here the magic is done!
+	enum_do_CC2650_fw_update_retcode fw_upd_return_code = sem_CC2650_fw_operation(enum_CC2650_fw_operation_get_file_header_info, CC2650_fw_query_filename, &hw_header);
+	if (p_reply_body)
+	{
+		p_reply_body->retcode= fw_upd_return_code;
+		snprintf((char*)p_reply_body->query_result_string, sizeof(p_reply_body->query_result_string), "%s", get_msg_from_CC2650_fw_update_retcode(fw_upd_return_code));
+		if (fw_upd_return_code == enum_do_CC2650_fw_update_retcode_OK)
+		{
+			snprintf((char*)p_reply_body->CC2650_fw_query_filename	, sizeof(p_reply_body->CC2650_fw_query_filename)	, "%s", CC2650_fw_query_filename);
+			snprintf((char*)p_reply_body->ascii_fw_type			, sizeof(p_reply_body->ascii_fw_type)				, "%s", hw_header.ascii_fw_type);
+			snprintf((char*)p_reply_body->ascii_version_number		, sizeof(p_reply_body->ascii_version_number)		, "%s", hw_header.ascii_version_number);
+			snprintf((char*)p_reply_body->date						, sizeof(p_reply_body->date)						, "%s", hw_header.date);
+			snprintf((char*)p_reply_body->magic_name				, sizeof(p_reply_body->magic_name)					, "%s", hw_header.magic_name);
+			p_reply_body->header_CRC32_CC2650			= hw_header.header_CRC32_CC2650;
+			p_reply_body->firmware_body_CRC32_CC2650 	= hw_header.firmware_body_CRC32_CC2650;
+			p_reply_body->firmware_body_size			= hw_header.firmware_body_size;
+			p_reply_body->fw_type						= hw_header.fw_type;
+			p_reply_body->fw_version_major				= hw_header.fw_version_major;
+			p_reply_body->fw_version_middle				= hw_header.fw_version_middle;
+			p_reply_body->fw_version_minor				= hw_header.fw_version_minor;
+		}
+	}
+}
+
 void get_CC2650_firmware_update_status(type_fwupd_CC2650_query_update_status_reply_body *p)
 {
 	type_CC2650_fw_update_handle *p_CC2650fwupd = &handle_app.CC2650_fw_update_handle;
@@ -231,7 +271,8 @@ void get_CC2650_firmware_update_status(type_fwupd_CC2650_query_update_status_rep
 		p->ends_ERR = p_CC2650fwupd->ends_ERR;
 		p->ends_OK = p_CC2650fwupd->ends_OK;
 		p->num_ack = p_CC2650fwupd->num_ack;
-		p->num_req = p_CC2650fwupd->num_req;
+		p->num_request = p_CC2650fwupd->num_req;
+		p->flash_write_percentage = get_CC2650_fw_update_progress();
 		p->fw_update_result_code = p_CC2650fwupd->CC2650_fw_update_retcode;
 		p->fw_update_result_code_is_valid = p_CC2650fwupd->CC2650_fw_update_retcode_is_valid;
 		snprintf((char*)p->fw_update_result_string, sizeof(p->fw_update_result_string), "%s", p_CC2650fwupd->result);
@@ -290,6 +331,7 @@ void init_handle_app(void)
 		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
 		pthread_mutex_init(&handle_app.mtx_id, &mutexattr);
 	}
+
 	pthread_mutex_init(&handle_app.CC2650_fw_update_handle.mtx_id, NULL);
 	{
 		pthread_mutexattr_t mutexattr;
@@ -298,6 +340,15 @@ void init_handle_app(void)
 		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
 		pthread_mutex_init(&handle_app.CC2650_fw_update_handle.mtx_id, &mutexattr);
 	}
+	pthread_mutex_init(&handle_app.CC2650_fw_update_handle.mtx_update, NULL);
+	{
+		pthread_mutexattr_t mutexattr;
+
+		pthread_mutexattr_init(&mutexattr);
+		pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+		pthread_mutex_init(&handle_app.CC2650_fw_update_handle.mtx_update, &mutexattr);
+	}
+
 	init_link_quality(&handle_app.link_quality);
 }
 unsigned int get_app_new_trans_id(uint32_t message_id)
@@ -907,8 +958,9 @@ void* appProcess(void *argument)
 			//uint32_t fw_upd_return_code = do_CC2650_fw_update("/usr/ASACZ_CC2650fw_COORDINATOR.2_6_5");
 			my_log(LOG_INFO,"%s: firmware update starts with filename = %s", __func__, fw_file_path);
 
+			type_ASACZ_CC2650_fw_update_header hw_header;
 			// here the magic is done!
-			uint32_t fw_upd_return_code = do_CC2650_fw_update(fw_file_path);
+			uint32_t fw_upd_return_code = sem_CC2650_fw_operation(enum_CC2650_fw_operation_update_firmware, fw_file_path, &hw_header);
 
 			pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
 				p_CC2650fwupd->CC2650_fw_update_retcode = fw_upd_return_code;

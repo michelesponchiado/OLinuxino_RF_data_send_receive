@@ -1064,6 +1064,8 @@ int handle_ASACZ_request_administrator_firmware_update(type_handle_ASACZ_request
 		{
 			case enum_ASAC_ZigBee_fwupd_destination_CC2650:
 			{
+				p_reply->dst.enum_dst = enum_ASAC_ZigBee_fwupd_destination_CC2650;
+				p_reply->ops.CC2650 = p_req->ops.CC2650;
 				switch(p_req->ops.CC2650)
 				{
 					case enum_ASAC_ZigBee_fwupd_CC2650_op_read_version:
@@ -1082,6 +1084,12 @@ int handle_ASACZ_request_administrator_firmware_update(type_handle_ASACZ_request
 					{
 						type_fwupd_CC2650_query_update_status_reply_body * p_reply_body = &p_reply->body.CC2650_query_firmware_update_status;
 						get_CC2650_firmware_update_status(p_reply_body);
+						break;
+					}
+					case enum_ASAC_ZigBee_fwupd_CC2650_op_query_firmware_file:
+					{
+						type_fwupd_CC2650_query_firmware_file_reply * p_reply_body = &p_reply->body.CC2650_query_firmware_file_reply;
+						CC2650_query_firmware_file((char*)p_req->body.CC2650_query_firmware_file_req.CC2650_fw_query_filename, p_reply_body);
 						break;
 					}
 					default:

@@ -90,4 +90,6 @@ typedef enum
 
 enum_request_CC2650_firmware_update_retcode request_CC2650_firmware_update(char *firmware_file_path, type_fwupd_CC2650_start_update_reply_body *p_dst);
 void get_CC2650_firmware_update_status(type_fwupd_CC2650_query_update_status_reply_body *p);
+void CC2650_query_firmware_file(char* CC2650_fw_query_filename , type_fwupd_CC2650_query_firmware_file_reply *p_reply_body);
+
 #endif /* INC_ASACZ_APP_H_ */

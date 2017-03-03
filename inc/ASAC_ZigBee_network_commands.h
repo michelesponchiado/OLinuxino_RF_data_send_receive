@@ -459,6 +459,7 @@ typedef enum
 	enum_ASAC_ZigBee_fwupd_CC2650_op_read_version = 0,		// read the radio chip firmware version
 	enum_ASAC_ZigBee_fwupd_CC2650_op_start_update,			// update the radio chip firmware
 	enum_ASAC_ZigBee_fwupd_CC2650_op_query_update_status,	// query the status of the radio chip firmware update procedure
+	enum_ASAC_ZigBee_fwupd_CC2650_op_query_firmware_file,	// query the firmware informations embedded in a CC2650 ASAC firmware file
 
 	enum_ASAC_ZigBee_fwupd_CC2650_numof
 }enum_ASAC_ZigBee_fwupd_CC2650_ops;
@@ -466,7 +467,8 @@ typedef enum
 typedef struct _type_fwupd_CC2650_read_version_req_body
 {
 	uint32_t unused;
-}type_fwupd_CC2650_read_version_req_body;
+}__attribute__((__packed__)) type_fwupd_CC2650_read_version_req_body;
+
 typedef struct _type_fwupd_CC2650_read_version_reply_body
 {
 	uint32_t is_valid;
@@ -475,13 +477,13 @@ typedef struct _type_fwupd_CC2650_read_version_reply_body
 	uint32_t minor;
 	uint32_t product;
 	uint32_t transport;
-}type_fwupd_CC2650_read_version_reply_body;
+}__attribute__((__packed__)) type_fwupd_CC2650_read_version_reply_body;
 
 #define def_max_length_fwupd_CC2650_fw_signed_filename 256
 typedef struct _type_fwupd_CC2650_start_update_req_body
 {
 	uint8_t CC2650_fw_signed_filename[def_max_length_fwupd_CC2650_fw_signed_filename];
-}type_fwupd_CC2650_start_update_req_body;
+}__attribute__((__packed__)) type_fwupd_CC2650_start_update_req_body;
 
 #define def_max_length_fwupd_CC2650_fw_update_error_message 256
 typedef struct _type_fwupd_CC2650_start_update_reply_body
@@ -490,25 +492,50 @@ typedef struct _type_fwupd_CC2650_start_update_reply_body
 	uint32_t num_request;	// the identifier of the firmware update request assigned
 	uint32_t result_code;	// the result code please see enum_request_CC2650_firmware_update_retcode, anyway 0 means OK
 	uint8_t result_message[def_max_length_fwupd_CC2650_fw_update_error_message];	// the result string message, we hope it will be "OK"
-}type_fwupd_CC2650_start_update_reply_body;
+}__attribute__((__packed__)) type_fwupd_CC2650_start_update_reply_body;
 
 typedef struct _type_fwupd_CC2650_query_update_status_req_body
 {
 	uint32_t unused;
-}type_fwupd_CC2650_query_update_status_req_body;
+}__attribute__((__packed__)) type_fwupd_CC2650_query_update_status_req_body;
 
 #define def_max_char_fwupd_CC2650_result_string 256
 typedef struct _type_fwupd_CC2650_query_update_status_reply_body
 {
-	uint32_t status;
-	uint32_t ends_OK;
-	uint32_t ends_ERR;
-	uint32_t fw_update_result_code_is_valid;
-	uint32_t fw_update_result_code;
-	uint8_t fw_update_result_string[def_max_char_fwupd_CC2650_result_string];
-	uint32_t num_req;
-	uint32_t num_ack;
-}type_fwupd_CC2650_query_update_status_reply_body;
+	uint32_t status;							// please see enum_CC2650_fw_update_status
+	uint32_t ends_OK;							// the update has finished OK
+	uint32_t ends_ERR;							// the update has finished with error
+	uint32_t fw_update_result_code_is_valid;	// the following field fw_update_result_code is valid
+	uint32_t fw_update_result_code;				// the result of the firmware update procedure, please see enum_do_CC2650_fw_update_retcode
+	uint8_t fw_update_result_string[def_max_char_fwupd_CC2650_result_string];	// the firmware update result string
+	uint32_t flash_write_percentage; 			// the percentage of the CC2650 flash write procedure
+	uint32_t num_request;						// this is the current flash update request progressive index; most of the times it will be the same value returned on start update
+	uint32_t num_ack;							// this is the current request number being serviced / completed
+}__attribute__((__packed__)) type_fwupd_CC2650_query_update_status_reply_body;
+
+typedef struct _type_fwupd_CC2650_query_firmware_file_req
+{
+	uint8_t CC2650_fw_query_filename[def_max_length_fwupd_CC2650_fw_signed_filename];
+}__attribute__((__packed__)) type_fwupd_CC2650_query_firmware_file_req;
+
+typedef struct _type_fwupd_CC2650_query_firmware_file_reply
+{
+	uint32_t retcode;					// this is 0 if the check was OK, else it contains the error code, please see enum_do_CC2650_fw_update_retcode
+	uint8_t query_result_string[def_max_char_fwupd_CC2650_result_string];	// the query result string
+	uint8_t CC2650_fw_query_filename[def_max_length_fwupd_CC2650_fw_signed_filename];	// the filename queried
+	uint8_t magic_name[32];				// must be set to "ASACZ_CC2650_fw_update_header", and filled up with 0x00 in the remaining bytes
+	uint8_t ascii_fw_type[32];			// must be set to "COORDINATOR" or "ROUTER" or "END_DEVICE"
+	uint8_t ascii_version_number[32];	// must have the format "<major>.<middle>.<minor>"
+	uint8_t date[32];					// must be set to "YYYY mmm dd"
+	uint32_t fw_type;					// must be set to 0 for COORDINATOR, 1 for ROUTER, 2 for END_DEVICE
+	uint32_t fw_version_major;			// the firmware version major number
+	uint32_t fw_version_middle;			// the firmware version middle number
+	uint32_t fw_version_minor;			// the firmware version minor number
+	uint32_t firmware_body_size;		// the expected number of bytes in the firmware body, most of the times it should be 131072, i.e. 128 kBytes
+	uint32_t firmware_body_CRC32_CC2650;// the CRC32 of the firmware body calculated as CC2650 does it, please see the calcCrcLikeChip routine
+	uint32_t header_CRC32_CC2650;		// the CRC32 of the header (this field excluded), calculated as CC2650 does it, please see the calcCrcLikeChip routine
+}__attribute__((__packed__)) type_fwupd_CC2650_query_firmware_file_reply;
+
 
 #define def_ASAC_ZigBee_fwupd_req_command_version 0
 
@@ -533,6 +560,7 @@ typedef struct _type_ASAC_ZigBee_interface_command_fwupd_req
 		type_fwupd_CC2650_read_version_req_body CC2650_read_firmware_version;
 		type_fwupd_CC2650_start_update_req_body CC2650_start_firmware_update;
 		type_fwupd_CC2650_query_update_status_req_body CC2650_query_firmware_update_status;
+		type_fwupd_CC2650_query_firmware_file_req CC2650_query_firmware_file_req;
 	}body;
 }__attribute__((__packed__)) type_ASAC_ZigBee_interface_command_fwupd_req ;
 
@@ -558,6 +586,7 @@ typedef struct _type_ASAC_ZigBee_interface_command_fwupd_reply
 		type_fwupd_CC2650_read_version_reply_body CC2650_read_firmware_version;
 		type_fwupd_CC2650_start_update_reply_body CC2650_start_firmware_update;
 		type_fwupd_CC2650_query_update_status_reply_body CC2650_query_firmware_update_status;
+		type_fwupd_CC2650_query_firmware_file_reply CC2650_query_firmware_file_reply;
 	}body;
 }__attribute__((__packed__)) type_ASAC_ZigBee_interface_command_fwupd_reply;
 //

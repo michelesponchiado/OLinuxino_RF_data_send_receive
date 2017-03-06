@@ -9,6 +9,7 @@
 #define ASACZ_ZAP_H_
 
 #include <ASAC_ZigBee_network_commands.h>
+#include <pthread.h>
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>

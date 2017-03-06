@@ -52,8 +52,6 @@ LOCAL_SRC_FILES := \
 
 #LOCAL_CFLAGS += -DTS_DEVICE=$(TARGET_TS_DEVICE)
 
-
-
 LOCAL_MODULE := ASACZserver
 LOCAL_MODULE_TAGS := eng
 
@@ -67,13 +65,14 @@ LOCAL_C_INCLUDES := 	$(LOCAL_PATH)/framework/platform/gnu 	\
 			$(LOCAL_PATH)/ASACZ_ZAP			\
 			$(LOCAL_PATH)/utils			\
 			$(LOCAL_PATH)/inc			\
+			$(LOCAL_PATH)/../cc2650_fw_update/lib_inc \
 			$(LOCAL_PATH)/src
 
 LOCAL_CFLAGS += -DCC26xx -DANDROID
 
 LOCAL_MODULE_PATH := $(TARGET_ROOT_OUT_SBIN)
 LOCAL_FORCE_STATIC_EXECUTABLE := true
-LOCAL_STATIC_LIBRARIES += libcutils libc libm
+LOCAL_STATIC_LIBRARIES += libcutils libc libm libCC2650_fw_update_Android libstdc++
 LOCAL_LDLIBS := -lpthread -lrt
 
 include $(BUILD_EXECUTABLE)

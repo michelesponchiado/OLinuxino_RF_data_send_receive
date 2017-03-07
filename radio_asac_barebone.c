@@ -39,6 +39,8 @@
 #define PROPERTY_RF_ON_PIN "ro.radioRF.pinON"
 #define PROPERTY_RF_RESET_PIN "ro.radioRF.pinReset"
 #define PROPERTY_RF_COM_PORT "ro.radioRF.COMport"
+#define PROPERTY_ASACZ_CC2650_BOOT_ENABLE "ro.ASACZ.CC2650_BOOT_ENABLE"
+
 
 //LEDs
 #define PROPERTY_YEL_SW 			"ro.radioRF.YEL_SW"
@@ -53,6 +55,7 @@
 // the names of the pins in the Linux sysfs
 char rf_on_pin_value[PROPERTY_VALUE_MAX];
 char rf_reset_pin_value[PROPERTY_VALUE_MAX];
+char CC2650_BOOT_ENABLE_pin_value[PROPERTY_VALUE_MAX];
 
 
 // defines to set the correct value to the ON pin
@@ -65,6 +68,11 @@ char rf_reset_pin_value[PROPERTY_VALUE_MAX];
 #define def_reset_pin_active_value 0
 #define def_reset_pin_not_active_value (!def_reset_pin_active_value)
 
+
+// defines to set the correct value to the CC2650_BOOT_ENABLE pin
+// it is active HIGH
+#define def_CC2650_BOOT_ENABLE_pin_active_value 1
+#define def_CC2650_BOOT_ENABLE_pin_not_active_value (!def_reset_pin_active_value)
 
 // useful routine to get a RF pin name
 // returns 1 if OK, -1 if name not found
@@ -347,6 +355,78 @@ int green_LED_set(int off0_on1)
         return i_ret_value[0];
     }
     return i_ret_value[1];
+}
+
+int is_OK_do_CC2650_reset(unsigned int enable_boot_mode)
+{
+	int is_OK = 1;
+
+	// get the RF reset pin name
+	if (is_OK)
+	{
+		if (i_get_rf_pin_name(PROPERTY_RF_RESET_PIN, rf_reset_pin_value, sizeof(rf_reset_pin_value)) < 0)
+		{
+			is_OK = 0;
+		}
+	}
+
+	// get the CC2650_BOOT_ENABLE pin name
+	if (is_OK)
+	{
+
+		if (i_get_rf_pin_name(PROPERTY_ASACZ_CC2650_BOOT_ENABLE, CC2650_BOOT_ENABLE_pin_value, sizeof(CC2650_BOOT_ENABLE_pin_value)) < 0)
+		{
+			is_OK = 0;
+		}
+	}
+
+	// ACTIVATE THE RESET PIN
+	if (is_OK)
+	{
+		if (pin_set_value(rf_reset_pin_value, def_reset_pin_active_value) < 0)
+		{
+			is_OK = 0;
+		}
+	}
+
+	// wait 100ms
+	if (is_OK)
+	{
+		usleep(100 * 1000);
+	}
+
+	// ACTIVATE/DEACTIVATE (depending upon the operation passed as parameter) THE BOOT ENABLE PIN
+	if (is_OK)
+	{
+		int pin_value = enable_boot_mode ? def_CC2650_BOOT_ENABLE_pin_active_value : def_CC2650_BOOT_ENABLE_pin_not_active_value;
+		if (pin_set_value(CC2650_BOOT_ENABLE_pin_value, pin_value) < 0)
+		{
+			is_OK = 0;
+		}
+	}
+
+	// wait 200ms
+	if (is_OK)
+	{
+		usleep(200 * 1000);
+	}
+
+	// DEACTIVATE THE RESET PIN
+	if (is_OK)
+	{
+		if (pin_set_value(rf_reset_pin_value, def_reset_pin_not_active_value) < 0)
+		{
+			is_OK = 0;
+		}
+	}
+
+	// wait 10ms
+	if (is_OK)
+	{
+		usleep(10 * 1000);
+	}
+
+	return is_OK;
 }
 
 

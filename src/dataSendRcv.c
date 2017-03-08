@@ -666,7 +666,7 @@ void* appMsgProcess(void *argument)
 	return NULL;
 }
 
-//#define test_firmware_update
+#define test_firmware_update
 #ifdef test_firmware_update
 #warning test_firmware_update !!!!!!!!!!!!!!!
 int fw_test_done = 0;
@@ -960,7 +960,7 @@ void* appProcess(void *argument)
 				p_CC2650fwupd->status = enum_CC2650_fw_update_status_do;
 			pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
 #ifdef test_firmware_update
-			int n_needed = snprintf(fw_file_path, sizeof(fw_file_path), "/data/system/ASACZ_CC2650fw_COORDINATOR.2_6_5");
+			int n_needed = snprintf(fw_file_path, sizeof(fw_file_path), "/data/system/ASACZ_CC2650fw_ROUTER.2_6_5");
 			my_log(LOG_INFO, "test_firmware_update: using as update the file %s", fw_file_path);
 #else
 			int n_needed = snprintf(fw_file_path, sizeof(fw_file_path), "%s", p_CC2650fwupd->CC2650_fw_signed_filename);

@@ -348,9 +348,50 @@ int is_OK_do_CC2650_reset(unsigned int enable_boot_mode)
 //#define def_test_fw_upd
 #undef def_test_fw_upd
 
+#include <libgen.h>
+static void print_syntax(char *full_name)
+{
+	char copy_path[512];
+	snprintf(copy_path, sizeof(copy_path), "%s", full_name);
+	char *bname = basename(copy_path);
+	if (!bname)
+	{
+		bname = "ASACZ";
+	}
+	printf("Syntax:\n");
+	printf("%s --help\n", bname);
+		printf("\tshows this help\n");
+	printf("%s --version\n", bname);
+		printf("\tshows the program version info\n");
+	printf("%s [udpport=<UDP port number> [serialport=<serial port name>]]\n", bname);
+		printf("\tsets the UDP port number (default %u) and optionally the serial port name (default %s)\n", def_port_number, def_selected_serial_port);
+	printf("\n");
+	printf("Examples of valid calls:\n");
+	printf("%s\n");
+		printf("\tuses the default UDP port number %u and the default serial port name %s\n", def_port_number, def_selected_serial_port);
+	printf("%s udpport=3118\n");
+		printf("\tuses the UDP port number 3118 and the default serial port name %s\n", def_selected_serial_port);
+	printf("%s udpport=3119 serialport=/dev/ttys3\n");
+		printf("\tuses the UDP port number 3118 and the serial port name /dev/ttys3\n");
+}
+
 int main(int argc, char* argv[])
 {
+    if ((argc >= 2) && (strncasecmp(argv[1],"--help",6)==0))
+    {
+        print_syntax(argv[0]);
+		return 0;
+    }
+    if ((argc >= 2) && (strncasecmp(argv[1],"--version",9)==0))
+    {
+        init_ASACZ_firmware_version();
+        char v[128];
+    	get_ASACZ_firmware_version_string(v, sizeof(v));
+        printf("version:\n\t%s\n", v);
+		return 0;
+    }
 	init_sig_handlers();
+	
 #if 0
 	{
 		void ASACZ_conf_module_test(void);

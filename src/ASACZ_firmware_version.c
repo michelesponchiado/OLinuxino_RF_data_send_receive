@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	6
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	7
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,9 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 7
+// * added the option --version to print on the console the program version
+// * added the option --help to print on the console the arguments syntax
 // 0.1.3 build 6
 // * adding the firmware update procedure, experimenting, but it seems to work OK
 // 0.1.3 build 5

@@ -292,7 +292,7 @@ enum_request_CC2650_firmware_update_retcode request_CC2650_firmware_update(char 
 			snprintf((char*)p_dst->result_message, sizeof(p_dst->result_message), "ERR already running");
 			r = enum_request_CC2650_firmware_update_retcode_ERR_already_running;
 		}
-		else if (needed >= sizeof(p_CC2650fwupd->CC2650_fw_signed_filename))
+		else if (needed >= (int)sizeof(p_CC2650fwupd->CC2650_fw_signed_filename))
 		{
 			snprintf((char*)p_dst->result_message, sizeof(p_dst->result_message), "ERR too long filename");
 			r = enum_request_CC2650_firmware_update_retcode_ERR_too_long_filename;
@@ -666,6 +666,12 @@ void* appMsgProcess(void *argument)
 	return NULL;
 }
 
+//#define test_firmware_update
+#ifdef test_firmware_update
+#warning test_firmware_update !!!!!!!!!!!!!!!
+int fw_test_done = 0;
+#endif	
+
 // processes the statuses of the ZigBee network handling
 void* appProcess(void *argument)
 {
@@ -876,6 +882,15 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_rx_msgs:
 		{
+#ifdef test_firmware_update
+	if (!fw_test_done)
+	{
+			my_log(LOG_INFO, "test_firmware_update: CC2650 FIRMWARE UPDATE TEST STARTS!");
+		fw_test_done = 1;
+		handle_app.status = enum_app_status_firmware_update_init;
+		break;
+	}
+#endif			
 			handle_app.status = enum_app_status_tx_msgs;
 			break;
 		}
@@ -900,6 +915,9 @@ void* appProcess(void *argument)
 			pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
 
 			handle_app.suspend_rx_tasks = ++handle_app.suspend_rx_tasks_idx;
+			// send an IEEE address request to unlock the receiving thread
+			int32_t status = sysGetExtAddr();
+			
 			handle_app.status = enum_app_status_firmware_update_init_wait;
 			initialize_my_timeout(&handle_app.timeout_init_fw_update);
 
@@ -941,9 +959,15 @@ void* appProcess(void *argument)
 			pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
 				p_CC2650fwupd->status = enum_CC2650_fw_update_status_do;
 			pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
+#ifdef test_firmware_update
+			int n_needed = snprintf(fw_file_path, sizeof(fw_file_path), "/data/system/ASACZ_CC2650fw_COORDINATOR.2_6_5");
+			my_log(LOG_INFO, "test_firmware_update: using as update the file %s", fw_file_path);
+#else
 			int n_needed = snprintf(fw_file_path, sizeof(fw_file_path), "%s", p_CC2650fwupd->CC2650_fw_signed_filename);
+#endif			
+			
 			{
-				if (n_needed >= sizeof(fw_file_path))
+				if (n_needed >= (int)sizeof(fw_file_path))
 				{
 					pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
 						p_CC2650fwupd->status = enum_CC2650_fw_update_status_ends;

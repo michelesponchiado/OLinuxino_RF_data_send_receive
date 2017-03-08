@@ -868,7 +868,7 @@ void* appProcess(void *argument)
 			dbg_print(PRINT_LEVEL_INFO, "My IEEE Address is: 0x%" PRIx64 "", handle_app.IEEE_address.address);
 			my_log(LOG_INFO, "Display device OK, going to rx/tx mode");
 // wait until a device shows up?
-#warning better to remove this default end point / destination address
+//#warning better to remove this default end point / destination address
 			handle_app.DataRequest.DstAddr 		= (uint16_t) 0xfa24;
 			handle_app.DataRequest.DstEndpoint 	= get_default_dst_endpoint();
 			handle_app.DataRequest.SrcEndpoint 	= get_default_src_endpoint();
@@ -916,7 +916,7 @@ void* appProcess(void *argument)
 
 			handle_app.suspend_rx_tasks = ++handle_app.suspend_rx_tasks_idx;
 			// send an IEEE address request to unlock the receiving thread
-			int32_t status = sysGetExtAddr();
+			sysGetExtAddr();
 			
 			handle_app.status = enum_app_status_firmware_update_init_wait;
 			initialize_my_timeout(&handle_app.timeout_init_fw_update);

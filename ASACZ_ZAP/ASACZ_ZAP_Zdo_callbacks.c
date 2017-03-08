@@ -162,7 +162,7 @@ static uint8_t mtZdoStateChangeIndCb(uint8_t newDevState)
 		break;
 	case DEV_COORD_STARTING:
 		dbg_print(PRINT_LEVEL_INFO, "Network Starting");
-		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Started as Zigbee Coordinator");
+		my_log(LOG_INFO,"mtZdoStateChangeIndCb: Starting as Zigbee Coordinator");
 		break;
 	case DEV_ZB_COORD:
 		dbg_print(PRINT_LEVEL_INFO, "Network Started");

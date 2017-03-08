@@ -291,11 +291,11 @@ enum_get_next_end_point_command_list_retcode get_next_end_point_command_list(uin
 			}
 
 		}
-		my_log(LOG_ERR, "%s: + end of loop\n", __func__);
+		my_log(LOG_INFO, "%s: + end of loop\n", __func__);
 		if (!found_end_point)
 		{
 			r = enum_get_next_end_point_command_list_retcode_empty;
-			my_log(LOG_ERR, "%s: no endpoint found\n", __func__);
+			my_log(LOG_INFO, "%s: no endpoint found\n", __func__);
 		}
 		else	
 			my_log(LOG_INFO, "%s: endpoint found OK\n", __func__);

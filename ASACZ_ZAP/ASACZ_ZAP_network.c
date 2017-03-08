@@ -19,6 +19,7 @@
 
 static void request_firmware_version()
 {
+	my_log(LOG_INFO,"%s: requesting radio chip firmware version", __func__);
 	handle_app.CC2650_version.is_valid = 0;
 #define def_timeout_wait_fw_version_ms 5000
 	uint8_t status = sysVersion(def_timeout_wait_fw_version_ms);
@@ -28,7 +29,7 @@ static void request_firmware_version()
 	}
 	else
 	{
-		my_log(LOG_INFO,"%s: requesting radio chip firmware version", __func__);
+		my_log(LOG_INFO,"%s: radio chip firmware version requested OK", __func__);
 	}
 }
 

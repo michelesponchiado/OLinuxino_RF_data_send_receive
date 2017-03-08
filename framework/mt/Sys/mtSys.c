@@ -134,6 +134,7 @@ static uint32_t is_OK_wait_reply(enum_sys_ackreq e, uint32_t wait_reply_ms)
 		{
 			break;
 		}
+		rpcWaitMqClientMsg(10);
 	}
 
 	return ret;

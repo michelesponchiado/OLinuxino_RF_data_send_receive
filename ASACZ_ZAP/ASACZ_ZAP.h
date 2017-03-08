@@ -43,8 +43,7 @@
 typedef enum
 {
 	// Device Info Constants
-	enum_ZB_INFO_UNKNOWN 					=0,
-	enum_ZB_INFO_THE_VERY_FIRST				,
+	enum_ZB_INFO_THE_VERY_FIRST = 0			,
 	enum_ZB_INFO_DEV_STATE  = enum_ZB_INFO_THE_VERY_FIRST               ,
 	enum_ZB_INFO_IEEE_ADDR                 ,
 	enum_ZB_INFO_SHORT_ADDR                ,
@@ -53,6 +52,7 @@ typedef enum
 	enum_ZB_INFO_CHANNEL                   ,
 	enum_ZB_INFO_PAN_ID                    ,
 	enum_ZB_INFO_EXT_PAN_ID                ,
+	enum_ZB_INFO_UNKNOWN 					,
 	enum_ZB_INFO_numof						,
 }enum_ZB_INFO;
 

@@ -529,7 +529,9 @@ enum_boot_check_retcode boot_check(void)
 
 								if (!error_command)
 								{
+#ifdef do_uci_commit
 									error_command = !is_OK_execute_command("uci commit network");
+#endif
 								}
 
 								if (!error_command)
@@ -662,7 +664,9 @@ enum_boot_check_retcode boot_check(void)
 
 								if (!error_command)
 								{
+#ifdef do_uci_commit
 									error_command = !is_OK_execute_command("uci commit network");
+#endif
 								}
 
 								if (!error_command)

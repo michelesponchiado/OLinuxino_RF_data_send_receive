@@ -4,5 +4,5 @@
 
 USER_OBJS :=
 
-LIBS := -lpthread
+LIBS := -lpthread -lCC2650_fw_update -lstdc++
 

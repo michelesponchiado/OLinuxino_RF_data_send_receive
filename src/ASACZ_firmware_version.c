@@ -30,6 +30,7 @@
 // 0.1.3 build 7
 // * added the option --version to print on the console the program version
 // * added the option --help to print on the console the arguments syntax
+// * the boot check changes are volatile ("uci commit" is not executed after the setting have been done)
 // 0.1.3 build 6
 // * adding the firmware update procedure, experimenting, but it seems to work OK
 // 0.1.3 build 5

@@ -367,11 +367,11 @@ static void print_syntax(char *full_name)
 		printf("\tsets the UDP port number (default %u) and optionally the serial port name (default %s)\n", def_port_number, def_selected_serial_port);
 	printf("\n");
 	printf("Examples of valid calls:\n");
-	printf("%s\n");
+	printf("%s\n", bname);
 		printf("\tuses the default UDP port number %u and the default serial port name %s\n", def_port_number, def_selected_serial_port);
-	printf("%s udpport=3118\n");
+	printf("%s udpport=3118\n", bname);
 		printf("\tuses the UDP port number 3118 and the default serial port name %s\n", def_selected_serial_port);
-	printf("%s udpport=3119 serialport=/dev/ttys3\n");
+	printf("%s udpport=3119 serialport=/dev/ttys3\n", bname);
 		printf("\tuses the UDP port number 3118 and the serial port name /dev/ttys3\n");
 }
 

@@ -38,7 +38,7 @@ all: ASACZ_x86
 ASACZ_x86: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: Cross GCC Linker'
-	gcc  -o "ASACZ_x86" $(OBJS) $(USER_OBJS) $(LIBS)
+	gcc -L"/home/michele/workspace/CC2650_fw_update/Debug" -o "ASACZ_x86" $(OBJS) $(USER_OBJS) $(LIBS)
 	@echo 'Finished building target: $@'
 	@echo ' '
 

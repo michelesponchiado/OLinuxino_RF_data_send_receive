@@ -65,6 +65,7 @@ uint8_t request_device_info(enum_ZB_INFO e, uint32_t wait_reply_ms, type_sapi_de
 				}
 				break;
 			}
+			rpcWaitMqClientMsg(10);
 		}
 	}
 
@@ -170,7 +171,7 @@ static uint8_t getDeviceInfoSrspCb (GetDeviceInfoSrspFormat_t *msg)
 			}
 			case enum_ZB_INFO_EXT_PAN_ID:
 			{
-				my_log(LOG_INFO, "%s: EXT PANID: 0x%"PRIx64, __func__, ps->u.extPANID);
+				my_log(LOG_INFO, "%s: EXT PANID: 0x%"PRIX64, __func__, ps->u.extPANID);
 				break;
 			}
 			case enum_ZB_INFO_UNKNOWN:

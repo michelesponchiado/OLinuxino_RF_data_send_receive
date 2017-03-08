@@ -689,6 +689,15 @@ void* appProcess(void *argument)
 		// if in error, only a restart can change status
 		case enum_app_status_error:
 		{
+#ifdef test_firmware_update
+	if (!fw_test_done)
+	{
+			my_log(LOG_INFO, "test_firmware_update: CC2650 FIRMWARE UPDATE TEST STARTS!");
+		fw_test_done = 1;
+		handle_app.status = enum_app_status_firmware_update_init;
+		break;
+	}
+#endif					
 			if (ZAP_is_required_network_restart_from_scratch())
 			{
 				handle_app.status = enum_app_status_restart_network_from_scratch;
@@ -913,10 +922,10 @@ void* appProcess(void *argument)
 				p_CC2650fwupd->ends_OK = 0;
 				p_CC2650fwupd->is_running = 1;
 			pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
-
+			handle_app.num_loop_wait_suspend_rx_thread = 0;
 			handle_app.suspend_rx_tasks = ++handle_app.suspend_rx_tasks_idx;
-			// send an IEEE address request to unlock the receiving thread
-			sysGetExtAddr();
+			// sends a ping with no Rx so we can unlock the receiving threads
+			sysPing_noRx();
 			
 			handle_app.status = enum_app_status_firmware_update_init_wait;
 			initialize_my_timeout(&handle_app.timeout_init_fw_update);
@@ -931,22 +940,41 @@ void* appProcess(void *argument)
 				p_CC2650fwupd->CC2650_fw_update_retcode_is_valid = 0;
 				p_CC2650fwupd->CC2650_fw_update_retcode= 0;
 			pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
-			if (handle_app.InMessageTaskSuspended == handle_app.suspend_rx_tasks)
+			if (handle_app.InMessageTaskSuspended == handle_app.suspend_rx_tasks && handle_app.rpcTaskSuspended == handle_app.suspend_rx_tasks)
 			{
 				handle_app.status = enum_app_status_firmware_update_do;
-				my_log(LOG_INFO,"%s: closing the serial port", __func__);
+				my_log(LOG_INFO,"%s: receive tasks suspended OK, closing the serial port", __func__);
 				// closes the serial port
 				rpcTransportClose();
 			}
-			else if (is_my_timeout_elapsed_ms(&handle_app.timeout_init_fw_update, 100000))
+			else if (is_my_timeout_elapsed_ms(&handle_app.timeout_init_fw_update, 1000))
 			{
-				handle_app.status = enum_app_status_firmware_update_ends;
-				my_log(LOG_ERR,"%s: timeout waiting firmware update start", __func__);
-				pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
-					p_CC2650fwupd->status = enum_CC2650_fw_update_status_ends;
-					p_CC2650fwupd->ends_ERR= 1;
-					snprintf((char*)p_CC2650fwupd->result, sizeof(p_CC2650fwupd->result), "TIMEOUT STOPPING RX THREAD");
-				pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
+				initialize_my_timeout(&handle_app.timeout_init_fw_update);
+				if (++handle_app.num_loop_wait_suspend_rx_thread >= 3)
+				{
+					handle_app.num_loop_wait_suspend_rx_thread = 0;
+					handle_app.status = enum_app_status_firmware_update_ends;
+#if 0					
+					my_log(LOG_ERR,"%s: timeout waiting firmware, abandon", __func__);
+					pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
+						p_CC2650fwupd->status = enum_CC2650_fw_update_status_ends;
+						p_CC2650fwupd->ends_ERR= 1;
+						snprintf((char*)p_CC2650fwupd->result, sizeof(p_CC2650fwupd->result), "TIMEOUT STOPPING RX THREAD");
+					pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
+					break;
+#else
+					my_log(LOG_ERR,"%s: timeout waiting firmware update start, trying anyway the firmware update", __func__);
+				handle_app.status = enum_app_status_firmware_update_do;
+				// closes the serial port
+				rpcTransportClose();
+#endif
+				}
+				else
+				{
+					my_log(LOG_INFO,"%s: trying again to unlock the receiving threads", __func__);
+					extern void rpc_no_blocking(void);
+					rpc_no_blocking();
+				}
 			}
 			break;
 		}
@@ -983,8 +1011,22 @@ void* appProcess(void *argument)
 			my_log(LOG_INFO,"%s: firmware update starts with filename = %s", __func__, fw_file_path);
 
 			type_ASACZ_CC2650_fw_update_header hw_header;
-			// here the magic is done!
-			uint32_t fw_upd_return_code = sem_CC2650_fw_operation(enum_CC2650_fw_operation_update_firmware, fw_file_path, &hw_header);
+			uint32_t fw_upd_return_code = enum_do_CC2650_fw_update_retcode_OK;
+			unsigned int idx_retry;
+			#define def_max_retry_upd_fw_CC2650 3
+			for (idx_retry = 0; idx_retry < def_max_retry_upd_fw_CC2650; idx_retry ++)
+			{
+				// here the magic is done!
+				fw_upd_return_code = sem_CC2650_fw_operation(enum_CC2650_fw_operation_update_firmware, fw_file_path, &hw_header);
+				if (fw_upd_return_code == enum_do_CC2650_fw_update_retcode_OK)
+				{
+					break;
+				}
+				else
+				{
+					my_log(LOG_INFO,"%s: firmware update ends with error %u (%s)", __func__, fw_upd_return_code, get_msg_from_CC2650_fw_update_retcode(fw_upd_return_code));
+				}
+			}
 
 			pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_id);
 				p_CC2650fwupd->CC2650_fw_update_retcode = fw_upd_return_code;

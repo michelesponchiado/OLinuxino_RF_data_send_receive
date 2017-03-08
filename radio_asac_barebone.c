@@ -72,7 +72,7 @@ char CC2650_BOOT_ENABLE_pin_value[PROPERTY_VALUE_MAX];
 // defines to set the correct value to the CC2650_BOOT_ENABLE pin
 // it is active HIGH
 #define def_CC2650_BOOT_ENABLE_pin_active_value 1
-#define def_CC2650_BOOT_ENABLE_pin_not_active_value (!def_reset_pin_active_value)
+#define def_CC2650_BOOT_ENABLE_pin_not_active_value (!def_CC2650_BOOT_ENABLE_pin_active_value)
 
 // useful routine to get a RF pin name
 // returns 1 if OK, -1 if name not found
@@ -126,7 +126,7 @@ static int pin_set_value(char *pin_name, int value)
 
     return (ret == nwr) ? 0 : -1;
 }
-#define def_reset_tx_dtr_rts
+//#define def_reset_tx_dtr_rts
 void enable_radio_RX_pin(int enable_RX_mode);
 
 // power ON the radio (and deactivate the reset)
@@ -383,6 +383,7 @@ int is_OK_do_CC2650_reset(unsigned int enable_boot_mode)
 	// ACTIVATE THE RESET PIN
 	if (is_OK)
 	{
+		ALOGI("RESET ACTIVE");
 		if (pin_set_value(rf_reset_pin_value, def_reset_pin_active_value) < 0)
 		{
 			is_OK = 0;
@@ -398,6 +399,14 @@ int is_OK_do_CC2650_reset(unsigned int enable_boot_mode)
 	// ACTIVATE/DEACTIVATE (depending upon the operation passed as parameter) THE BOOT ENABLE PIN
 	if (is_OK)
 	{
+		if (enable_boot_mode)
+		{
+			ALOGI("ENABLING BOOT MODE");
+		}
+		else
+		{
+			ALOGI("DISABLING BOOT MODE");
+		}
 		int pin_value = enable_boot_mode ? def_CC2650_BOOT_ENABLE_pin_active_value : def_CC2650_BOOT_ENABLE_pin_not_active_value;
 		if (pin_set_value(CC2650_BOOT_ENABLE_pin_value, pin_value) < 0)
 		{
@@ -414,6 +423,7 @@ int is_OK_do_CC2650_reset(unsigned int enable_boot_mode)
 	// DEACTIVATE THE RESET PIN
 	if (is_OK)
 	{
+		ALOGI("RESET NOT ACTIVE");
 		if (pin_set_value(rf_reset_pin_value, def_reset_pin_not_active_value) < 0)
 		{
 			is_OK = 0;

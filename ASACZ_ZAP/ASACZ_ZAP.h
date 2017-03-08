@@ -201,6 +201,7 @@ typedef struct _type_handle_app
 	uint32_t suspend_rx_tasks;
 	uint32_t InMessageTaskSuspended;
 	uint32_t rpcTaskSuspended;
+	uint32_t num_loop_wait_suspend_rx_thread;
 	type_my_timeout timeout_init_fw_update;
 	type_all_sapi_device_info_struct all_sapi_device_info_struct;
 	type_CC2650_version CC2650_version;

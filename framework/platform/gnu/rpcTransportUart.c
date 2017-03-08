@@ -158,6 +158,26 @@ int32_t rpcTransportOpen(char *_devicePath, uint32_t port)
 	return serialPortFd;
 }
 
+
+void rpc_no_blocking(void)
+{
+	if (serialPortFd >= 0)
+	{
+		
+		usleep(1000);
+		tcflush(serialPortFd, TCIFLUSH);
+		struct termios tio;
+		if (tcgetattr(serialPortFd, &tio) == 0)
+		{
+			tio.c_cc[VMIN] = 0;
+			tio.c_cc[VTIME] = 1;
+		}
+		tcsetattr(serialPortFd, TCSANOW, &tio);
+		usleep(1000);
+		tcflush(serialPortFd, TCIFLUSH);
+	}
+}
+
 /*********************************************************************
  * @fn      rpcTransportClose
  *

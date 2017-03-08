@@ -375,6 +375,7 @@ static void print_syntax(char *full_name)
 		printf("\tuses the UDP port number 3118 and the serial port name /dev/ttys3\n");
 }
 
+
 int main(int argc, char* argv[])
 {
     if ((argc >= 2) && (strncasecmp(argv[1],"--help",6)==0))
@@ -529,7 +530,7 @@ int main(int argc, char* argv[])
 		appInit();
 
 		int thread_create_retcode = 0;
-
+		
 		//Start the Rx thread
 		dbg_print(PRINT_LEVEL_INFO, "creating RPC thread\n");
 		thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_rpc].t, NULL, rpcTask, (void *) &serialPortFd);

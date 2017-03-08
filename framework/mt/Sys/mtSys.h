@@ -479,6 +479,7 @@ void sysProcess(uint8_t *rpcBuff, uint8_t rpcLen);
 //		uint8_t dataLen);
 //uint8_t sysGetExtAddr(uint8_t ieee[8]);
 uint8_t sysPing(void);
+uint8_t sysPing_noRx(void);
 uint8_t sysSetExtAddr(SetExtAddrFormat_t *req);
 uint8_t sysGetExtAddr(void);
 uint8_t sysRamRead(RamReadFormat_t *req);

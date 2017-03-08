@@ -165,6 +165,15 @@ uint8_t sysPing()
 
 	return status;
 }
+uint8_t sysPing_noRx(void)
+{
+	uint8_t status;
+
+	status = rpcSendFrame((MT_RPC_CMD_SREQ | MT_RPC_SYS_SYS), MT_SYS_PING, NULL, 0);
+
+
+	return status;
+}
 
 /*********************************************************************
  * @fn      processPingSrsp

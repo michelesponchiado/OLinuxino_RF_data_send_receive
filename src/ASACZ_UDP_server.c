@@ -39,6 +39,7 @@
 #include "ASACZ_devices_list.h"
 #include "ASACZ_firmware_version.h"
 #include "ASACZ_app.h"
+#include "ASACZ_diag_test.h"
 
 typedef struct _type_handle_socket_in
 {
@@ -1036,6 +1037,74 @@ int handle_ASACZ_request_restart_network_from_scratch(type_handle_ASACZ_request 
 	return retcode;
 }
 
+int handle_ASACZ_request_administrator_diagnostic_test(type_handle_ASACZ_request *p)
+{
+	int retcode = 0;
+	p->send_reply = 1;
+	p->send_unknown = 0;
+	my_log(LOG_INFO,"%s: administrator_diagnostic_test received", __func__);
+
+	uint32_t reply_max_command_version = def_ASAC_ZigBee_admin_diag_test_req_command_version;
+	init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
+
+	uint32_t is_format_OK = 1;
+	if (is_format_OK)
+	{
+		if (p->pzmessage_tx->h.c.command_version != reply_max_command_version)
+		{
+			is_format_OK = 0;
+		}
+	}
+	if (is_format_OK)
+	{
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),diag_test_reply);
+		type_ASAC_admin_diag_test_req * p_req = &p->pzmessage_rx->req.diag_test_req;
+		type_ASAC_admin_diag_test_reply * p_reply = &p->pzmessage_tx->reply.diag_test_reply;
+		my_log(LOG_INFO,"%s: handling diagnostic test request", __func__);
+		p_reply->op.enum_op = p_req->op.enum_op;
+		switch(p_req->op.enum_op)
+		{
+			case enum_admin_diag_test_op_start:
+			{
+				type_admin_diag_test_req_start_body *p_start_req = &p_req->body.start;
+				type_admin_diag_test_reply_start_body *p_start_reply = &p_reply->body.start;
+				p_start_reply->retcode.enum_retcode = start_CC2650_diag_test(p_start_req);
+				get_CC2650_start_diag_test_retcode_string(p_start_reply->retcode.enum_retcode, (char*)p_start_reply->retcode_ascii, sizeof(p_start_reply->retcode_ascii));
+				break;
+			}
+			case enum_admin_diag_test_op_read_status:
+			{
+				type_admin_diag_test_req_status_body *p_status_req = &p_req->body.status;
+				type_admin_diag_test_reply_status_body *p_status_reply = &p_reply->body.status;
+				p_status_reply->format.enum_format = get_CC2650_diag_test_status(p_status_req->format.enum_format, (char*)&p_status_reply->body);
+				break;
+			}
+			case enum_admin_diag_test_op_stop:
+			{
+				type_admin_diag_test_reply_stop_body *p_stop_reply = &p_reply->body.stop;
+				p_stop_reply->retcode.enum_retcode = stop_CC2650_diag_test();
+				get_CC2650_stop_diag_test_retcode_string(p_stop_reply->retcode.enum_retcode, (char*)p_stop_reply->retcode_ascii, sizeof(p_stop_reply->retcode_ascii));
+				break;
+			}
+			default:
+			{
+				is_format_OK = 0;
+				break;
+			}
+		}
+	}
+	if (!is_format_OK)
+	{
+		my_log(LOG_ERR,"%s: error in the format", __func__);
+		p->send_reply = 0;
+		p->send_unknown = 1;
+		retcode = -1;
+	}
+	return retcode;
+}
+
+
+
 int handle_ASACZ_request_administrator_firmware_update(type_handle_ASACZ_request *p)
 {
 	int retcode = 0;
@@ -1268,6 +1337,12 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 				break;
 			}
 
+
+			case enum_ASAC_ZigBee_interface_command_administrator_diagnostic_test:
+			{
+				retcode = handle_ASACZ_request_administrator_diagnostic_test(&handle_ASACZ_request);
+				break;
+			}
 			default:
 			{
 				handle_ASACZ_request.send_unknown = 1;

@@ -85,6 +85,7 @@ typedef enum
 	enum_ASAC_ZigBee_interface_command_administrator_first = 0x30000000,
 	enum_ASAC_ZigBee_interface_command_administrator_firmware_update = enum_ASAC_ZigBee_interface_command_administrator_first,
 	enum_ASAC_ZigBee_interface_command_administrator_restart_network_from_scratch,
+	enum_ASAC_ZigBee_interface_command_administrator_diagnostic_test,
 // the command used to reply to unknown commands
 	enum_ASAC_ZigBee_interface_command_unknown = 0xFFFFFFFF,
 
@@ -595,6 +596,198 @@ typedef struct _type_ASAC_ZigBee_interface_command_fwupd_reply
 
 
 //
+// enum_ASAC_ZigBee_interface_command_administrator_diagnostic_test begins here
+//
+
+
+// START
+typedef enum
+{
+	enum_admin_diag_test_op_start = 0,
+	enum_admin_diag_test_op_read_status,
+	enum_admin_diag_test_op_stop,
+	enum_admin_diag_test_op_numof
+}enum_admin_diag_test_op;
+
+typedef enum
+{
+	enum_admin_diag_test_message_length_type_default = 0,
+	enum_admin_diag_test_message_length_type_very_short,
+	enum_admin_diag_test_message_length_type_short,
+	enum_admin_diag_test_message_length_type_medium,
+	enum_admin_diag_test_message_length_type_large,
+	enum_admin_diag_test_message_length_type_very_large,
+	enum_admin_diag_test_message_length_type_custom,
+	enum_admin_diag_test_message_length_type_numof
+}enum_admin_diag_test_message_length_type;
+
+typedef enum
+{
+	enum_admin_diag_test_message_body_type_default = 0,
+	enum_admin_diag_test_message_body_type_ASCII,
+	enum_admin_diag_test_message_body_type_random_binary,
+	enum_admin_diag_test_message_body_type_numof
+}enum_admin_diag_test_message_body_type;
+
+typedef enum
+{
+	enum_admin_diag_test_average_type_default = 0,
+	enum_admin_diag_test_average_type_uniform_weight,
+	enum_admin_diag_test_average_type_raised_cosin,
+	enum_admin_diag_test_average_type_numof
+}enum_admin_diag_test_average_type;
+
+typedef struct _type_admin_diag_test_req_start_body
+{
+	uint64_t server_IEEE_address; // 0 means use the coordinator
+	union
+	{
+		enum_admin_diag_test_message_length_type enum_type;
+		uint32_t uint32_type;
+	}length_type;
+	uint32_t custom_message_length_type; // min 1 max 120(?)
+	union
+	{
+		enum_admin_diag_test_message_body_type enum_type;
+		uint32_t uint32_type;
+	}message_body_type;
+	uint32_t batch_acquire_period_ms; // min 100, max 5000, default 500ms; every tot ms a new batch sample is added to the average
+	uint32_t num_batch_samples_for_average; // number of batch samples used for computing the average
+	union
+	{
+		enum_admin_diag_test_average_type enum_type;
+		uint32_t uint32_type;
+	}average_type;
+
+}__attribute__((__packed__)) type_admin_diag_test_req_start_body;
+
+typedef enum
+{
+	enum_admin_diag_test_start_retcode_OK = 0,
+	enum_admin_diag_test_start_retcode_numof
+}enum_admin_diag_test_start_retcode;
+
+typedef struct _type_admin_diag_test_reply_start_body
+{
+	union
+	{
+		enum_admin_diag_test_start_retcode enum_retcode;
+		uint32_t uint32_retcode;
+	}retcode;
+	uint8_t retcode_ascii[256]; // a NULL-termined string describing the return code result, es: "OK" or "CLOSED FOR LUNCH, BACK IN 1 HOUR"
+}__attribute__((__packed__)) type_admin_diag_test_reply_start_body;
+
+
+// STATUS REQ
+
+typedef enum
+{
+	enum_admin_diag_test_status_req_format_default = 0,
+	enum_admin_diag_test_status_req_format_numof
+}enum_admin_diag_test_status_req_format;
+
+typedef struct _type_admin_diag_test_req_status_body
+{
+	union
+	{
+		enum_admin_diag_test_status_req_format enum_format;
+		uint32_t uint32_format;
+	}format;
+}__attribute__((__packed__)) type_admin_diag_test_req_status_body;
+
+typedef struct _type_admin_diag_test_status_standard_format_body
+{
+	uint64_t nmsg_tx_OK; // numero di messaggi spediti con successo da inizio test
+	uint64_t nmsg_tx_ERR; // numero di messaggi spediti con errore da inizio test
+	uint64_t nmsg_rx_OK; // numero di messaggi ricevuti con formato corretto da inizio test
+	uint64_t nmsg_rx_ERR; // numero di messaggi ricevuti con formato errato da inizio test
+	uint64_t nbytes_tx_OK; //  numero di bytes spediti con successo da inizio test
+	uint64_t nbytes_rx_OK; // numero di bytes spediti con successo da inizio test
+	float average_num_msg_per_second_tx;
+	float average_num_msg_per_second_rx;
+	float average_num_bytes_per_second_tx;
+	float average_num_bytes_per_second_rx;
+
+}__attribute__((__packed__)) type_admin_diag_test_status_standard_format_body;
+
+typedef struct _type_admin_diag_test_reply_status_body
+{
+	union
+	{
+		enum_admin_diag_test_status_req_format enum_format;
+		uint32_t uint32_format;
+	}format;
+	union
+	{
+		type_admin_diag_test_status_standard_format_body standard_format_body;
+	}body;
+}__attribute__((__packed__)) type_admin_diag_test_reply_status_body;
+
+// STOP
+
+typedef struct _type_admin_diag_test_req_stop_body
+{
+	uint32_t unused;
+}__attribute__((__packed__)) type_admin_diag_test_req_stop_body;
+
+typedef enum
+{
+	enum_admin_diag_test_stop_retcode_OK = 0,
+	enum_admin_diag_test_stop_retcode_numof
+}enum_admin_diag_test_stop_retcode;
+
+typedef struct _type_admin_diag_test_reply_stop_body
+{
+	union
+	{
+		enum_admin_diag_test_stop_retcode enum_retcode;
+		uint32_t uint32_retcode;
+	}retcode;
+	uint8_t retcode_ascii[256]; // a NULL-termined string describing the return code result, es: "OK" or "WAS NOT RUNNING"
+}__attribute__((__packed__)) type_admin_diag_test_reply_stop_body;
+
+
+
+#define def_ASAC_ZigBee_admin_diag_test_req_command_version 0
+
+typedef struct _type_ASAC_admin_diag_test_req
+{
+	// the operation required
+	union
+	{
+		enum_admin_diag_test_op enum_op;
+		uint32_t uint32_op;
+	}op;
+	union
+	{
+		type_admin_diag_test_req_start_body start;
+		type_admin_diag_test_req_status_body status;
+		type_admin_diag_test_req_stop_body stop;
+	}body;
+}__attribute__((__packed__)) type_ASAC_admin_diag_test_req ;
+
+typedef struct _type_ASAC_admin_diag_test_reply
+{
+	// the operation required
+	union
+	{
+		enum_admin_diag_test_op enum_op;
+		uint32_t uint32_op;
+	}op;
+	union
+	{
+		type_admin_diag_test_reply_start_body start;
+		type_admin_diag_test_reply_status_body status;
+		type_admin_diag_test_reply_stop_body stop;
+	}body;
+}__attribute__((__packed__)) type_ASAC_admin_diag_test_reply ;
+
+
+//
+// enum_ASAC_ZigBee_interface_command_administrator_diagnostic_test ends here
+//
+
+//
 //
 //
 // The ZigBee interface command structure begins here
@@ -623,6 +816,7 @@ typedef struct _type_ASAC_Zigbee_interface_request
 
 		// administration
 		type_ASAC_ZigBee_interface_command_fwupd_req fwupd_req;
+		type_ASAC_admin_diag_test_req diag_test_req;
 
 	}req;
 }type_ASAC_Zigbee_interface_request;
@@ -652,6 +846,7 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 
 		// administration commands
 		type_ASAC_ZigBee_interface_command_fwupd_reply fwupd_reply;
+		type_ASAC_admin_diag_test_reply diag_test_reply;
 
 		// reply to an unknown command
 		type_ASAC_ZigBee_interface_unknown_reply unknown;

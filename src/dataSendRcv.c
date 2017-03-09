@@ -697,7 +697,12 @@ void* appProcess(void *argument)
 		handle_app.status = enum_app_status_firmware_update_init;
 		break;
 	}
-#endif					
+#endif
+			if (is_required_CC2650_firmware_update())
+			{
+				handle_app.status = enum_app_status_firmware_update_init;
+				break;
+			}
 			if (ZAP_is_required_network_restart_from_scratch())
 			{
 				handle_app.status = enum_app_status_restart_network_from_scratch;

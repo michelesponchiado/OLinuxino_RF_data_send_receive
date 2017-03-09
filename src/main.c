@@ -363,6 +363,8 @@ static void print_syntax(char *full_name)
 		printf("\tshows this help\n");
 	printf("%s --version\n", bname);
 		printf("\tshows the program version info\n");
+	printf("%s --CC2650fwupdate=<CC2650_firmware_file_pathname>\n", bname);
+		printf("\tupdates the CC2650 firmware using the signed binary <CC2650_firmware_file_pathname>\n");
 	printf("%s [udpport=<UDP port number> [serialport=<serial port name>]]\n", bname);
 		printf("\tsets the UDP port number (default %u) and optionally the serial port name (default %s)\n", def_port_number, def_selected_serial_port);
 	printf("\n");
@@ -373,11 +375,16 @@ static void print_syntax(char *full_name)
 		printf("\tuses the UDP port number 3118 and the default serial port name %s\n", def_selected_serial_port);
 	printf("%s udpport=3119 serialport=/dev/ttys3\n", bname);
 		printf("\tuses the UDP port number 3118 and the serial port name /dev/ttys3\n");
+	printf("%s --CC2650fwupdate=/usr/ASACZ_CC2650fw_COORDINATOR.2_6_5\n", bname);
+		printf("\tupdates the firmware using the file /usr/ASACZ_CC2650fw_COORDINATOR.2_6_5\n");
 }
 
 
 int main(int argc, char* argv[])
 {
+	volatile unsigned int do_CC2650_fw_update = 0;
+	char CC2650_fw_path[1024];
+	memset(CC2650_fw_path, 0, sizeof(CC2650_fw_path));
     if ((argc >= 2) && (strncasecmp(argv[1],"--help",6)==0))
     {
         print_syntax(argv[0]);
@@ -390,6 +397,20 @@ int main(int argc, char* argv[])
     	get_ASACZ_firmware_version_string(v, sizeof(v));
         printf("version:\n\t%s\n", v);
 		return 0;
+    }
+    if ((argc >= 2) && (strncasecmp(argv[1],"--CC2650fwupdate=",17)==0))
+    {
+		printf("CC2650 firmware update has been requested\n");
+    	int n = snprintf(CC2650_fw_path, sizeof(CC2650_fw_path), "%s", &argv[1][17]);
+    	if (n >= sizeof(CC2650_fw_path))
+    	{
+    		printf("too long input filename (max %u chars); firmware update will be NOT executed\n", sizeof(CC2650_fw_path) - 1);
+    	}
+    	else
+    	{
+    		printf("CC2650 firmware update will start using file %s\n", CC2650_fw_path);
+        	do_CC2650_fw_update = 1;
+    	}
     }
 	init_sig_handlers();
 	
@@ -418,13 +439,23 @@ int main(int argc, char* argv[])
 	syslog(LOG_INFO, "The application starts");
 	memset(&threads_cancel_info, 0, sizeof(threads_cancel_info));
 
-#ifdef def_test_fw_upd
-	volatile unsigned int do_fw_u = 0;
-	if (do_fw_u)
+	if (do_CC2650_fw_update)
 	{
-		do_CC2650_fw_update("/usr/ASACZ_CC2650fw_COORDINATOR.2_6_5");
+		type_ASACZ_CC2650_fw_update_header my_h;
+		printf("CC2650 firmware update starts right NOW!\n");
+		printf("\t please wait, up to one minute could be needed...\n");
+		enum_do_CC2650_fw_update_retcode r = do_CC2650_fw_operation(enum_CC2650_fw_operation_update_firmware, CC2650_fw_path, &my_h);
+		if (enum_do_CC2650_fw_update_retcode_OK == r)
+		{
+			printf("\nOK CC2650 firmware updated OK ! :) :) :) \n");
+			printf("\t the updated firmware has version %s, type %s\n", my_h.ascii_version_number, my_h.ascii_fw_type);
+		}
+		else
+		{
+			printf("\n****\nBAD NEWS! ERROR updating CC2650 firmware: %s\n\n", get_msg_from_CC2650_fw_update_retcode(r));
+		}
+
 	}
-#endif
 
 #ifdef OLINUXINO
 	// reset chip and disables boot mode

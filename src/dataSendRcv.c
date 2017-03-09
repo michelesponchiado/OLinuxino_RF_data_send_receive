@@ -666,7 +666,7 @@ void* appMsgProcess(void *argument)
 	return NULL;
 }
 
-#define test_firmware_update
+//#define test_firmware_update
 #ifdef test_firmware_update
 #warning test_firmware_update !!!!!!!!!!!!!!!
 int fw_test_done = 0;

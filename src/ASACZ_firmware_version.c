@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	7
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	8
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,8 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 8
+// * removing the enable to the debug code to test the firmware update under Android: it works after some bugs have been removed from the TI library
 // 0.1.3 build 7
 // * added the option --version to print on the console the program version
 // * added the option --help to print on the console the arguments syntax

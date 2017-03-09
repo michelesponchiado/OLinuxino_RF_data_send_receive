@@ -113,6 +113,7 @@ pthread_exit(0);
 
 static void do_shutdown(void)
 {
+	syslog(LOG_INFO,"%s + doing shutdown...", __func__);
 #ifdef print_all_received_messages
 	void close_print_message(void);
 	close_print_message();
@@ -193,7 +194,8 @@ static void do_shutdown(void)
 #endif
 		}
 	}
-	syslog(LOG_INFO, "The application closes");
+	syslog(LOG_INFO, "%s the application ends here", __func__);
+	syslog(LOG_INFO,"%s - doing shutdown...", __func__);
 	// at exit, close system log
 	closelog();
 }
@@ -213,11 +215,9 @@ void signal_shutdown_callback_handler(int signum)
 	}
 	fatal_error_in_progress = 1;
 
-	dbg_print(PRINT_LEVEL_ERROR, "Caught signal %d\n",signum);
-	printf("+ doing shutdown...\n");
+	syslog(LOG_WARNING, "Caught signal %d\n",signum);
 	// Cleanup and close up stuff here
 	do_shutdown();
-	printf("- doing shutdown...\n");
 
 	// Now re-raise the signal.  We reactivate the signal’s default handling, which is to terminate the process.
 	// We could just call exit or abort, but re-raising the signal sets the return status from the process correctly.
@@ -454,7 +454,7 @@ int main(int argc, char* argv[])
 		{
 			printf("\n****\nBAD NEWS! ERROR updating CC2650 firmware: %s\n\n", get_msg_from_CC2650_fw_update_retcode(r));
 		}
-
+		return 0;
 	}
 
 #ifdef OLINUXINO

@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	9
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	10
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,9 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 10
+// * the command line option --CC2650fwupdate=<CC2650_firmware_file_pathname> executes a return after the update has finished
+// * the shutdown procedure puts the information in the log and not in the console output
 // 0.1.3 build 9
 // * if the ZigBee stack is in error, the firmware update requested is still checked, so we can program a blank chip on board
 // * added the command line option --CC2650fwupdate=<CC2650_firmware_file_pathname> to force the CC2650 firmware update from the command line

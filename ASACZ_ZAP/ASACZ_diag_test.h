@@ -19,6 +19,8 @@ void get_CC2650_stop_diag_test_retcode_string(enum_admin_diag_test_stop_retcode 
 	void init_diag_test(void);
 	unsigned int is_OK_AF_callback_diag_transId(uint8_t transId);
 	unsigned int is_OK_handle_diag_test(void);
+	unsigned int is_running_diag_test(void);
+	unsigned int is_request_start_diag_test(void);
 	void diag_rx_callback(IncomingMsgFormat_t *msg);
 #endif
 

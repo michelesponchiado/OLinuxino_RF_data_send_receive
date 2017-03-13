@@ -1119,6 +1119,11 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_tx_msgs:
 		{
+			if (is_request_start_diag_test() || is_running_diag_test())
+			{
+				handle_app.status = enum_app_status_diag_test;
+				break;
+			}
 			if (is_required_CC2650_firmware_update())
 			{
 				handle_app.status = enum_app_status_firmware_update_init;

@@ -54,6 +54,7 @@ typedef struct _type_handle_diag_test_stats
 	uint64_t num_msg_rx_OK;
 	uint64_t num_msg_rx_ERR;
 	uint64_t num_bytes_rx_OK;
+	uint32_t elapsed_ms;
 }type_handle_diag_test_stats;
 
 typedef enum
@@ -119,6 +120,8 @@ typedef struct _type_handle_diag_test
 	uint16_t server_network_short_address;
 	volatile uint32_t idle_req;
 	volatile uint32_t idle_ack;
+	volatile uint32_t start_req;
+	volatile uint32_t start_ack;
 }type_handle_diag_test;
 
 static type_handle_diag_test handle_diag_test;
@@ -219,11 +222,27 @@ void diag_rx_callback(IncomingMsgFormat_t *msg)
 
 }
 
+unsigned int is_request_start_diag_test(void)
+{
+	if (handle_diag_test.start_req != handle_diag_test.start_ack)
+	{
+		handle_diag_test.start_ack = handle_diag_test.start_req;
+		handle_diag_test.status = enum_diag_test_status_init;
+		return 1;
+	}
+	return 0;
+}
+unsigned int is_running_diag_test(void)
+{
+
+	return handle_diag_test.run.is_running;
+}
 unsigned int is_OK_handle_diag_test(void)
 {
 	if (handle_diag_test.idle_req != handle_diag_test.idle_ack)
 	{
 		handle_diag_test.idle_ack = handle_diag_test.idle_req;
+		handle_diag_test.start_ack = handle_diag_test.start_req;
 		handle_diag_test.status = enum_diag_test_status_idle;
 	}
 	unsigned int is_OK = 1;
@@ -243,13 +262,13 @@ unsigned int is_OK_handle_diag_test(void)
 		}
 		case enum_diag_test_status_init:
 		{
-			handle_diag_test.run.is_running = 1;
 			handle_diag_test.status = enum_diag_test_status_run;
 
 			memset(&handle_diag_test.stats, 0, sizeof(handle_diag_test.stats));
 			memset(&handle_diag_test.run, 0, sizeof(handle_diag_test.run));
 			init_transId();
 			handle_diag_test.run.batch_start_time = get_current_epoch_time_ms();
+			handle_diag_test.run.is_running = 1;
 
 			uint16_t message_length = def_min_diag_msg_length;
 			switch(handle_diag_test.req_start.length_type.enum_type)
@@ -291,8 +310,8 @@ unsigned int is_OK_handle_diag_test(void)
 			type_handle_diag_test_stats *p_stats = &handle_diag_test.run.stats;
 			type_handle_diag_test_run *p_run = &handle_diag_test.run;
 
-			unsigned int index_id = 0;
-			if (!is_OK_get_free_transId_index(&index_id))
+			unsigned int index_sent_trans_id = 0;
+			if (!is_OK_get_free_transId_index(&index_sent_trans_id))
 			{
 				if (++p_run->num_wait_transId_free < 128)
 				{
@@ -313,11 +332,11 @@ unsigned int is_OK_handle_diag_test(void)
 			{
 				residual_length = def_min_diag_msg_length;
 			}
-			else if (residual_length < def_max_diag_msg_length)
+			else if (residual_length > def_max_diag_msg_length)
 			{
 				residual_length = def_max_diag_msg_length;
 			}
-			snprintf((char*)p_run->message.body, sizeof(p_run->message.body), "%*.*s", residual_length, residual_length, "ASACZ diagnostic test message");
+			snprintf((char*)p_run->message.body, sizeof(p_run->message.body), "%-*.*s", residual_length, residual_length, "ASACZ diagnostic test message");
 			uint16_t total_length = sizeof(p_run->message.progressive_id) + residual_length;
 			if (total_length > 128)
 			{
@@ -333,6 +352,8 @@ unsigned int is_OK_handle_diag_test(void)
 			pdr->SrcEndpoint = ASACZ_reserved_endpoint;
 			// retrieve a new transaction ID
 			pdr->TransID     = get_app_new_trans_id(handle_app.message_id);
+			p_run->sent_msg_info[index_sent_trans_id].trans_id = pdr->TransID;
+			p_run->sent_msg_info[index_sent_trans_id].message_length = pdr->Len;
 			// send the message
 			int32_t status = afDataRequest(pdr);
 			// check the return code
@@ -353,7 +374,6 @@ unsigned int is_OK_handle_diag_test(void)
 			int64_t elapsed = now - handle_diag_test.run.batch_start_time;
 			if (elapsed >= handle_diag_test.req_start.batch_acquire_period_ms)
 			{
-				handle_diag_test.run.batch_start_time = now;
 				type_handle_diag_test_stats *p_run_stats = &handle_diag_test.run.stats;
 				type_handle_diag_test_stats *p_global_stats = &handle_diag_test.stats;
 				pthread_mutex_lock(&handle_diag_test.mtx_id[enum_diag_mutex_stats]);
@@ -362,10 +382,19 @@ unsigned int is_OK_handle_diag_test(void)
 					{
 						 idx = 0;
 					}
-					handle_diag_test.run.batches[idx] = *p_run_stats;
+					type_handle_diag_test_stats *p_batch = &handle_diag_test.run.batches[idx];
+					*p_batch = *p_run_stats;
+					p_batch->elapsed_ms = elapsed;
+
+					memset(p_run_stats, 0, sizeof(p_run_stats));
+
 					if (++idx >= sizeof(handle_diag_test.run.batches) / sizeof(handle_diag_test.run.batches[0]))
 					{
 						 idx = 0;
+					}
+					if (idx >= handle_diag_test.req_start.num_batch_samples_for_average)
+					{
+						idx = 0;
 					}
 					handle_diag_test.run.idx_next_batch = idx;
 
@@ -378,21 +407,24 @@ unsigned int is_OK_handle_diag_test(void)
 
 					type_diag_averages avg;
 					memset(&avg, 0, sizeof(avg));
+					uint32_t tot_elapsed_ms = 0;
 					unsigned int i;
-					for (i = 0; i < sizeof(handle_diag_test.run.batches) / sizeof(handle_diag_test.run.batches[0]) && i < handle_diag_test.req_start.batch_acquire_period_ms; i++)
+					for (i = 0; i < sizeof(handle_diag_test.run.batches) / sizeof(handle_diag_test.run.batches[0]) && i < handle_diag_test.req_start.num_batch_samples_for_average; i++)
 					{
-						type_handle_diag_test_stats *pcur = &handle_diag_test.run.batches[idx];
+						type_handle_diag_test_stats *pcur = &handle_diag_test.run.batches[i];
 						avg.average_num_bytes_per_second_rx += pcur->num_bytes_rx_OK;
 						avg.average_num_bytes_per_second_tx += pcur->num_bytes_tx_OK;
 						avg.average_num_msg_per_second_rx 	+= pcur->num_msg_rx_OK;
 						avg.average_num_msg_per_second_tx 	+= pcur->num_msg_tx_OK;
+						tot_elapsed_ms += pcur->elapsed_ms;
 					}
-					float inv_elapsed = 1.0 / elapsed;
+					float inv_elapsed = 1000.0 / tot_elapsed_ms;
 					type_diag_averages *p_global_avg = &handle_diag_test.averages;
 					p_global_avg->average_num_bytes_per_second_rx = avg.average_num_bytes_per_second_rx * inv_elapsed;
 					p_global_avg->average_num_bytes_per_second_tx = avg.average_num_bytes_per_second_tx * inv_elapsed;
 					p_global_avg->average_num_msg_per_second_rx = avg.average_num_msg_per_second_rx * inv_elapsed;
 					p_global_avg->average_num_msg_per_second_tx = avg.average_num_msg_per_second_tx * inv_elapsed;
+					handle_diag_test.run.batch_start_time = get_current_epoch_time_ms();;
 
 				pthread_mutex_unlock(&handle_diag_test.mtx_id[enum_diag_mutex_stats]);
 			}
@@ -445,7 +477,7 @@ enum_admin_diag_test_start_retcode start_CC2650_diag_test(type_admin_diag_test_r
 	}
 	if (retcode == enum_admin_diag_test_start_retcode_OK)
 	{
-		if (handle_diag_test.req_start.average_type.enum_type >= enum_admin_diag_test_average_type_numof)
+		if (p_req->average_type.enum_type >= enum_admin_diag_test_average_type_numof)
 		{
 			retcode = enum_admin_diag_test_start_retcode_invalid_average_type;
 		}
@@ -453,46 +485,46 @@ enum_admin_diag_test_start_retcode start_CC2650_diag_test(type_admin_diag_test_r
 	if (retcode == enum_admin_diag_test_start_retcode_OK)
 	{
 	#define def_max_batch_acquire_period_ms 10000
-		if (handle_diag_test.req_start.batch_acquire_period_ms > def_max_batch_acquire_period_ms)
+		if (p_req->batch_acquire_period_ms > def_max_batch_acquire_period_ms)
 		{
 			retcode = enum_admin_diag_test_start_retcode_invalid_batch_acquire_period_ms;
 		}
 	}
 	if (retcode == enum_admin_diag_test_start_retcode_OK)
 	{
-		if (handle_diag_test.req_start.custom_message_length_type >= def_max_diag_msg_length)
+		if (p_req->custom_message_length_type >= def_max_diag_msg_length)
 		{
 			retcode = enum_admin_diag_test_start_retcode_invalid_custom_message_length_type;
 		}
 	}
 	if (retcode == enum_admin_diag_test_start_retcode_OK)
 	{
-		if (handle_diag_test.req_start.length_type.enum_type >= enum_admin_diag_test_message_length_type_numof)
+		if (p_req->length_type.enum_type >= enum_admin_diag_test_message_length_type_numof)
 		{
 			retcode = enum_admin_diag_test_start_retcode_invalid_length_type;
 		}
 	}
 	if (retcode == enum_admin_diag_test_start_retcode_OK)
 	{
-		if (handle_diag_test.req_start.message_body_type.enum_type >= enum_admin_diag_test_message_body_type_numof)
+		if (p_req->message_body_type.enum_type >= enum_admin_diag_test_message_body_type_numof)
 		{
 			retcode = enum_admin_diag_test_start_retcode_invalid_message_body_type;
 		}
 	}
 	if (retcode == enum_admin_diag_test_start_retcode_OK)
 	{
-		if (handle_diag_test.req_start.num_batch_samples_for_average >= def_max_diag_batches)
+		if (p_req->num_batch_samples_for_average >= def_max_diag_batches)
 		{
 			retcode = enum_admin_diag_test_start_retcode_invalid_num_batch_samples_for_average;
 		}
 	}
 	if (retcode == enum_admin_diag_test_start_retcode_OK)
 	{
-		if (handle_diag_test.req_start.server_IEEE_address == 0)
+		if (p_req->server_IEEE_address == 0)
 		{
 			handle_diag_test.server_network_short_address = 0;
 		}
-		if (!is_OK_get_network_short_address_from_IEEE(handle_diag_test.req_start.server_IEEE_address, &handle_diag_test.server_network_short_address))
+		else if (!is_OK_get_network_short_address_from_IEEE(p_req->server_IEEE_address, &handle_diag_test.server_network_short_address))
 		{
 			retcode = enum_admin_diag_test_start_retcode_invalid_server_IEEE_address;
 		}
@@ -503,9 +535,7 @@ enum_admin_diag_test_start_retcode start_CC2650_diag_test(type_admin_diag_test_r
 		// copy the start request
 		memcpy(&handle_diag_test.req_start, p_req, sizeof(handle_diag_test.req_start));
 
-		// starts the test
-		handle_diag_test.status = enum_diag_test_status_init;
-		is_OK_handle_diag_test();
+		handle_diag_test.start_req++;
 
 	#ifdef def_simulate_diag_test
 		memset(&private_default_body, 0, sizeof(private_default_body));

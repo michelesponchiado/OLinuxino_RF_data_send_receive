@@ -82,12 +82,12 @@ static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg)
 	{
 		if (msg->Status == MT_RPC_SUCCESS)
 		{
-			my_log(LOG_INFO, "Data confirm cb OK: end-point: %u, trans-id: %u", (uint32_t)msg->Endpoint, (uint32_t)msg->TransId);
+			//my_log(LOG_INFO, "Data confirm cb OK: end-point: %u, trans-id: %u", (uint32_t)msg->Endpoint, (uint32_t)msg->TransId);
 			message_history_tx_set_trans_id_status(msg->TransId, enum_message_history_status_dataconfirm_received);
 		}
 		else
 		{
-			my_log(LOG_ERR, "Data confirm cb ERR: end-point: %u, trans-id: %u", (uint32_t)msg->Endpoint, (uint32_t)msg->TransId);
+			//my_log(LOG_ERR, "Data confirm cb ERR: end-point: %u, trans-id: %u", (uint32_t)msg->Endpoint, (uint32_t)msg->TransId);
 			message_history_tx_set_trans_id_error(msg->TransId, enum_message_history_error_DATACONFIRM);
 		}
 	}

@@ -1036,6 +1036,64 @@ int handle_ASACZ_request_restart_network_from_scratch(type_handle_ASACZ_request 
 	}
 	return retcode;
 }
+int handle_ASACZ_command_network_probe(type_handle_ASACZ_request *p)
+{
+	int retcode = 0;
+	p->send_reply = 1;
+	p->send_unknown = 0;
+	my_log(LOG_INFO,"%s: network probe received", __func__);
+
+	uint32_t reply_max_command_version = def_ASAC_ZigBee_network_probe_req_command_version;
+	init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
+
+	uint32_t is_format_OK = 1;
+	if (is_format_OK)
+	{
+		if (p->pzmessage_tx->h.c.command_version != reply_max_command_version)
+		{
+			is_format_OK = 0;
+		}
+	}
+	if (is_format_OK)
+	{
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),network_probe_reply);
+		type_ASAC_ZigBee_interface_network_probe_request * p_req = &p->pzmessage_rx->req.network_probe_request;
+		type_ASAC_ZigBee_interface_network_probe_reply * p_reply = &p->pzmessage_tx->reply.network_probe_reply;
+		my_log(LOG_INFO,"%s: handling network probe request", __func__);
+		memset(p_reply, 0, sizeof(*p_reply));
+		p_reply->op.enum_op = p_req->op.enum_op;
+		switch(p_req->op.enum_op)
+		{
+			case enum_network_probe_op_discovery:
+			{
+				type_ASAC_ZigBee_interface_network_probe_reply_discovery *p_discovery_reply = &p_reply->body.discovery;
+				if (is_OK_get_my_radio_IEEE_address(&p_discovery_reply->IEEE_address_info.IEEE_address))
+				{
+					p_discovery_reply->IEEE_address_info.is_valid_IEEE_address = 1;
+				}
+
+				get_ASACZ_firmware_version_whole_struct(&p_discovery_reply->ASACZ_version);
+				get_CC2650_firmware_version(&p_discovery_reply->CC2650_version);
+				get_OpenWrt_version(p_discovery_reply->OpenWrt_release, sizeof(p_discovery_reply->OpenWrt_release));
+
+				break;
+			}
+			default:
+			{
+				is_format_OK = 0;
+				break;
+			}
+		}
+	}
+	if (!is_format_OK)
+	{
+		my_log(LOG_ERR,"%s: error in the format", __func__);
+		p->send_reply = 0;
+		p->send_unknown = 1;
+		retcode = -1;
+	}
+	return retcode;
+}
 
 int handle_ASACZ_request_administrator_diagnostic_test(type_handle_ASACZ_request *p)
 {
@@ -1341,6 +1399,12 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 			case enum_ASAC_ZigBee_interface_command_administrator_diagnostic_test:
 			{
 				retcode = handle_ASACZ_request_administrator_diagnostic_test(&handle_ASACZ_request);
+				break;
+			}
+
+			case enum_ASAC_ZigBee_interface_command_network_probe:
+			{
+				retcode = handle_ASACZ_command_network_probe(&handle_ASACZ_request);
 				break;
 			}
 			default:

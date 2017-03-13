@@ -169,8 +169,11 @@ uint8_t afDataRequest(DataRequestFormat_t *req)
 
 		if (status == MT_RPC_SUCCESS)
 		{
+#define def_no_delay_after_af_data_request
+#ifndef def_no_delay_after_af_data_request
 #warning are this and similar delays really needed?
 			rpcWaitMqClientMsg(50);
+#endif
 		}
 
 		free(cmd);

@@ -41,16 +41,17 @@ f * Filename:       dataSendRcv.c
  */
 
 #include <ASACZ_ZAP.h>
-#include "../ASACZ_ZAP/ASACZ_ZAP_AF_callbacks.h"
-#include "../ASACZ_ZAP/ASACZ_ZAP_AF_register.h"
-#include "../ASACZ_ZAP/ASACZ_ZAP_end_points_update_list.h"
-#include "../ASACZ_ZAP/ASACZ_ZAP_IEEE_address.h"
-#include "../ASACZ_ZAP/ASACZ_ZAP_network.h"
-#include "../ASACZ_ZAP/ASACZ_ZAP_NV.h"
-#include "../ASACZ_ZAP/ASACZ_ZAP_Sapi_callbacks.h"
-#include "../ASACZ_ZAP/ASACZ_ZAP_Sys_callbacks.h"
-#include "../ASACZ_ZAP/ASACZ_ZAP_TX_power.h"
-#include "../ASACZ_ZAP/ASACZ_ZAP_Zdo_callbacks.h"
+#include "ASACZ_ZAP_AF_callbacks.h"
+#include "ASACZ_ZAP_AF_register.h"
+#include "ASACZ_ZAP_end_points_update_list.h"
+#include "ASACZ_ZAP_IEEE_address.h"
+#include "ASACZ_ZAP_network.h"
+#include "ASACZ_ZAP_NV.h"
+#include "ASACZ_ZAP_Sapi_callbacks.h"
+#include "ASACZ_ZAP_Sys_callbacks.h"
+#include "ASACZ_ZAP_TX_power.h"
+#include "ASACZ_ZAP_Zdo_callbacks.h"
+#include "ASACZ_diag_test.h"
 #include <CC2650_fw_update.h>
 /*********************************************************************
  * MACROS
@@ -350,6 +351,7 @@ void init_handle_app(void)
 	}
 
 	init_link_quality(&handle_app.link_quality);
+	init_diag_test();
 }
 unsigned int get_app_new_trans_id(uint32_t message_id)
 {
@@ -724,6 +726,13 @@ void* appProcess(void *argument)
 			start_queue_message_Tx();
 			handle_app.devState = DEV_HOLD;
 			handle_app.status = enum_app_status_flush_messages_init;
+			// reset my own IEEE address
+			invalidate_IEEE_address(&handle_app.IEEE_address);
+			// send an IEEE address request
+			sysGetExtAddr();
+			// request the CC2650 firmware version without waiting
+			sysVersion(0);
+
 			break;
 		}
 		case enum_app_status_flush_messages_init:
@@ -735,11 +744,15 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_flush_messages_do:
 		{
-#define def_max_messages_flushed 100
-			int32_t status = rpcWaitMqClientMsg(50);
+#define def_max_messages_flushed 25
+			int32_t status = rpcWaitMqClientMsg(200);
 			if (status == -1)
 			{
 				handle_app.status = enum_app_status_start_network;
+				if (is_valid_IEEE_address(&handle_app.IEEE_address))
+				{
+					dbg_print(PRINT_LEVEL_INFO, "My IEEE Address is: 0x%" PRIx64 "", handle_app.IEEE_address.address);
+				}
 			}
 			else if (++handle_app.num_msgs_flushed >= def_max_messages_flushed)
 			{
@@ -787,18 +800,26 @@ void* appProcess(void *argument)
 		}
 		case enum_app_status_get_IEEE_address:
 		{
-			// reset my own IEEE address
-			invalidate_IEEE_address(&handle_app.IEEE_address);
-			// send an IEEE address request
-			int32_t status = sysGetExtAddr();
-			if (status != MT_RPC_SUCCESS)
+			if (!is_valid_IEEE_address(&handle_app.IEEE_address))
 			{
-				my_log(LOG_ERR, "Unable to execute sysGetExtAddr");
-				handle_app_error(enum_app_error_code_unable_to_sysGetExtAddr);
+				// reset my own IEEE address
+				invalidate_IEEE_address(&handle_app.IEEE_address);
+				// send an IEEE address request
+				int32_t status = sysGetExtAddr();
+				if (status != MT_RPC_SUCCESS)
+				{
+					my_log(LOG_ERR, "Unable to execute sysGetExtAddr");
+					handle_app_error(enum_app_error_code_unable_to_sysGetExtAddr);
+				}
+				else
+				{
+					my_log(LOG_INFO, "IEEE address request sent OK");
+					handle_app.status = enum_app_status_sysOsalNvWrite;
+				}
 			}
 			else
 			{
-				my_log(LOG_INFO, "IEEE address request sent OK");
+				my_log(LOG_INFO, "IEEE address already valid");
 				handle_app.status = enum_app_status_sysOsalNvWrite;
 			}
 			break;
@@ -1080,6 +1101,15 @@ void* appProcess(void *argument)
 			my_log(LOG_INFO,"%s: starting again the network", __func__);
 			handle_app.status = enum_app_status_restart_network_from_scratch;
 
+			break;
+		}
+
+		case enum_app_status_diag_test:
+		{
+			if (!is_OK_handle_diag_test())
+			{
+				handle_app.status = enum_app_status_rx_msgs;
+			}
 			break;
 		}
 

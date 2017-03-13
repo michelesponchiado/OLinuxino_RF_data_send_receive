@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	10
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	11
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,11 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 11
+// * adding the diagnostic test
+// * removed the 50ms delay after the af data request
+// * in rpcTransportUart.c, removed the 8bytes-write-then-wait on serial port, now they are written all together
+// * the firmware version and the IEEE address are requested BEFORE starting the network stack, so even if the network is in error, these informations are available
 // 0.1.3 build 10
 // * the command line option --CC2650fwupdate=<CC2650_firmware_file_pathname> executes a return after the update has finished
 // * the shutdown procedure puts the information in the log and not in the console output
@@ -116,6 +121,54 @@ void get_ASACZ_firmware_version_whole_struct(type_ASACZ_firmware_version *p)
 		memcpy(p, &ASACZ_firmware_version, sizeof(*p));
 	}
 }
+
+void get_OpenWrt_version(uint8_t *pOpenWrt_release, uint32_t size_of_OpenWrt_release)
+{
+
+  FILE *fp;
+
+  /* Open the command for reading. */
+  fp = popen("cat /etc/*release", "rb");
+  if (fp == NULL)
+  {
+	snprintf((char*)pOpenWrt_release, size_of_OpenWrt_release, "%s", "Error looking for the information required");
+  }
+  else
+  {
+	  char path[1035];
+	  int residual = size_of_OpenWrt_release - 1;
+	  char *pc = (char*)pOpenWrt_release;
+	  /* Read the output a line at a time - output it. */
+	  while (1)
+	  {
+		  int n_read = fread(path, 1, sizeof(path), fp);
+		  if (n_read <= 0)
+		  {
+			  break;
+		  }
+		  int n_to_copy = n_read;
+		  if (n_to_copy > residual)
+		  {
+			  n_to_copy = residual;
+		  }
+		  memcpy(pc, path, n_to_copy);
+		  residual -= n_to_copy;
+		  if (residual <= 0)
+		  {
+			  break;
+		  }
+		  pc += n_to_copy;
+		  if (feof(fp))
+		  {
+			  break;
+		  }
+	  }
+	  pclose(fp);
+  }
+
+
+}
+
 void init_ASACZ_firmware_version(void)
 {
 	ASACZ_firmware_version.build_number = def_ASACZ_firmware_version_BUILD_NUMBER;

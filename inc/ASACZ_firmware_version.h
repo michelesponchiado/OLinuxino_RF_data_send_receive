@@ -29,5 +29,6 @@ typedef struct _type_ASACZ_firmware_version
 void init_ASACZ_firmware_version(void);
 void get_ASACZ_firmware_version_string(char *p_string, uint32_t max_char_to_copy);
 void get_ASACZ_firmware_version_whole_struct(type_ASACZ_firmware_version *p);
+void get_OpenWrt_version(uint8_t *pOpenWrt_release, uint32_t size_of_OpenWrt_release);
 
 #endif /* INC_ASACZ_FIRMWARE_VERSION_H_ */

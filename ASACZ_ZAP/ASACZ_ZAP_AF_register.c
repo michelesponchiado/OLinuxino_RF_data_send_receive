@@ -7,7 +7,7 @@
 
 #include <ASACZ_ZAP.h>
 #include <ASACZ_firmware_version.h>
-#include "../ASACZ_ZAP/ASACZ_ZAP_AF_register.h"
+#include "ASACZ_ZAP_AF_register.h"
 
 
 static const RegisterFormat_t default_RegisterFormat_t =
@@ -16,11 +16,15 @@ static const RegisterFormat_t default_RegisterFormat_t =
 		.AppDeviceId = 0x0100,
 		.AppDevVer = 1,
 		.LatencyReq = 0,
-		.EndPoint = 0xf0,
-		.AppNumInClusters = 1,
-		.AppInClusterList[0] = 0x0001,
-		.AppNumOutClusters = 1,
-		.AppOutClusterList[0] = 0x0001,
+		.EndPoint = ASACZ_reserved_endpoint,
+		.AppNumInClusters = ASACZ_reserved_endpoint_clusters_numof,
+		.AppInClusterList[0] = ASACZ_reserved_endpoint_cluster_random,
+		.AppInClusterList[1] = ASACZ_reserved_endpoint_cluster_diag,
+		.AppInClusterList[2] = ASACZ_reserved_endpoint_cluster_stream,
+		.AppNumOutClusters = ASACZ_reserved_endpoint_clusters_numof,
+		.AppOutClusterList[0] = ASACZ_reserved_endpoint_cluster_random,
+		.AppOutClusterList[1] = ASACZ_reserved_endpoint_cluster_diag,
+		.AppOutClusterList[2] = ASACZ_reserved_endpoint_cluster_stream,
 };
 
 #ifdef print_all_received_messages

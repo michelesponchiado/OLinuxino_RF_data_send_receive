@@ -6,7 +6,9 @@
  */
 
 #include <ASACZ_ZAP.h>
-#include "../ASACZ_ZAP/ASACZ_ZAP_AF_callbacks.h"
+#include "ASACZ_diag_test.h"
+#include "ASACZ_ZAP_AF_register.h"
+#include "ASACZ_ZAP_AF_callbacks.h"
 
 
 static const char *get_af_error_code_string(uint8_t code)
@@ -72,16 +74,22 @@ static void set_link_quality_current_value(uint8_t v)
 
 static uint8_t mtAfDataConfirmCb(DataConfirmFormat_t *msg)
 {
-
-	if (msg->Status == MT_RPC_SUCCESS)
+	// was it a callback of a diagnostic message
+	if (is_OK_AF_callback_diag_transId(msg->TransId))
 	{
-		my_log(LOG_INFO, "Data confirm cb OK: end-point: %u, trans-id: %u", (uint32_t)msg->Endpoint, (uint32_t)msg->TransId);
-		message_history_tx_set_trans_id_status(msg->TransId, enum_message_history_status_dataconfirm_received);
 	}
 	else
 	{
-		my_log(LOG_ERR, "Data confirm cb ERR: end-point: %u, trans-id: %u", (uint32_t)msg->Endpoint, (uint32_t)msg->TransId);
-		message_history_tx_set_trans_id_error(msg->TransId, enum_message_history_error_DATACONFIRM);
+		if (msg->Status == MT_RPC_SUCCESS)
+		{
+			my_log(LOG_INFO, "Data confirm cb OK: end-point: %u, trans-id: %u", (uint32_t)msg->Endpoint, (uint32_t)msg->TransId);
+			message_history_tx_set_trans_id_status(msg->TransId, enum_message_history_status_dataconfirm_received);
+		}
+		else
+		{
+			my_log(LOG_ERR, "Data confirm cb ERR: end-point: %u, trans-id: %u", (uint32_t)msg->Endpoint, (uint32_t)msg->TransId);
+			message_history_tx_set_trans_id_error(msg->TransId, enum_message_history_error_DATACONFIRM);
+		}
 	}
 	return msg->Status;
 }
@@ -117,48 +125,55 @@ static uint8_t mtAfDataDeleteSrspCb(DataDeleteSrspFormat_t *msg)
 static uint8_t mtAfIncomingMsgCb(IncomingMsgFormat_t *msg)
 {
 	uint8_t retcode = SUCCESS;
-	// incoming message received, we put it in the received messages queue
-	uint64_t IEEE_address;
-	dbg_print(PRINT_LEVEL_INFO, "%s: message from device @ Short Address 0x%X", __func__,(unsigned int)msg->SrcAddr);
-	set_link_quality_current_value(msg->LinkQuality);
-	dbg_print(PRINT_LEVEL_INFO, "%s: link quality: %s (%u / %i dBm)", __func__
-			, get_app_current_link_quality_string()
-			, (unsigned int )get_app_current_link_quality_value_energy_detected()
-			, (int )get_app_current_link_quality_value_dBm()
-			);
-
-	if (!is_OK_get_IEEE_from_network_short_address(msg->SrcAddr, &IEEE_address, enum_device_lifecycle_action_do_refresh_rx))
+	if (msg->SrcEndpoint == ASACZ_reserved_endpoint && msg->ClusterId == ASACZ_reserved_endpoint_cluster_diag)
 	{
-		dbg_print(PRINT_LEVEL_INFO, "%s: UNKNOWN DEVICE @ Short Address 0x%X", __func__,(unsigned int)msg->SrcAddr);
-		my_log(LOG_ERR, "Unknown short address 0x%X on incoming message", (uint32_t)msg->SrcAddr);
-		retcode = FAILURE;
+		diag_rx_callback(msg);
 	}
 	else
 	{
-		dbg_print(PRINT_LEVEL_INFO, "%s: the device is @ IEEE 0x%"  PRIx64 ", Short Address 0x%X", __func__,IEEE_address, (unsigned int)msg->SrcAddr);
-		uint32_t id;
-		type_ASAC_ZigBee_interface_command_received_message_callback m;
-		memset(&m, 0, sizeof(m));
-		{
-			type_ASAC_ZigBee_src_id *ph = &m.src_id;
+		// incoming message received, we put it in the received messages queue
+		uint64_t IEEE_address;
+		dbg_print(PRINT_LEVEL_INFO, "%s: message from device @ Short Address 0x%X", __func__,(unsigned int)msg->SrcAddr);
+		set_link_quality_current_value(msg->LinkQuality);
+		dbg_print(PRINT_LEVEL_INFO, "%s: link quality: %s (%u / %i dBm)", __func__
+				, get_app_current_link_quality_string()
+				, (unsigned int )get_app_current_link_quality_value_energy_detected()
+				, (int )get_app_current_link_quality_value_dBm()
+				);
 
-			ph->IEEE_source_address		= IEEE_address;
-			ph->destination_endpoint 	= msg->DstEndpoint;
-			ph->cluster_id 				= msg->ClusterId;
-			ph->source_endpoint 		= msg->SrcEndpoint;
-			ph->transaction_id 			= msg->TransSeqNum;
-		}
-		m.message_length = msg->Len;
-		memcpy(m.message, msg->Data, m.message_length);
-		if (!is_OK_push_Rx_outside_message(&m, &id))
+		if (!is_OK_get_IEEE_from_network_short_address(msg->SrcAddr, &IEEE_address, enum_device_lifecycle_action_do_refresh_rx))
 		{
-			dbg_print(PRINT_LEVEL_INFO, "%s: ERROR PUTTING message in outside queue", __func__);
-			my_log(LOG_ERR, "Unable to put received message in rx queue");
+			dbg_print(PRINT_LEVEL_INFO, "%s: UNKNOWN DEVICE @ Short Address 0x%X", __func__,(unsigned int)msg->SrcAddr);
+			my_log(LOG_ERR, "Unknown short address 0x%X on incoming message", (uint32_t)msg->SrcAddr);
 			retcode = FAILURE;
 		}
 		else
 		{
-			dbg_print(PRINT_LEVEL_INFO, "%s: message put OK in outside queue", __func__);
+			dbg_print(PRINT_LEVEL_INFO, "%s: the device is @ IEEE 0x%"  PRIx64 ", Short Address 0x%X", __func__,IEEE_address, (unsigned int)msg->SrcAddr);
+			uint32_t id;
+			type_ASAC_ZigBee_interface_command_received_message_callback m;
+			memset(&m, 0, sizeof(m));
+			{
+				type_ASAC_ZigBee_src_id *ph = &m.src_id;
+
+				ph->IEEE_source_address		= IEEE_address;
+				ph->destination_endpoint 	= msg->DstEndpoint;
+				ph->cluster_id 				= msg->ClusterId;
+				ph->source_endpoint 		= msg->SrcEndpoint;
+				ph->transaction_id 			= msg->TransSeqNum;
+			}
+			m.message_length = msg->Len;
+			memcpy(m.message, msg->Data, m.message_length);
+			if (!is_OK_push_Rx_outside_message(&m, &id))
+			{
+				dbg_print(PRINT_LEVEL_INFO, "%s: ERROR PUTTING message in outside queue", __func__);
+				my_log(LOG_ERR, "Unable to put received message in rx queue");
+				retcode = FAILURE;
+			}
+			else
+			{
+				dbg_print(PRINT_LEVEL_INFO, "%s: message put OK in outside queue", __func__);
+			}
 		}
 	}
 	return retcode;

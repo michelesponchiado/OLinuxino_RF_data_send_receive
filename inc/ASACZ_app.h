@@ -33,6 +33,7 @@ typedef enum
 	enum_app_status_firmware_update_init_wait,
 	enum_app_status_firmware_update_do,
 	enum_app_status_firmware_update_ends,
+	enum_app_status_diag_test,
 	enum_app_status_shutdown,
 	enum_app_status_error,
 	enum_app_status_numof
@@ -46,6 +47,7 @@ char * get_app_current_link_quality_string(void);
 uint8_t get_app_current_link_quality_value_energy_detected(void);
 int32_t get_app_current_link_quality_value_dBm(void);
 void force_zigbee_shutdown(void);
+unsigned int get_app_new_trans_id(uint32_t message_id);
 
 typedef enum
 {

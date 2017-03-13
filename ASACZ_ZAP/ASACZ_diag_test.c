@@ -544,7 +544,7 @@ void get_CC2650_start_diag_test_retcode_string(enum_admin_diag_test_start_retcod
 	{
 		if (start_diag_retcode_msg_table[i].r == r)
 		{
-			snprintf(s, size_s, start_diag_retcode_msg_table[i].msg);
+			snprintf(s, size_s, "%s", start_diag_retcode_msg_table[i].msg);
 			found = 1;
 		}
 	}
@@ -652,7 +652,7 @@ void get_CC2650_stop_diag_test_retcode_string(enum_admin_diag_test_stop_retcode 
 	{
 		if (stop_diag_retcode_msg_table[i].r == r)
 		{
-			snprintf(s, size_s, stop_diag_retcode_msg_table[i].msg);
+			snprintf(s, size_s, "%s", stop_diag_retcode_msg_table[i].msg);
 			found = 1;
 		}
 	}

@@ -210,7 +210,7 @@ void rpcTransportClose(void)
  */
 void rpcTransportWrite(uint8_t* buf, uint8_t len)
 {
-#if 0
+#if 1
 	int remain = len;
 	int offset = 0;
 	//dbg_print(PRINT_LEVEL_VERBOSE, "rpcTransportWrite : len = %d\n", len);

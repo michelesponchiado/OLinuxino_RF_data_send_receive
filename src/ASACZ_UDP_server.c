@@ -1071,8 +1071,18 @@ int handle_ASACZ_command_network_probe(type_handle_ASACZ_request *p)
 				{
 					p_discovery_reply->IEEE_address_info.is_valid_IEEE_address = 1;
 				}
+				type_ASACZ_firmware_version firmware_version;
+				get_ASACZ_firmware_version_whole_struct(&firmware_version);
+				type_ASAC_ZigBee_interface_network_firmware_version_reply *pv = &p_discovery_reply->ASACZ_version;
+				pv->major_number 	= firmware_version.major_number;
+				pv->middle_number = firmware_version.middle_number;
+				pv->minor_number 	= firmware_version.minor_number;
+				pv->build_number 	= firmware_version.build_number;
+				snprintf((char*)pv->date_and_time, sizeof(pv->date_and_time), "%s",firmware_version.date_and_time);
+				snprintf((char*)pv->patch, sizeof(pv->patch), "%s",firmware_version.patch);
+				snprintf((char*)pv->notes, sizeof(pv->notes), "%s",firmware_version.notes);
+				snprintf((char*)pv->string, sizeof(pv->string), "%s",firmware_version.string);
 
-				get_ASACZ_firmware_version_whole_struct(&p_discovery_reply->ASACZ_version);
 				get_CC2650_firmware_version(&p_discovery_reply->CC2650_version);
 				get_OpenWrt_version(p_discovery_reply->OpenWrt_release, sizeof(p_discovery_reply->OpenWrt_release));
 

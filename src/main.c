@@ -402,7 +402,7 @@ int main(int argc, char* argv[])
     {
 		printf("CC2650 firmware update has been requested\n");
     	int n = snprintf(CC2650_fw_path, sizeof(CC2650_fw_path), "%s", &argv[1][17]);
-    	if (n >= sizeof(CC2650_fw_path))
+    	if (n >= (int)sizeof(CC2650_fw_path))
     	{
     		printf("too long input filename (max %u chars); firmware update will be NOT executed\n", sizeof(CC2650_fw_path) - 1);
     	}

@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	11
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	12
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,9 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 12
+// * the diagnostic test starts working
+// * solved some bugs in the diagnostic test
 // 0.1.3 build 11
 // * adding the diagnostic test
 // * removed the 50ms delay after the af data request

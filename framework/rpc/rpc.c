@@ -439,9 +439,9 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 	int32_t status = MT_RPC_SUCCESS;
 
 	// block here if SREQ is in progress
-	dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: Blocking on RPC sem");
+	//dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: Blocking on RPC sem");
 	sem_wait(&rpcSem);
-	dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: Sending RPC");
+	//dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: Sending RPC");
 
 	// fill in header bytes
 	buf[0] = MT_RPC_SOF;
@@ -462,8 +462,7 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 	}
 
 	// calculate FCS field
-	buf[payload_len + RPC_UART_HDR_LEN] = calcFcs(
-	        &buf[RPC_UART_FRAME_START_IDX], payload_len + RPC_HDR_LEN);
+	buf[payload_len + RPC_UART_HDR_LEN] = calcFcs(&buf[RPC_UART_FRAME_START_IDX], payload_len + RPC_HDR_LEN);
 
 #ifdef HAL_UART_IP
 	// No SOF or FCS
@@ -474,7 +473,7 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 #endif
 
 	// print out message to be sent
-	printRpcMsg("SOC OUT -->", buf[0], payload_len, &buf[2]);
+	//printRpcMsg("SOC OUT -->", buf[0], payload_len, &buf[2]);
 
 	// wait for SRSP if necessary
 	if ((cmd0 & MT_RPC_CMD_TYPE_MASK) == MT_RPC_CMD_SREQ)
@@ -484,21 +483,21 @@ uint8_t rpcSendFrame(uint8_t cmd0, uint8_t cmd1, uint8_t *payload,
 			{ time(0) + (SRSP_TIMEOUT_MS / 1000), (long) ((long) SRSP_TIMEOUT_MS
 			        % 1000) * 1000000 };
 
-		dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: waiting for SRSP [%02x]",
-		        expectedSrspCmdId);
-
+		//dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: waiting for SRSP [%02x]", expectedSrspCmdId);
+		//int64_t get_current_epoch_time_ms(void);
+		//int64_t before = get_current_epoch_time_ms();
 		//Wait for the SRSP
 		status = sem_timedwait(&srspSem, &srspTimeOut);
+		//int64_t after = get_current_epoch_time_ms();
+		// normally the reply comes after 2 or 3 milliseconds
 		if (status == -1)
 		{
-			dbg_print(PRINT_LEVEL_WARNING,
-			        "rpcSendFrame: SRSP Error - CMD0: 0x%02X CMD1: 0x%02X",
-			        cmd0, cmd1);
+			//dbg_print(PRINT_LEVEL_WARNING,"rpcSendFrame: SRSP Error - CMD0: 0x%02X CMD1: 0x%02X",cmd0, cmd1);
 			status = MT_RPC_ERR_SUBSYSTEM;
 		}
 		else
 		{
-			dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: Receive SRSP");
+			//dbg_print(PRINT_LEVEL_VERBOSE, "rpcSendFrame: Receive SRSP");
 			status = MT_RPC_SUCCESS;
 		}
 

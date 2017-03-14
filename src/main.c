@@ -573,7 +573,7 @@ int main(int argc, char* argv[])
 		threads_cancel_info[enum_thread_id_rpc].created_OK = 1;
 
 		//Start the example thread
-		dbg_print(PRINT_LEVEL_INFO, "creating example thread\n");
+		dbg_print(PRINT_LEVEL_INFO, "creating app thread\n");
 		thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_app].t, NULL, appTask, NULL);
 		if (thread_create_retcode != 0)
 		{

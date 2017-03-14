@@ -678,7 +678,7 @@ int fw_test_done = 0;
 void* appProcess(void *argument)
 {
 	// give some breath to the system
-	usleep(5000);
+	usleep(2000);
 
 	switch(handle_app.status)
 	{
@@ -1181,7 +1181,7 @@ void *rpcTask(void *argument)
 		{
 			handle_app.rpcTaskSuspended = handle_app.suspend_rx_tasks;
 		}
-		usleep(1000);
+		usleep(2000);
 	}
 
 	dbg_print(PRINT_LEVEL_WARNING, "rpcTask exited!\n");
@@ -1190,7 +1190,7 @@ void *appInMessageTask(void *argument)
 {
 	while (1)
 	{
-		usleep(1000);
+		usleep(2000);
 		if (!handle_app.suspend_rx_tasks)
 		{
 			handle_app.InMessageTaskSuspended = 0;

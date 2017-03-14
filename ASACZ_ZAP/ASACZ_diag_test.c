@@ -79,6 +79,7 @@ typedef struct _type_handle_diag_sent_msg_info
 }type_handle_diag_sent_msg_info;
 
 #define def_max_diag_batches 64
+#define def_max_send_times 64
 typedef struct _type_handle_diag_test_run
 {
 	volatile unsigned int is_running;
@@ -91,6 +92,10 @@ typedef struct _type_handle_diag_test_run
 	unsigned int idx_next_batch;
 	type_handle_diag_test_stats batches[def_max_diag_batches];
 	type_handle_diag_test_stats stats;
+
+	unsigned int send_times_idx;
+	int64_t send_times[def_max_send_times];
+
 }type_handle_diag_test_run;
 
 typedef struct _type_diag_averages
@@ -319,7 +324,6 @@ unsigned int is_OK_handle_diag_test(void)
 				}
 				init_transId();
 			}
-			p_run->num_wait_transId_free = 0;
 
 
 			DataRequestFormat_t * pdr = &handle_diag_test.DataRequest;
@@ -354,6 +358,21 @@ unsigned int is_OK_handle_diag_test(void)
 			pdr->TransID     = get_app_new_trans_id(handle_app.message_id);
 			p_run->sent_msg_info[index_sent_trans_id].trans_id = pdr->TransID;
 			p_run->sent_msg_info[index_sent_trans_id].message_length = pdr->Len;
+			{
+				unsigned int idx_time = p_run->send_times_idx;
+				if (idx_time >= def_max_send_times)
+				{
+					idx_time = 0;
+				}
+				p_run->send_times[idx_time] = get_current_epoch_time_ms();
+				if (++idx_time >= def_max_send_times)
+				{
+					idx_time = 0;
+				}
+				p_run->send_times_idx = idx_time;
+			}
+			p_run->num_wait_transId_free = 0;
+
 			// send the message
 			int32_t status = afDataRequest(pdr);
 			// check the return code
@@ -369,7 +388,7 @@ unsigned int is_OK_handle_diag_test(void)
 		case enum_diag_test_status_run_wait_after_tx:
 		{
 			handle_diag_test.status = enum_diag_test_status_run;
-			usleep(4000);
+			//usleep(4000);
 			int64_t now = get_current_epoch_time_ms();
 			int64_t elapsed = now - handle_diag_test.run.batch_start_time;
 			if (elapsed >= handle_diag_test.req_start.batch_acquire_period_ms)
@@ -385,8 +404,6 @@ unsigned int is_OK_handle_diag_test(void)
 					type_handle_diag_test_stats *p_batch = &handle_diag_test.run.batches[idx];
 					*p_batch = *p_run_stats;
 					p_batch->elapsed_ms = elapsed;
-
-					memset(p_run_stats, 0, sizeof(p_run_stats));
 
 					if (++idx >= sizeof(handle_diag_test.run.batches) / sizeof(handle_diag_test.run.batches[0]))
 					{
@@ -424,6 +441,7 @@ unsigned int is_OK_handle_diag_test(void)
 					p_global_avg->average_num_bytes_per_second_tx = avg.average_num_bytes_per_second_tx * inv_elapsed;
 					p_global_avg->average_num_msg_per_second_rx = avg.average_num_msg_per_second_rx * inv_elapsed;
 					p_global_avg->average_num_msg_per_second_tx = avg.average_num_msg_per_second_tx * inv_elapsed;
+					memset(p_run_stats, 0, sizeof(*p_run_stats));
 					handle_diag_test.run.batch_start_time = get_current_epoch_time_ms();;
 
 				pthread_mutex_unlock(&handle_diag_test.mtx_id[enum_diag_mutex_stats]);

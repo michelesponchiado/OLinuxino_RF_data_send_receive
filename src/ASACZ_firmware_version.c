@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	12
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	16
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,14 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 16
+// * testing the get set serial number
+// 0.1.3 build 15
+// * added the missing IEEE address to the discovery reply
+// 0.1.3 build 14
+// * the serial number is put as the first field in the discovery body as per Appi's request
+// 0.1.3 build 13
+// * the serial number is returned in the discovery message body, by now it is fixed to 123456
 // 0.1.3 build 12
 // * the diagnostic test starts working
 // * solved some bugs in the diagnostic test
@@ -134,7 +142,7 @@ void get_OpenWrt_version(uint8_t *pOpenWrt_release, uint32_t size_of_OpenWrt_rel
   fp = popen("cat /etc/*release", "rb");
   if (fp == NULL)
   {
-	snprintf((char*)pOpenWrt_release, size_of_OpenWrt_release, "%s", "Error looking for the information required");
+	snprintf((char*)pOpenWrt_release, size_of_OpenWrt_release, "%s", "Unable to retrieve the information required");
   }
   else
   {
@@ -166,7 +174,13 @@ void get_OpenWrt_version(uint8_t *pOpenWrt_release, uint32_t size_of_OpenWrt_rel
 			  break;
 		  }
 	  }
-	  pclose(fp);
+	  int close_retvalue = pclose(fp);
+	  int exit_status = WEXITSTATUS(close_retvalue);
+	  if (exit_status)
+	  {
+		  // error doing the command
+		  snprintf((char*)pOpenWrt_release, size_of_OpenWrt_release, "Unable to get the information required, exit code %i", exit_status);
+	  }
   }
 
 

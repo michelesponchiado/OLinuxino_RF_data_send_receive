@@ -40,6 +40,7 @@
 #include "ASACZ_firmware_version.h"
 #include "ASACZ_app.h"
 #include "ASACZ_diag_test.h"
+#include "ASACZ_admin_device_info.h"
 
 typedef struct _type_handle_socket_in
 {
@@ -1036,6 +1037,64 @@ int handle_ASACZ_request_restart_network_from_scratch(type_handle_ASACZ_request 
 	}
 	return retcode;
 }
+
+int handle_ASACZ_command_administrator_device_info(type_handle_ASACZ_request *p)
+{
+	int retcode = 0;
+	p->send_reply = 1;
+	p->send_unknown = 0;
+	my_log(LOG_INFO,"%s: administrator_device_info received", __func__);
+
+	uint32_t reply_max_command_version = def_administrator_device_info_command_version;
+	init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
+
+	uint32_t is_format_OK = 1;
+	if (is_format_OK)
+	{
+		if (p->pzmessage_tx->h.c.command_version != reply_max_command_version)
+		{
+			is_format_OK = 0;
+		}
+	}
+	if (is_format_OK)
+	{
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),device_info_reply);
+		type_ASAC_ZigBee_interface_administrator_device_info_req * p_req = &p->pzmessage_rx->req.device_info_req;
+		type_ASAC_ZigBee_interface_administrator_device_info_reply * p_reply = &p->pzmessage_tx->reply.device_info_reply;
+		my_log(LOG_INFO,"%s: handling administrator_device_info", __func__);
+		memset(p_reply, 0, sizeof(*p_reply));
+		p_reply->op.enum_op = p_req->op.enum_op;
+		switch(p_req->op.enum_op)
+		{
+			case enum_administrator_device_info_op_get_serial_number:
+			{
+				type_administrator_device_info_op_get_serial_number_reply *p_get_reply = &p_reply->body.get_serial_number;
+				get_ASACZ_admin_device_sn(p_get_reply);
+				break;
+			}
+			case enum_administrator_device_info_op_set_serial_number:
+			{
+				type_administrator_device_info_op_set_serial_number_reply *p_set_reply = &p_reply->body.set_serial_number;
+				set_ASACZ_admin_device_sn(&p_req->body.set_serial_number, p_set_reply);
+				break;
+			}
+			default:
+			{
+				is_format_OK = 0;
+				break;
+			}
+		}
+	}
+	if (!is_format_OK)
+	{
+		my_log(LOG_ERR,"%s: error in the format", __func__);
+		p->send_reply = 0;
+		p->send_unknown = 1;
+		retcode = -1;
+	}
+	return retcode;
+}
+
 int handle_ASACZ_command_network_probe(type_handle_ASACZ_request *p)
 {
 	int retcode = 0;
@@ -1082,6 +1141,16 @@ int handle_ASACZ_command_network_probe(type_handle_ASACZ_request *p)
 				snprintf((char*)pv->patch, sizeof(pv->patch), "%s",firmware_version.patch);
 				snprintf((char*)pv->notes, sizeof(pv->notes), "%s",firmware_version.notes);
 				snprintf((char*)pv->string, sizeof(pv->string), "%s",firmware_version.string);
+				{
+					type_administrator_device_info_op_get_serial_number_reply g;
+					memset(&g, 0, sizeof(g));
+					get_ASACZ_admin_device_sn(&g);
+					p_discovery_reply->serial_number = g.serial_number;
+				}
+				if (is_OK_get_my_radio_IEEE_address(&p_discovery_reply->IEEE_address_info.IEEE_address))
+				{
+					p_discovery_reply->IEEE_address_info.is_valid_IEEE_address = 1;
+				}
 
 				get_CC2650_firmware_version(&p_discovery_reply->CC2650_version);
 				get_OpenWrt_version(p_discovery_reply->OpenWrt_release, sizeof(p_discovery_reply->OpenWrt_release));
@@ -1415,6 +1484,11 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 			case enum_ASAC_ZigBee_interface_command_network_probe:
 			{
 				retcode = handle_ASACZ_command_network_probe(&handle_ASACZ_request);
+				break;
+			}
+			case enum_ASAC_ZigBee_interface_command_administrator_device_info:
+			{
+				retcode = handle_ASACZ_command_administrator_device_info(&handle_ASACZ_request);
 				break;
 			}
 			default:

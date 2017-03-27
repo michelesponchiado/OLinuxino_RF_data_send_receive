@@ -221,4 +221,17 @@ void *rpcTask(void *argument);
 void *appInMessageTask(void *argument);
 
 
+#undef default_ASACZ_firmware_file_directory
+
+#ifdef OLINUXINO
+	#define default_ASACZ_firmware_file_directory "/tmp/tftp/"
+#endif
+
+#ifdef ANDROID
+	#define default_ASACZ_firmware_file_directory "/data/system/"
+#endif
+
+#undef default_CC2650_firmware_file_directory
+#define default_CC2650_firmware_file_directory default_ASACZ_firmware_file_directory
+
 #endif /* ASACZ_ZAP_H_ */

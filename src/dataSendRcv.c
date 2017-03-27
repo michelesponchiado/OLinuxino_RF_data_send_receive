@@ -228,7 +228,13 @@ unsigned int is_required_CC2650_firmware_update(void)
 enum_do_CC2650_fw_update_retcode sem_CC2650_fw_operation(enum_CC2650_fw_operation op, const char *path_binary_file, type_ASACZ_CC2650_fw_update_header *p_dst_header)
 {
 	pthread_mutex_lock(&handle_app.CC2650_fw_update_handle.mtx_update);
-		enum_do_CC2650_fw_update_retcode r = do_CC2650_fw_operation(op, path_binary_file, p_dst_header);
+		char complete_path[1096];
+		int needed = snprintf((char*)complete_path, sizeof(complete_path), "%s%s", default_CC2650_firmware_file_directory, path_binary_file);
+		enum_do_CC2650_fw_update_retcode r = enum_do_CC2650_fw_update_retcode_ERR_unable_to_open_the_firmware_file;
+		if (needed <= (int) sizeof(complete_path))
+		{
+			r = do_CC2650_fw_operation(op, complete_path, p_dst_header);
+		}
 	pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_update);
 	return r;
 }
@@ -280,7 +286,6 @@ void get_CC2650_firmware_update_status(type_fwupd_CC2650_query_update_status_rep
 		p->status = p_CC2650fwupd->status;
 	pthread_mutex_unlock(&handle_app.CC2650_fw_update_handle.mtx_id);
 }
-
 
 enum_request_CC2650_firmware_update_retcode request_CC2650_firmware_update(char *firmware_file_path, type_fwupd_CC2650_start_update_reply_body *p_dst)
 {
@@ -724,6 +729,7 @@ void* appProcess(void *argument)
 		case enum_app_status_init:
 		{
 			start_queue_message_Tx();
+			start_queue_message_Rx();
 			handle_app.devState = DEV_HOLD;
 			handle_app.status = enum_app_status_flush_messages_init;
 			// reset my own IEEE address

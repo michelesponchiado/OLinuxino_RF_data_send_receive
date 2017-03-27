@@ -89,6 +89,8 @@ typedef enum
 	enum_ASAC_ZigBee_interface_command_administrator_restart_network_from_scratch,
 	enum_ASAC_ZigBee_interface_command_administrator_diagnostic_test,
 	enum_ASAC_ZigBee_interface_command_administrator_device_info,
+	enum_ASAC_ZigBee_interface_command_administrator_system_reboot,
+	enum_ASAC_ZigBee_interface_command_administrator_UTC,
 // the command used to reply to unknown commands
 	enum_ASAC_ZigBee_interface_command_unknown = 0xFFFFFFFF,
 
@@ -829,6 +831,7 @@ typedef struct _type_ASAC_ZigBee_interface_network_probe_request
 typedef struct _type_ASAC_ZigBee_interface_network_probe_reply_discovery
 {
 	uint32_t serial_number;
+	uint64_t uptime_seconds;
 	type_ASAC_ZigBee_interface_network_my_IEEE_reply IEEE_address_info;
 	type_ASAC_ZigBee_interface_network_firmware_version_reply ASACZ_version;
 	type_fwupd_CC2650_read_version_reply_body CC2650_version;
@@ -961,6 +964,108 @@ typedef struct _type_ASAC_ZigBee_interface_administrator_device_info_reply
 //
 
 
+
+//
+//
+//
+// enum_ASAC_ZigBee_interface_command_administrator_system_reboot begins here
+//
+//
+//
+#define def_administrator_system_reboot_command_version 0
+
+
+typedef struct _type_ASAC_ZigBee_interface_administrator_system_reboot_req
+{
+	uint32_t reboot_req_id;				// the boot identifier, you can set it to 0
+	uint8_t reboot_req_message[64]; 	// a message that's showing up in the system log when requesting the reboot"
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_administrator_system_reboot_req;
+
+typedef struct _type_ASAC_ZigBee_interface_administrator_system_reboot_reply
+{
+	uint32_t reboot_req_id;				// same as per the request
+	uint8_t reboot_req_message[64]; 	// same as per the request
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_administrator_system_reboot_reply;
+
+
+//
+//
+//
+// enum_ASAC_ZigBee_interface_command_administrator_reboot ends here
+//
+//
+//
+
+
+//
+//
+//
+// enum_ASAC_ZigBee_interface_command_administrator_UTC begins here
+//
+//
+//
+#define def_administrator_UTC_command_version 0
+
+typedef enum
+{
+	enum_UTC_op_get = 0,
+	enum_UTC_op_set ,
+
+	enum_UTC_op_numof
+}enum_UTC_op;
+typedef enum
+{
+	enum_UTC_op_retcode_OK = 0,
+	enum_UTC_op_retcode_ERROR_get ,
+	enum_UTC_op_retcode_ERROR_set ,
+	enum_UTC_op_retcode_ERROR_unknown_op ,
+
+	enum_UTC_op_retcode_numof
+}enum_UTC_op_retcode;
+
+typedef struct _type_ASAC_ZigBee_interface_administrator_UTC_req
+{
+	// the operation required (basically, get or set), we can see this field as an enum or as an uint32_t
+	union
+	{
+		enum_UTC_op enum_op;
+		uint32_t uint_op;
+	}op;
+	// the time to set, used only when a set operation is required
+	union
+	{
+		int64_t time_to_set;
+	}body;
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_administrator_UTC_req;
+
+typedef struct _type_ASAC_ZigBee_interface_administrator_UTC_reply
+{
+	// the operation required
+	union
+	{
+		enum_UTC_op enum_op;
+		uint32_t uint_op;
+	}op;
+	// the return code: can be OK (0), or some error
+	union
+	{
+		enum_UTC_op_retcode enum_r;
+		uint32_t uint_r;
+	}return_code;
+	uint8_t return_ascii[128]; // the return code as ASCII string
+	int64_t current_system_epoch_time;	// the current system epoch time
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_administrator_UTC_reply;
+
+
+//
+//
+//
+// enum_ASAC_ZigBee_interface_command_administrator_UTC ends here
+//
+//
+//
+
+
 //
 //
 //
@@ -993,6 +1098,8 @@ typedef struct _type_ASAC_Zigbee_interface_request
 		type_ASAC_ZigBee_interface_command_fwupd_req fwupd_req;
 		type_ASAC_admin_diag_test_req diag_test_req;
 		type_ASAC_ZigBee_interface_administrator_device_info_req device_info_req;
+		type_ASAC_ZigBee_interface_administrator_system_reboot_req system_reboot_req;
+		type_ASAC_ZigBee_interface_administrator_UTC_req UTC_req;
 
 	}req;
 }type_ASAC_Zigbee_interface_request;
@@ -1025,6 +1132,8 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 		type_ASAC_ZigBee_interface_command_fwupd_reply fwupd_reply;
 		type_ASAC_admin_diag_test_reply diag_test_reply;
 		type_ASAC_ZigBee_interface_administrator_device_info_reply device_info_reply;
+		type_ASAC_ZigBee_interface_administrator_system_reboot_reply system_reboot_reply;
+		type_ASAC_ZigBee_interface_administrator_UTC_reply UTC_reply;
 
 		// reply to an unknown command
 		type_ASAC_ZigBee_interface_unknown_reply unknown;

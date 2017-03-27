@@ -1038,6 +1038,126 @@ int handle_ASACZ_request_restart_network_from_scratch(type_handle_ASACZ_request 
 	return retcode;
 }
 
+int handle_ASACZ_command_administrator_UTC(type_handle_ASACZ_request *p)
+{
+	int retcode = 0;
+	p->send_reply = 1;
+	p->send_unknown = 0;
+	my_log(LOG_INFO,"%s: administrator_UTC received", __func__);
+
+	uint32_t reply_max_command_version = def_administrator_UTC_command_version;
+	init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
+
+	uint32_t is_format_OK = 1;
+	if (is_format_OK)
+	{
+		if (p->pzmessage_tx->h.c.command_version != reply_max_command_version)
+		{
+			is_format_OK = 0;
+		}
+	}
+	if (is_format_OK)
+	{
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),UTC_reply);
+		type_ASAC_ZigBee_interface_administrator_UTC_req * p_req = &p->pzmessage_rx->req.UTC_req;
+		type_ASAC_ZigBee_interface_administrator_UTC_reply * p_reply = &p->pzmessage_tx->reply.UTC_reply;
+		memset(p_reply, 0, sizeof(*p_reply));
+		p_reply->op.uint_op = p_req->op.uint_op;
+		p_reply->return_code.enum_r = enum_UTC_op_retcode_OK;
+		snprintf((char *)p_reply->return_ascii, sizeof(p_reply->return_ascii), "%s", "OK");
+		time_t t = time(NULL);
+		unsigned int get_errno_code = 0;
+		int my_err = 0;
+		switch(p_req->op.enum_op)
+		{
+			case enum_UTC_op_get:
+			{
+				if (t == ((time_t)-1))
+				{
+					my_err = errno;
+					get_errno_code = 1;
+					p_reply->return_code.enum_r = enum_UTC_op_retcode_ERROR_get;
+				}
+				break;
+			}
+			case enum_UTC_op_set:
+			{
+				time_t timetoset = p_req->body.time_to_set;
+				if (stime(&timetoset) < 0)
+				{
+					my_err = errno;
+					get_errno_code = 1;
+					p_reply->return_code.enum_r = enum_UTC_op_retcode_ERROR_set;
+				}
+				// read again the system time
+				t = time(NULL);
+				break;
+			}
+			default:
+			{
+				snprintf((char *)p_reply->return_ascii, sizeof(p_reply->return_ascii), "Unknown operation requested: %u", p_req->op.uint_op);
+				p_reply->return_code.enum_r = enum_UTC_op_retcode_ERROR_unknown_op;
+				break;
+			}
+		}
+		if (get_errno_code)
+		{
+			snprintf((char *)p_reply->return_ascii, sizeof(p_reply->return_ascii), "%s", strerror(my_err));
+			get_errno_code = 0;
+		}
+		p_reply->current_system_epoch_time = t;
+	}
+	if (!is_format_OK)
+	{
+		my_log(LOG_ERR,"%s: error in the format", __func__);
+		p->send_reply = 0;
+		p->send_unknown = 1;
+		retcode = -1;
+	}
+	return retcode;
+}
+
+
+int handle_ASACZ_command_administrator_system_reboot(type_handle_ASACZ_request *p)
+{
+	int retcode = 0;
+	p->send_reply = 1;
+	p->send_unknown = 0;
+	my_log(LOG_INFO,"%s: administrator_system_reboot received", __func__);
+
+	uint32_t reply_max_command_version = def_administrator_system_reboot_command_version;
+	init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
+
+	uint32_t is_format_OK = 1;
+	if (is_format_OK)
+	{
+		if (p->pzmessage_tx->h.c.command_version != reply_max_command_version)
+		{
+			is_format_OK = 0;
+		}
+	}
+	if (is_format_OK)
+	{
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),system_reboot_reply);
+		type_ASAC_ZigBee_interface_administrator_system_reboot_req * p_req = &p->pzmessage_rx->req.system_reboot_req;
+		type_ASAC_ZigBee_interface_administrator_system_reboot_reply * p_reply = &p->pzmessage_tx->reply.system_reboot_reply;
+		memset(p_reply, 0, sizeof(*p_reply));
+		p_reply->reboot_req_id = p_req->reboot_req_id;
+		memcpy(p_reply->reboot_req_message, p_req->reboot_req_message, sizeof(p_reply->reboot_req_message));
+		my_log(LOG_INFO,"%s: administrator_system_reboot id: %u, msg: %s", __func__, p_req->reboot_req_id, p_req->reboot_req_message);
+		// issuing the system reboot request
+		system("reboot");
+	}
+	if (!is_format_OK)
+	{
+		my_log(LOG_ERR,"%s: error in the format", __func__);
+		p->send_reply = 0;
+		p->send_unknown = 1;
+		retcode = -1;
+	}
+	return retcode;
+}
+
 int handle_ASACZ_command_administrator_device_info(type_handle_ASACZ_request *p)
 {
 	int retcode = 0;
@@ -1125,6 +1245,12 @@ int handle_ASACZ_command_network_probe(type_handle_ASACZ_request *p)
 		{
 			case enum_network_probe_op_discovery:
 			{
+				{
+					#include <sys/sysinfo.h>
+					struct sysinfo info;
+					sysinfo(&info);
+					p_reply->body.discovery.uptime_seconds = info.uptime;
+				}
 				type_ASAC_ZigBee_interface_network_probe_reply_discovery *p_discovery_reply = &p_reply->body.discovery;
 				if (is_OK_get_my_radio_IEEE_address(&p_discovery_reply->IEEE_address_info.IEEE_address))
 				{
@@ -1489,6 +1615,16 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 			case enum_ASAC_ZigBee_interface_command_administrator_device_info:
 			{
 				retcode = handle_ASACZ_command_administrator_device_info(&handle_ASACZ_request);
+				break;
+			}
+			case enum_ASAC_ZigBee_interface_command_administrator_system_reboot:
+			{
+				retcode = handle_ASACZ_command_administrator_system_reboot(&handle_ASACZ_request);
+				break;
+			}
+			case enum_ASAC_ZigBee_interface_command_administrator_UTC:
+			{
+				retcode = handle_ASACZ_command_administrator_UTC(&handle_ASACZ_request);
 				break;
 			}
 			default:

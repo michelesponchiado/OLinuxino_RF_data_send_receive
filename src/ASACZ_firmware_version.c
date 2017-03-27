@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	18
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	19
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,11 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 19
+// * adding the reboot command
+// * added the UTC command
+// * CHANGED the discovery command including the uptime in milliseconds
+//
 // 0.1.3 build 18
 // * the firmware update procedure shows a non-decreasing percentage
 // * the firmware file update and the query firmware file both assume the input file path is relative to the firmware default directory:

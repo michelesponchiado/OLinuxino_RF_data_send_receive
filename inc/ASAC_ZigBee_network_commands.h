@@ -91,6 +91,7 @@ typedef enum
 	enum_ASAC_ZigBee_interface_command_administrator_device_info,
 	enum_ASAC_ZigBee_interface_command_administrator_system_reboot,
 	enum_ASAC_ZigBee_interface_command_administrator_UTC,
+	enum_ASAC_ZigBee_interface_command_administrator_restart_me,
 // the command used to reply to unknown commands
 	enum_ASAC_ZigBee_interface_command_unknown = 0xFFFFFFFF,
 
@@ -457,6 +458,7 @@ typedef struct _type_ASAC_ZigBee_interface_unknown_reply
 typedef enum
 {
 	enum_ASAC_ZigBee_fwupd_destination_CC2650 = 0,
+	enum_ASAC_ZigBee_fwupd_destination_ASACZ,
 	enum_ASAC_ZigBee_fwupd_destination_numof
 }enum_ASAC_ZigBee_fwupd_destination;
 
@@ -471,10 +473,21 @@ typedef enum
 	enum_ASAC_ZigBee_fwupd_CC2650_numof
 }enum_ASAC_ZigBee_fwupd_CC2650_ops;
 
+// the ASACZ firmware operations available
+typedef enum
+{
+	enum_ASAC_fwupd_ASACZ_op_start_update = 0,		// starts the update using the package file already transferred in a local directory
+	enum_ASAC_fwupd_ASACZ_op_status_update,			// checks the update status
+
+	enum_ASAC_fwupd_ASACZ_op_numof
+}enum_ASAC_fwupd_ASACZ_ops;
+
+
 typedef struct _type_fwupd_CC2650_read_version_req_body
 {
 	uint32_t unused;
 }__attribute__((__packed__)) type_fwupd_CC2650_read_version_req_body;
+
 
 typedef struct _type_fwupd_CC2650_read_version_reply_body
 {
@@ -485,6 +498,33 @@ typedef struct _type_fwupd_CC2650_read_version_reply_body
 	uint32_t product;
 	uint32_t transport;
 }__attribute__((__packed__)) type_fwupd_CC2650_read_version_reply_body;
+
+
+#define def_max_length_fwupd_ASACZ_fw_signed_filename 256
+typedef struct _type_fwupd_ASACZ_do_update_req_body
+{
+	uint8_t ASACZ_fw_signed_filename[def_max_length_fwupd_ASACZ_fw_signed_filename]; // the filename is relative to the default base directory
+}__attribute__((__packed__)) type_fwupd_ASACZ_do_update_req_body;
+
+#define def_max_length_fwupd_ASACZ_fw_update_error_message 256
+typedef struct _type_fwupd_ASACZ_do_update_reply_body
+{
+	uint32_t started_OK;	// this is set to 1 if the requested was forward OK
+}__attribute__((__packed__)) type_fwupd_ASACZ_do_update_reply_body;
+
+typedef struct _type_fwupd_ASACZ_status_update_req_body
+{
+	uint32_t unused;
+}__attribute__((__packed__)) type_fwupd_ASACZ_status_update_req_body;
+
+typedef struct _type_fwupd_ASACZ_status_update_reply_body
+{
+	uint32_t running;
+	uint32_t ends_OK;			// this is set to 1 if the requested was forward OK
+	uint32_t ends_ERROR;			// this is set to 1 if the requested was forward OK
+	uint32_t result_code;	// the result code please see enum_request_ASACZ_firmware_update_retcode, anyway 0 means OK
+	uint8_t result_message[def_max_length_fwupd_ASACZ_fw_update_error_message];	// the result string message, we hope it will be "OK"
+}__attribute__((__packed__)) type_fwupd_ASACZ_status_update_reply_body;
 
 #define def_max_length_fwupd_CC2650_fw_signed_filename 256
 typedef struct _type_fwupd_CC2650_start_update_req_body
@@ -560,6 +600,7 @@ typedef struct _type_ASAC_ZigBee_interface_command_fwupd_req
 	union
 	{
 		enum_ASAC_ZigBee_fwupd_CC2650_ops CC2650;
+		enum_ASAC_fwupd_ASACZ_ops ASACZ;
 		uint32_t uint32_op;
 	}ops;
 	union
@@ -568,6 +609,9 @@ typedef struct _type_ASAC_ZigBee_interface_command_fwupd_req
 		type_fwupd_CC2650_start_update_req_body CC2650_start_firmware_update;
 		type_fwupd_CC2650_query_update_status_req_body CC2650_query_firmware_update_status;
 		type_fwupd_CC2650_query_firmware_file_req CC2650_query_firmware_file_req;
+
+		type_fwupd_ASACZ_do_update_req_body ASACZ_do_update_req_body;
+		type_fwupd_ASACZ_status_update_req_body ASACZ_status_update_req_body;
 	}body;
 }__attribute__((__packed__)) type_ASAC_ZigBee_interface_command_fwupd_req ;
 
@@ -586,6 +630,7 @@ typedef struct _type_ASAC_ZigBee_interface_command_fwupd_reply
 	union
 	{
 		enum_ASAC_ZigBee_fwupd_CC2650_ops CC2650;
+		enum_ASAC_fwupd_ASACZ_ops ASACZ;
 		uint32_t uint32_op;
 	}ops;
 	union
@@ -594,6 +639,9 @@ typedef struct _type_ASAC_ZigBee_interface_command_fwupd_reply
 		type_fwupd_CC2650_start_update_reply_body CC2650_start_firmware_update;
 		type_fwupd_CC2650_query_update_status_reply_body CC2650_query_firmware_update_status;
 		type_fwupd_CC2650_query_firmware_file_reply CC2650_query_firmware_file_reply;
+
+		type_fwupd_ASACZ_do_update_reply_body ASACZ_do_update_reply_body;
+		type_fwupd_ASACZ_status_update_reply_body ASACZ_status_update_reply_body;
 	}body;
 }__attribute__((__packed__)) type_ASAC_ZigBee_interface_command_fwupd_reply;
 //
@@ -997,6 +1045,39 @@ typedef struct _type_ASAC_ZigBee_interface_administrator_system_reboot_reply
 //
 
 
+
+//
+//
+//
+// enum_ASAC_ZigBee_interface_command_administrator_restart_me begins here
+//
+//
+//
+#define def_administrator_restart_me_command_version 0
+
+
+typedef struct _type_ASAC_ZigBee_interface_administrator_restart_me_req
+{
+	uint32_t restart_req_id;				// the restart identifier, you can set it to 0
+	uint8_t restart_req_message[64]; 		// a message that's showing up in the system log when requesting the restart
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_administrator_restart_me_req;
+
+typedef struct _type_ASAC_ZigBee_interface_administrator_restart_me_reply
+{
+	uint32_t restart_req_id;				// same as per the request
+	uint8_t restart_req_message[64]; 		// same as per the request
+} __attribute__((__packed__)) type_ASAC_ZigBee_interface_administrator_restart_me_reply;
+
+
+//
+//
+//
+// enum_ASAC_ZigBee_interface_command_administrator_restart_me ends here
+//
+//
+//
+
+
 //
 //
 //
@@ -1093,6 +1174,7 @@ typedef struct _type_ASAC_Zigbee_interface_request
 		type_ASAC_ZigBee_interface_network_signal_strength_req signal_strength;
 		type_ASAC_ZigBee_interface_restart_network_from_scratch_req restart_network_from_scratch_req;
 		type_ASAC_ZigBee_interface_network_probe_request network_probe_request;
+		type_ASAC_ZigBee_interface_administrator_restart_me_req restart_me_req;
 
 		// administration
 		type_ASAC_ZigBee_interface_command_fwupd_req fwupd_req;
@@ -1134,6 +1216,7 @@ typedef struct _type_ASAC_Zigbee_interface_command_reply
 		type_ASAC_ZigBee_interface_administrator_device_info_reply device_info_reply;
 		type_ASAC_ZigBee_interface_administrator_system_reboot_reply system_reboot_reply;
 		type_ASAC_ZigBee_interface_administrator_UTC_reply UTC_reply;
+		type_ASAC_ZigBee_interface_administrator_restart_me_reply restart_me_reply;
 
 		// reply to an unknown command
 		type_ASAC_ZigBee_interface_unknown_reply unknown;

@@ -68,6 +68,47 @@
 #include "simple_server.h"
 #include <CC2650_fw_update.h>
 
+typedef struct _type_request_exit
+{
+	unsigned int enabled;
+	unsigned int num_req;
+	unsigned int num_ack;
+}type_request_exit;
+static type_request_exit my_request_exit;
+
+void init_request_exit(void)
+{
+	memset(&my_request_exit, 0, sizeof(my_request_exit));
+}
+void enable_request_exit(unsigned int enable)
+{
+	my_request_exit.enabled = !!enable;
+}
+unsigned int is_enabled_request_exit(void)
+{
+	return my_request_exit.enabled;
+}
+
+void request_exit(void)
+{
+	if (is_enabled_request_exit())
+	{
+		my_request_exit.num_req++;
+	}
+}
+unsigned int is_required_exit(void)
+{
+	unsigned int is_required = 0;
+	unsigned int nr = my_request_exit.num_req;
+	unsigned int na = my_request_exit.num_ack;
+	if (nr != na)
+	{
+		my_request_exit.num_ack = nr;
+		is_required = 1;
+	}
+	return is_required;
+}
+
 void *appTask(void *argument)
 {
 	while (1)
@@ -93,6 +134,7 @@ typedef enum
 	enum_thread_id_app,
 	enum_thread_id_inMessage,
 	enum_thread_id_socket,
+	enum_thread_id_autoupdate,
 	enum_thread_id_numof
 }enum_thread_id;
 typedef struct _type_thread_id_created_info
@@ -102,6 +144,97 @@ typedef struct _type_thread_id_created_info
 }type_thread_id_created_info;
 
 type_thread_id_created_info threads_cancel_info[enum_thread_id_numof];
+
+#include "ASACZ_update_yourself.h"
+static type_ASACZ_update_yourself_inout ASACZ_update_yourself_inout;
+void get_ASACZ_update_yourself_inout_current_reply(type_fwupd_ASACZ_status_update_reply_body *p_status_reply)
+{
+	pthread_mutex_lock(&ASACZ_update_yourself_inout.mtx_id);
+		memcpy(p_status_reply, &ASACZ_update_yourself_inout.body_reply, sizeof (*p_status_reply));
+	pthread_mutex_unlock(&ASACZ_update_yourself_inout.mtx_id);
+}
+void signal_thread_ASACZ_update_yourself_ends(void)
+{
+	threads_cancel_info[enum_thread_id_autoupdate].created_OK = 0;
+}
+
+unsigned int isOK_ASACZ_update_yourself(type_fwupd_ASACZ_do_update_req_body *p_body_req, type_fwupd_ASACZ_do_update_reply_body *p_body_reply)
+{
+	unsigned int canceled_OK = 1;
+	if (threads_cancel_info[enum_thread_id_autoupdate].created_OK)
+	{
+		enum_thread_id e = enum_thread_id_autoupdate;
+		threads_cancel_info[e].created_OK = 0;
+		pthread_t t = threads_cancel_info[e].t;
+#ifdef ANDROID
+		int s;
+		if ( (s = pthread_kill(t, SIGUSR1)) != 0)
+		{
+			canceled_OK = 0;
+			printf("Error canceling thread %d, error = %d (%s)", (int)t, s, strerror(s));
+		}
+#else
+		int s;
+		s = pthread_cancel(t);
+		if (s != 0)
+		{
+			canceled_OK = 0;
+			syslog(LOG_ERR, "Unable to cancel thread id %i", (int)e);
+		}
+		else
+		{
+			void *res;
+			/* Join with thread to see what its exit status was */
+			s = pthread_join(t, &res);
+			if (s != 0)
+			{
+				canceled_OK = 0;
+				syslog(LOG_ERR, "Unable to join thread id %i", (int)e);
+			}
+			if (res == PTHREAD_CANCELED)
+			{
+				syslog(LOG_INFO, "Thread id %i canceled OK", (int)e);
+			}
+			else
+			{
+				canceled_OK = 0;
+				syslog(LOG_ERR, "Error canceling thread id %i", (int)e);
+			}
+		}
+	}
+#endif
+
+	if (canceled_OK)
+	{
+		memset(&ASACZ_update_yourself_inout, 0, sizeof(ASACZ_update_yourself_inout));
+
+		pthread_mutex_init(&ASACZ_update_yourself_inout.mtx_id, NULL);
+		{
+			pthread_mutexattr_t mutexattr;
+
+			pthread_mutexattr_init(&mutexattr);
+			pthread_mutexattr_settype(&mutexattr, PTHREAD_MUTEX_RECURSIVE);
+			pthread_mutex_init(&ASACZ_update_yourself_inout.mtx_id, &mutexattr);
+		}
+		memcpy(&ASACZ_update_yourself_inout.body_req, p_body_req, sizeof(ASACZ_update_yourself_inout.body_req));
+
+		int thread_create_retcode = pthread_create(&threads_cancel_info[enum_thread_id_autoupdate].t, NULL, thread_ASACZ_update_yourself, (void*)&ASACZ_update_yourself_inout);
+		if (thread_create_retcode != 0)
+		{
+			p_body_reply->started_OK = 0;
+		}
+		else
+		{
+			p_body_reply->started_OK = 1;
+			threads_cancel_info[enum_thread_id_autoupdate].created_OK = 1;
+		}
+	}
+	else
+	{
+		p_body_reply->started_OK = 0;
+	}
+	return p_body_reply->started_OK;
+}
 
 #ifdef ANDROID
 void thread_exit_handler(int sig)
@@ -363,6 +496,8 @@ static void print_syntax(char *full_name)
 		printf("\tshows this help\n");
 	printf("%s --version\n", bname);
 		printf("\tshows the program version info\n");
+	printf("%s --respawn\n", bname);
+		printf("\tused by the system when respawning the server\n");
 	printf("%s --CC2650fwupdate=<CC2650_firmware_file_pathname>\n", bname);
 		printf("\tupdates the CC2650 firmware using the signed binary <CC2650_firmware_file_pathname>\n");
 	printf("%s [udpport=<UDP port number> [serialport=<serial port name>]]\n", bname);
@@ -382,9 +517,13 @@ static void print_syntax(char *full_name)
 
 int main(int argc, char* argv[])
 {
+	unsigned int respawn = 0;
 	volatile unsigned int do_CC2650_fw_update = 0;
 	char CC2650_fw_path[1024];
 	memset(CC2650_fw_path, 0, sizeof(CC2650_fw_path));
+
+	init_request_exit();
+
     if ((argc >= 2) && (strncasecmp(argv[1],"--help",6)==0))
     {
         print_syntax(argv[0]);
@@ -397,6 +536,10 @@ int main(int argc, char* argv[])
     	get_ASACZ_firmware_version_string(v, sizeof(v));
         printf("version:\n\t%s\n", v);
 		return 0;
+    }
+    if ((argc >= 2) && (strncasecmp(argv[1],"--respawn",9)==0))
+    {
+    	respawn = 1;
     }
     if ((argc >= 2) && (strncasecmp(argv[1],"--CC2650fwupdate=",17)==0))
     {
@@ -437,6 +580,10 @@ int main(int argc, char* argv[])
 	// open the system log
 	open_syslog();
 	syslog(LOG_INFO, "The application starts");
+	if (respawn)
+	{
+		syslog(LOG_WARNING, "This is a system respawn!");
+	}
 	memset(&threads_cancel_info, 0, sizeof(threads_cancel_info));
 
 	if (do_CC2650_fw_update)
@@ -456,6 +603,7 @@ int main(int argc, char* argv[])
 		}
 		return 0;
 	}
+	enable_request_exit(1);
 
 #ifdef OLINUXINO
 	// reset chip and disables boot mode
@@ -612,6 +760,14 @@ int main(int argc, char* argv[])
 	{
 		// sleep some time and do basically nothing
 		usleep(1000000);
+		// issuing the exit request
+		if (is_required_exit())
+		{
+			syslog(LOG_INFO, "%s: exiting from the main loop as per exit request", __func__);
+			// send a SIGTERM to exit gracefully
+			kill(getpid(), SIGTERM);
+		}
+
 //#define def_test_shutdown
 #ifdef def_test_shutdown
 		{
@@ -632,7 +788,5 @@ int main(int argc, char* argv[])
 #endif
 	}
 	dbg_print(PRINT_LEVEL_INFO,"Server ends here");
-	return 0; /* we never get here */
-
-
+	return 0;
 }

@@ -41,6 +41,7 @@
 #include "ASACZ_app.h"
 #include "ASACZ_diag_test.h"
 #include "ASACZ_admin_device_info.h"
+#include <ASACZ_update_yourself.h>
 
 typedef struct _type_handle_socket_in
 {
@@ -1118,6 +1119,47 @@ int handle_ASACZ_command_administrator_UTC(type_handle_ASACZ_request *p)
 }
 
 
+int handle_ASACZ_command_administrator_restart_me(type_handle_ASACZ_request *p)
+{
+	int retcode = 0;
+	p->send_reply = 1;
+	p->send_unknown = 0;
+	my_log(LOG_INFO,"%s: administrator_restart_me received", __func__);
+
+	uint32_t reply_max_command_version = def_administrator_restart_me_command_version;
+	init_header_reply(&p->pzmessage_tx->h, p->pzmessage_rx, reply_max_command_version);
+
+	uint32_t is_format_OK = 1;
+	if (is_format_OK)
+	{
+		if (p->pzmessage_tx->h.c.command_version != reply_max_command_version)
+		{
+			is_format_OK = 0;
+		}
+	}
+	if (is_format_OK)
+	{
+		p->zmessage_tx_size = def_size_ASAC_Zigbee_interface_reply((p->pzmessage_tx),restart_me_reply);
+		type_ASAC_ZigBee_interface_administrator_restart_me_req * p_req = &p->pzmessage_rx->req.restart_me_req;
+		type_ASAC_ZigBee_interface_administrator_restart_me_reply * p_reply = &p->pzmessage_tx->reply.restart_me_reply;
+		memset(p_reply, 0, sizeof(*p_reply));
+		p_reply->restart_req_id = p_req->restart_req_id;
+		memcpy(p_reply->restart_req_message, p_req->restart_req_message, sizeof(p_reply->restart_req_message));
+		my_log(LOG_INFO,"%s: administrator_restart_me id: %u, msg: %s", __func__, p_req->restart_req_id, p_req->restart_req_message);
+		// issuing the exit request, the respawn service will restart the application in few seconds
+		request_exit();
+	}
+	if (!is_format_OK)
+	{
+		my_log(LOG_ERR,"%s: error in the format", __func__);
+		p->send_reply = 0;
+		p->send_unknown = 1;
+		retcode = -1;
+	}
+	return retcode;
+}
+
+
 int handle_ASACZ_command_administrator_system_reboot(type_handle_ASACZ_request *p)
 {
 	int retcode = 0;
@@ -1432,6 +1474,39 @@ int handle_ASACZ_request_administrator_firmware_update(type_handle_ASACZ_request
 				}
 				break;
 			}
+			case enum_ASAC_ZigBee_fwupd_destination_ASACZ:
+			{
+				p_reply->dst.enum_dst = enum_ASAC_ZigBee_fwupd_destination_ASACZ;
+				p_reply->ops.ASACZ = p_req->ops.ASACZ;
+				switch(p_req->ops.ASACZ)
+				{
+					case enum_ASAC_fwupd_ASACZ_op_start_update:
+					{
+						type_fwupd_ASACZ_do_update_req_body *p_body_req = &p_req->body.ASACZ_do_update_req_body;
+						type_fwupd_ASACZ_do_update_reply_body *p_body_reply = &p_reply->body.ASACZ_do_update_reply_body;
+						extern unsigned int isOK_ASACZ_update_yourself(type_fwupd_ASACZ_do_update_req_body *p_body_req, type_fwupd_ASACZ_do_update_reply_body *p_body_reply);
+						if (isOK_ASACZ_update_yourself(p_body_req, p_body_reply))
+						{
+							// exits and automagically restarts ?? No! Wait an explicit command to do it
+							// request_exit();
+						}
+						break;
+					}
+					case enum_ASAC_fwupd_ASACZ_op_status_update:
+					{
+						type_fwupd_ASACZ_status_update_reply_body *p_body_reply = &p_reply->body.ASACZ_status_update_reply_body;
+						void get_ASACZ_update_yourself_inout_current_reply(type_fwupd_ASACZ_status_update_reply_body *p_status_reply);
+						get_ASACZ_update_yourself_inout_current_reply(p_body_reply);
+						break;
+					}
+					default:
+					{
+						is_format_OK = 0;
+						break;
+					}
+				}
+				break;
+			}
 			default:
 			{
 				is_format_OK = 0;
@@ -1625,6 +1700,11 @@ int handle_ASACZ_request(type_ASAC_Zigbee_interface_request *pzmessage_rx, type_
 			case enum_ASAC_ZigBee_interface_command_administrator_UTC:
 			{
 				retcode = handle_ASACZ_command_administrator_UTC(&handle_ASACZ_request);
+				break;
+			}
+			case enum_ASAC_ZigBee_interface_command_administrator_restart_me:
+			{
+				retcode = handle_ASACZ_command_administrator_restart_me(&handle_ASACZ_request);
 				break;
 			}
 			default:

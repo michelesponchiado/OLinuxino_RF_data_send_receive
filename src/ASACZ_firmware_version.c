@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	19
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	22
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,16 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 22
+// * recompiled changing the version number to test the ASACZ update procedure
+// * the ASACZ update firmware seems to work OK
+// 0.1.3 build 21
+// * recompiled changing the version number to test the ASACZ update procedure
+// 0.1.3 build 20
+// * added the --respawn command line switch used by the system when respawning ASACZ
+// * added the enum_ASAC_ZigBee_interface_command_administrator_restart_me command to restart the ASAC server (needs OLinuxino at least 15.05-rc9 to work properly)
+//   to stop the ASACZ service from respawning, please change the file /etc/inittab and comment out the respawn asacz line
+// * added the command to update ASACZ
 // 0.1.3 build 19
 // * adding the reboot command
 // * added the UTC command
@@ -216,3 +226,5 @@ void init_ASACZ_firmware_version(void)
 			,ASACZ_firmware_version.notes
 			);
 }
+
+

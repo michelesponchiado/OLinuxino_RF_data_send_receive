@@ -94,4 +94,7 @@ enum_request_CC2650_firmware_update_retcode request_CC2650_firmware_update(char 
 void get_CC2650_firmware_update_status(type_fwupd_CC2650_query_update_status_reply_body *p);
 void CC2650_query_firmware_file(char* CC2650_fw_query_filename , type_fwupd_CC2650_query_firmware_file_reply *p_reply_body);
 
+void request_exit(void);
+unsigned int is_required_exit(void);
+
 #endif /* INC_ASACZ_APP_H_ */

@@ -295,10 +295,13 @@
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.cross.exe.release.75375994;cdt.managedbuild.config.gnu.cross.exe.release.75375994.;cdt.managedbuild.tool.gnu.cross.c.compiler.1580883069;cdt.managedbuild.tool.gnu.c.compiler.input.2125707534">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
-		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095;cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095.;cdt.managedbuild.tool.gnu.cross.cpp.compiler.1427691738;cdt.managedbuild.tool.gnu.cpp.compiler.input.229508860">
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.680362040;cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.680362040.;cdt.managedbuild.tool.gnu.cross.c.compiler.1062821954;cdt.managedbuild.tool.gnu.c.compiler.input.1279032472">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095;cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095.;cdt.managedbuild.tool.gnu.cross.c.compiler.518249407;cdt.managedbuild.tool.gnu.c.compiler.input.1869747111">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095;cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.1084122095.;cdt.managedbuild.tool.gnu.cross.cpp.compiler.1427691738;cdt.managedbuild.tool.gnu.cpp.compiler.input.229508860">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.cross.exe.debug.1949797869;cdt.managedbuild.config.gnu.cross.exe.debug.1949797869.;cdt.managedbuild.tool.gnu.cross.c.compiler.757223752;cdt.managedbuild.tool.gnu.c.compiler.input.2017531266">

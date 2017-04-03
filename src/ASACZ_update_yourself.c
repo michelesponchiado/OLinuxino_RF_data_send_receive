@@ -31,8 +31,99 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include <unistd.h>
+#include <limits.h>
+#include <assert.h>
+#include <string.h>
+#include <errno.h>
+
 #include <ASACZ_ZAP.h>
 #include <ASACZ_update_yourself.h>
+
+
+
+char findyourself_save_pwd[PATH_MAX];
+char findyourself_save_argv0[PATH_MAX];
+char findyourself_save_path[PATH_MAX];
+const char findyourself_path_separator='/';
+const char findyourself_path_separator_as_string[2]="/";
+const char findyourself_path_list_separator[8]=":";  // could be ":; "
+char my_own_path[PATH_MAX];
+unsigned int my_own_path_valid;
+
+int findyourself_initialized=0;
+
+void findyourself_init(char *argv0)
+{
+
+  getcwd(findyourself_save_pwd, sizeof(findyourself_save_pwd));
+  snprintf(findyourself_save_argv0, sizeof(findyourself_save_argv0), "%s", argv0);
+  snprintf(findyourself_save_path, sizeof(findyourself_save_path), "%s", getenv("PATH"));
+  findyourself_initialized=1;
+}
+
+
+int find_yourself(char *result, size_t size_of_result)
+{
+	char newpath[PATH_MAX+256];
+	char newpath2[PATH_MAX+256];
+
+	result[0]=0;
+	if(findyourself_save_argv0[0]==findyourself_path_separator)
+	{
+		realpath(findyourself_save_argv0, newpath);
+		if(!access(newpath, F_OK))
+		{
+			snprintf(result, size_of_result, newpath);
+			return(0);
+		}
+		else {
+			return(2);
+		}
+	} else if( strchr(findyourself_save_argv0, findyourself_path_separator ))
+	{
+		snprintf(newpath2, sizeof(newpath2),"%s%s%s", findyourself_save_pwd, findyourself_path_separator_as_string, findyourself_save_argv0);
+		realpath(newpath2, newpath);
+		if(!access(newpath, F_OK))
+		{
+			snprintf(result, size_of_result, newpath);
+			return(0);
+		}
+		else
+		{
+			return(3);
+		}
+	} else {
+		char *saveptr;
+		char *pathitem;
+		for(pathitem=strtok_r(findyourself_save_path, findyourself_path_list_separator,  &saveptr); pathitem; pathitem=strtok_r(NULL, findyourself_path_list_separator, &saveptr) ) {
+			snprintf(newpath2, sizeof(newpath2), "%s%s%s", pathitem, findyourself_path_separator_as_string, findyourself_save_argv0);
+			realpath(newpath2, newpath);
+			if(!access(newpath, F_OK))
+			{
+				snprintf(result, size_of_result, newpath);
+				return(0);
+			}
+		} // end for
+		return 3;
+  } // end else
+  // if we get here, we have tried all three methods on argv[0] and still haven't succeeded.   Include fallback methods here.
+  return(1);
+}
+
+void find_my_own_name(char * argv_0)
+{
+	findyourself_init(argv_0);
+	realpath(argv_0, my_own_path);
+	my_own_path_valid = 0;
+	if (find_yourself(my_own_path, sizeof(my_own_path)) == 0)
+	{
+		my_log(LOG_INFO, "%s found myself as: %s", __func__, my_own_path);
+		my_own_path_valid = 1;
+	}
+	my_log(LOG_INFO, "%s unable to found myself", __func__);
+}
+
 
 #define def_magic_name_OLinuxino_ASACZ_header "OLinuxino_ASACZ_header"
 typedef struct _type_OLinuxino_ASACZ_fw_update_header
@@ -105,6 +196,7 @@ const char *get_enum_asacz_package_retcode_string(enum_asacz_package_retcode e)
 }
 
 
+
 void *thread_ASACZ_update_yourself(void *arg)
 {
 	type_ASACZ_update_yourself_inout *p = (type_ASACZ_update_yourself_inout *)arg;
@@ -117,6 +209,8 @@ void *thread_ASACZ_update_yourself(void *arg)
 		p->thread_completed = 0;
 		p->thread_completed_OK = 0;
 		p->thread_completed_ERROR = 0;
+		p->body_reply.u_progress.enum_p = enum_file_package_progress_init;
+		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
 	pthread_mutex_unlock(&p->mtx_id);
 
 	char filename_in[512];
@@ -195,6 +289,11 @@ void *thread_ASACZ_update_yourself(void *arg)
 			}
 		}
 	}
+	pthread_mutex_lock(&p->mtx_id);
+		p->body_reply.u_progress.enum_p = enum_file_package_progress_input_file_read;
+		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
+	pthread_mutex_unlock(&p->mtx_id);
+
 	type_OLinuxino_ASACZ_fw_update_header OLinuxino_ASACZ_fw_update_header;
 	memset(&OLinuxino_ASACZ_fw_update_header, 0, sizeof(OLinuxino_ASACZ_fw_update_header));
 
@@ -231,13 +330,34 @@ void *thread_ASACZ_update_yourself(void *arg)
 			r = enum_asacz_package_retcode_ERR_body_CRC;
 		}
 	}
-	char outfile_name[512];
+	char outfile_name[PATH_MAX];
 	memset(outfile_name, 0, sizeof(outfile_name));
 	if (r == enum_asacz_package_retcode_OK)
 	{
-		if (readlink ("/proc/self/exe", outfile_name, sizeof(outfile_name) - 1) < 0)
+		unsigned int got_destination_filename = 0;
+		if (my_own_path_valid)
 		{
-			r = enum_asacz_package_retcode_ERR_unable_to_get_exe_name;
+			my_log(LOG_INFO, "%s checking the filename already auto-detected: %s", __func__, my_own_path);
+			int n = snprintf(outfile_name, sizeof(outfile_name), "%s", my_own_path);
+			if (n <= (int)sizeof(outfile_name))
+			{
+				got_destination_filename = 1;
+			}
+			else
+			{
+				my_log(LOG_INFO, "%s the name was OK: %s", __func__, outfile_name);
+			}
+		}
+		if (!got_destination_filename)
+		{
+			if(readlink ("/proc/self/exe", outfile_name, sizeof(outfile_name) - 1) < 0)
+			{
+				r = enum_asacz_package_retcode_ERR_unable_to_get_exe_name;
+			}
+			else
+			{
+				my_log(LOG_INFO, "%s the name from readlink is: %s", __func__, outfile_name);
+			}
 		}
 	}
 	unsigned int delete_old_file = 0;
@@ -253,11 +373,23 @@ void *thread_ASACZ_update_yourself(void *arg)
 			// file doesn't exist
 		}
 	}
+
+	unsigned int restore_asacz_file = 0;
 	if (r == enum_asacz_package_retcode_OK)
 	{
-		if (delete_old_file && unlink(outfile_name) < 0)
+		if (delete_old_file)
 		{
-			r = enum_asacz_package_retcode_ERR_unable_to_delete_old_exe;
+			// backup the file before deleting it!
+			system("/etc/init.d/asacz backup");
+			pthread_mutex_lock(&p->mtx_id);
+				p->body_reply.u_progress.enum_p = enum_file_package_progress_old_file_backup_done;
+				p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
+			pthread_mutex_unlock(&p->mtx_id);
+			restore_asacz_file = 1;
+			if (unlink(outfile_name) < 0)
+			{
+				r = enum_asacz_package_retcode_ERR_unable_to_delete_old_exe;
+			}
 		}
 	}
 	if (r == enum_asacz_package_retcode_OK)
@@ -286,6 +418,10 @@ void *thread_ASACZ_update_yourself(void *arg)
 			}
 		}
 	}
+	pthread_mutex_lock(&p->mtx_id);
+		p->body_reply.u_progress.enum_p = enum_file_package_progress_new_file_copy_done;
+		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
+	pthread_mutex_unlock(&p->mtx_id);
 	if (r == enum_asacz_package_retcode_OK)
 	{
 
@@ -297,11 +433,26 @@ void *thread_ASACZ_update_yourself(void *arg)
 	    }
 	}
 
+	// if error, and if a restore should be done, better to do it!
+	if (r != enum_asacz_package_retcode_OK)
+	{
+		if (restore_asacz_file)
+		{
+			system("/etc/init.d/asacz restore");
+			pthread_mutex_lock(&p->mtx_id);
+				p->body_reply.u_progress.enum_p = enum_file_package_progress_old_file_restore_done;
+				p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
+			pthread_mutex_unlock(&p->mtx_id);
+		}
+	}
+
 	if (p_bin_file_whole_malloced)
 	{
 		free(p_bin_file_whole_malloced);
 	}
 	pthread_mutex_lock(&p->mtx_id);
+		p->body_reply.u_progress.enum_p = enum_file_package_progress_ends;
+		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
 		p_body_reply->running = 0;
 		p_body_reply->ends_OK = (r == enum_asacz_package_retcode_OK) ? 1 : 0;
 		p_body_reply->ends_ERROR = !p_body_reply->ends_OK;

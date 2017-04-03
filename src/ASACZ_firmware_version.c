@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	22
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	28
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,26 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 28
+// * removed from the startup log the message "waiting rx loop ..."
+// * aggiunto uint32_t progress [0..5] e uint32_t progress_0_100 in testa al messaggio di risposta status
+//
+// 0.1.3 build 27
+// * the delay on boot startup has been raised to 15 seconds
+//
+// 0.1.3 build 26
+// * recompiled using a different library to check the application filename, not relying on proc/self
+//
+// 0.1.3 build 25
+// * recompiled stripping away the unneeded symbol tables etc, so the ASACZ shrinks to 170kBytes from the previous 900kBytes
+//
+// 0.1.3 build 24
+// * the ASACZ firmware update automagically executes a backup/restore of the ASACZ file calling an init.d asac backup/restore system script
+// * the file /tmp/ASACZ_started_once is created once the ASACZ server starts and completes the boot check
+//
+// 0.1.3 build 23
+// * recompiled so that CC2650 reset and boot check if they return error, they try again until OK or timeout (20'000 milliseconds), to avoid starting ASAC without
+//   executing the boot check: when ASACZ is started from the respawn, it starts very early, when the network isn't well settled
 // 0.1.3 build 22
 // * recompiled changing the version number to test the ASACZ update procedure
 // * the ASACZ update firmware seems to work OK

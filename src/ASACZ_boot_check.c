@@ -502,7 +502,7 @@ enum_boot_check_retcode boot_check(void)
 			for (idx_loop_rx = 0; idx_loop_rx < def_nloop_wait_reply_boot_message_ms && !ui_message_received_OK; idx_loop_rx++)
 			{
 #ifndef def_infinite_loop
-				my_log(LOG_INFO,"%s: waiting rx loop %u of %u ", __func__, idx_loop_rx + 1, def_nloop_wait_reply_boot_message_ms);
+				//my_log(LOG_INFO,"%s: waiting rx loop %u of %u ", __func__, idx_loop_rx + 1, def_nloop_wait_reply_boot_message_ms);
 #endif
 				int recv_retcode = recv(s_boot_check.socket_UDP_rx, rx_buffer, sizeof(rx_buffer), 0);
 				if (recv_retcode > 0)

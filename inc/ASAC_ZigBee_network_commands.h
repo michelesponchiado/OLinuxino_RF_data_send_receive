@@ -517,8 +517,27 @@ typedef struct _type_fwupd_ASACZ_status_update_req_body
 	uint32_t unused;
 }__attribute__((__packed__)) type_fwupd_ASACZ_status_update_req_body;
 
+
+
+typedef enum
+{
+	enum_file_package_progress_init,
+	enum_file_package_progress_input_file_read,
+	enum_file_package_progress_old_file_backup_done,
+	enum_file_package_progress_new_file_copy_done,
+	enum_file_package_progress_old_file_restore_done,
+	enum_file_package_progress_ends,
+	enum_file_package_progress_numof
+}enum_file_package_progress;
+
 typedef struct _type_fwupd_ASACZ_status_update_reply_body
 {
+	union
+	{
+		enum_file_package_progress enum_p;
+		uint32_t uint;
+	}u_progress;
+	uint32_t progress_0_100;
 	uint32_t running;
 	uint32_t ends_OK;			// this is set to 1 if the requested was forward OK
 	uint32_t ends_ERROR;			// this is set to 1 if the requested was forward OK

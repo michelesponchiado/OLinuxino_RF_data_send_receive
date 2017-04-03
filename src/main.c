@@ -517,7 +517,9 @@ static void print_syntax(char *full_name)
 
 int main(int argc, char* argv[])
 {
-	unsigned int respawn = 0;
+	find_my_own_name(argv[0]);
+#define def_filename_signal_ASACZ_started_once "/tmp/ASACZ_started_once"
+	//unsigned int respawn = 0;
 	volatile unsigned int do_CC2650_fw_update = 0;
 	char CC2650_fw_path[1024];
 	memset(CC2650_fw_path, 0, sizeof(CC2650_fw_path));
@@ -539,7 +541,7 @@ int main(int argc, char* argv[])
     }
     if ((argc >= 2) && (strncasecmp(argv[1],"--respawn",9)==0))
     {
-    	respawn = 1;
+    	//respawn = 1;
     }
     if ((argc >= 2) && (strncasecmp(argv[1],"--CC2650fwupdate=",17)==0))
     {
@@ -580,9 +582,22 @@ int main(int argc, char* argv[])
 	// open the system log
 	open_syslog();
 	syslog(LOG_INFO, "The application starts");
-	if (respawn)
+	unsigned int asacz_never_started_before = 0;
+#ifdef OLINUXINO
 	{
-		syslog(LOG_WARNING, "This is a system respawn!");
+		// if this file NOT exists, the application was never started at least once before power up
+		if( access( def_filename_signal_ASACZ_started_once, F_OK ) == -1 )
+		{
+			asacz_never_started_before = 1;
+		}
+	}
+#endif
+	if (asacz_never_started_before)
+	{
+		syslog(LOG_WARNING, "The system is booting up! Waiting some seconds while it settles.");
+		// execute a quite long sleep to give the system the needed time to properly setup, if booting
+		usleep( 15 * 1000 * 1000);
+		syslog(LOG_WARNING, "Long delay after system boot-up settlement ends here.");
 	}
 	memset(&threads_cancel_info, 0, sizeof(threads_cancel_info));
 
@@ -607,22 +622,80 @@ int main(int argc, char* argv[])
 
 #ifdef OLINUXINO
 	// reset chip and disables boot mode
-	is_OK_do_CC2650_reset(0);
+	{
+		unsigned int is_OK = 0;
+		unsigned int idx_try_do_CC2650_reset;
+#define def_total_timeout_try_do_CC2650_reset_ms 20000
+#define def_pause_try_do_CC2650_reset_ms 1000
+#define def_num_try_do_CC2650_reset (1 + def_total_timeout_try_do_CC2650_reset_ms / def_pause_try_do_CC2650_reset_ms)
+		for (idx_try_do_CC2650_reset = 0; !is_OK && idx_try_do_CC2650_reset < def_num_try_do_CC2650_reset ; idx_try_do_CC2650_reset++)
+		{
+			is_OK = is_OK_do_CC2650_reset(0);
+			if (!is_OK)
+			{
+				if (idx_try_do_CC2650_reset + 1 < def_num_try_do_CC2650_reset)
+				{
+			        my_log(LOG_WARNING, "%s trying again to reset CC2650 in %u ms, try %u of %u", __func__, def_pause_try_do_CC2650_reset_ms, idx_try_do_CC2650_reset + 1 , def_num_try_do_CC2650_reset);
+					usleep(def_pause_try_do_CC2650_reset_ms * 1000);
+				}
+			}
+		}
+		if (!is_OK)
+		{
+	        my_log(LOG_ERR, "%s unable to reset CC2650!", __func__);
+		}
+	}
 
+	if (asacz_never_started_before)
 	{
 
         my_log(LOG_INFO, "%s +checking boot", __func__);
-		enum_boot_check_retcode r = boot_check();
-		if (r == enum_boot_check_retcode_OK)
+		unsigned int is_OK = 0;
+		unsigned int idx_try_boot_check;
+#define def_total_timeout_try_boot_check_ms 20000
+#define def_pause_try_boot_check_ms 2000
+#define def_num_try_boot_check (1 + def_total_timeout_try_boot_check_ms / def_pause_try_boot_check_ms)
+
+		for (idx_try_boot_check = 0; !is_OK && idx_try_boot_check < def_num_try_boot_check ; idx_try_boot_check++)
 		{
-	        my_log(LOG_INFO, "%s boot check is OK", __func__);
+			enum_boot_check_retcode r = boot_check();
+			if (r == enum_boot_check_retcode_OK)
+			{
+				is_OK = 1;
+				my_log(LOG_INFO, "%s boot check is executed OK", __func__);
+			}
+			else
+			{
+				my_log(LOG_ERR, "%s boot check returns ERROR, try %u of %u", __func__, idx_try_boot_check + 1, def_num_try_boot_check);
+				// wait 1 second before checking again!
+				if (idx_try_boot_check + 1 < def_num_try_boot_check)
+				{
+					usleep(1000 * 1000);
+				}
+			}
 		}
-		else
+		if (!is_OK)
 		{
-	        my_log(LOG_ERR, "%s boot check returns ERROR", __func__);
+	        my_log(LOG_ERR, "%s unable to do to boot check!", __func__);
 		}
         my_log(LOG_INFO, "%s -checking boot", __func__);
 	}
+	else
+	{
+        my_log(LOG_INFO, "%s skipping the boot check because we are not booting", __func__);
+	}
+
+	// write down an information stating that we booted up and already executed the boot check
+	if (asacz_never_started_before)
+	{
+		FILE *f = fopen(def_filename_signal_ASACZ_started_once, "wb");
+		if (f)
+		{
+			fprintf(f, "ASACZ started once\n");
+			fclose(f);
+		}
+	}
+
 #endif
 	//atexit(my_at_exit);
 

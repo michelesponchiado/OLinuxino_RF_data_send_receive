@@ -52,5 +52,6 @@ typedef struct _type_ASACZ_update_yourself_inout
 
 void *thread_ASACZ_update_yourself(void *arg);
 const char *get_enum_asacz_package_retcode_string(enum_asacz_package_retcode e);
+void find_my_own_name(char * argv_0);
 
 #endif /* INC_ASACZ_UPDATE_YOURSELF_H_ */

@@ -17,7 +17,7 @@
 #define def_ASACZ_firmware_version_MINOR_NUMBER 	3
 
 // the version build number
-#define def_ASACZ_firmware_version_BUILD_NUMBER 	28
+#define def_ASACZ_firmware_version_BUILD_NUMBER 	29
 
 #define def_ASACZ_firmware_version_DATE_AND_TIME  	__DATE__" "__TIME__
 #define def_ASACZ_firmware_version_PATCH 			""
@@ -27,6 +27,9 @@
 	#define def_ASACZ_firmware_version_NOTES 			"prints received messages"
 #endif
 
+// 0.1.3 build 29
+// * corrects a minor bug on the percentage field of the ASACZ update
+//
 // 0.1.3 build 28
 // * removed from the startup log the message "waiting rx loop ..."
 // * aggiunto uint32_t progress [0..5] e uint32_t progress_0_100 in testa al messaggio di risposta status

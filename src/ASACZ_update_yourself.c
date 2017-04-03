@@ -210,7 +210,7 @@ void *thread_ASACZ_update_yourself(void *arg)
 		p->thread_completed_OK = 0;
 		p->thread_completed_ERROR = 0;
 		p->body_reply.u_progress.enum_p = enum_file_package_progress_init;
-		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
+		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_ends;
 	pthread_mutex_unlock(&p->mtx_id);
 
 	char filename_in[512];
@@ -291,7 +291,7 @@ void *thread_ASACZ_update_yourself(void *arg)
 	}
 	pthread_mutex_lock(&p->mtx_id);
 		p->body_reply.u_progress.enum_p = enum_file_package_progress_input_file_read;
-		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
+		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_ends;
 	pthread_mutex_unlock(&p->mtx_id);
 
 	type_OLinuxino_ASACZ_fw_update_header OLinuxino_ASACZ_fw_update_header;
@@ -383,7 +383,7 @@ void *thread_ASACZ_update_yourself(void *arg)
 			system("/etc/init.d/asacz backup");
 			pthread_mutex_lock(&p->mtx_id);
 				p->body_reply.u_progress.enum_p = enum_file_package_progress_old_file_backup_done;
-				p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
+				p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_ends;
 			pthread_mutex_unlock(&p->mtx_id);
 			restore_asacz_file = 1;
 			if (unlink(outfile_name) < 0)
@@ -420,7 +420,7 @@ void *thread_ASACZ_update_yourself(void *arg)
 	}
 	pthread_mutex_lock(&p->mtx_id);
 		p->body_reply.u_progress.enum_p = enum_file_package_progress_new_file_copy_done;
-		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
+		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_ends;
 	pthread_mutex_unlock(&p->mtx_id);
 	if (r == enum_asacz_package_retcode_OK)
 	{
@@ -441,7 +441,7 @@ void *thread_ASACZ_update_yourself(void *arg)
 			system("/etc/init.d/asacz restore");
 			pthread_mutex_lock(&p->mtx_id);
 				p->body_reply.u_progress.enum_p = enum_file_package_progress_old_file_restore_done;
-				p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
+				p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint* 100) / enum_file_package_progress_ends;
 			pthread_mutex_unlock(&p->mtx_id);
 		}
 	}
@@ -452,7 +452,7 @@ void *thread_ASACZ_update_yourself(void *arg)
 	}
 	pthread_mutex_lock(&p->mtx_id);
 		p->body_reply.u_progress.enum_p = enum_file_package_progress_ends;
-		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_numof;
+		p->body_reply.progress_0_100 = (p->body_reply.u_progress.uint * 100) / enum_file_package_progress_ends;
 		p_body_reply->running = 0;
 		p_body_reply->ends_OK = (r == enum_asacz_package_retcode_OK) ? 1 : 0;
 		p_body_reply->ends_ERROR = !p_body_reply->ends_OK;
